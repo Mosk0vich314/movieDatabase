@@ -24,20 +24,6 @@ const Stats = (() => {
     const directorsSorted = Object.entries(directorCounts).sort((a, b) => b[1] - a[1]);
     const uniqueDirectors = directorsSorted.length;
 
-    // Movies per month (last 12 months)
-    const now = new Date();
-    const monthCounts = [];
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const label = d.toLocaleString('default', { month: 'short', year: '2-digit' });
-      const count = movies.filter(m => {
-        if (!m.dateAdded) return false;
-        const added = new Date(m.dateAdded);
-        return added.getFullYear() === d.getFullYear() && added.getMonth() === d.getMonth();
-      }).length;
-      monthCounts.push({ label, count });
-    }
-
     // Rating distribution
     const ratingDist = [0, 0, 0, 0, 0];
     movies.forEach(m => {
@@ -47,12 +33,11 @@ const Stats = (() => {
     // Top rated movies
     const topRated = [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 5);
 
-    return { total, avgRating, genresSorted, directorsSorted, uniqueDirectors, monthCounts, ratingDist, topRated };
+    return { total, avgRating, genresSorted, directorsSorted, uniqueDirectors, ratingDist, topRated };
   }
 
   function render(stats) {
     const maxGenre = stats.genresSorted.length > 0 ? stats.genresSorted[0][1] : 1;
-    const maxMonth = Math.max(...stats.monthCounts.map(m => m.count), 1);
     const maxDirector = stats.directorsSorted.length > 0 ? stats.directorsSorted[0][1] : 1;
 
     return `
@@ -103,21 +88,6 @@ const Stats = (() => {
                   <div class="bar-fill" style="width: ${(count / maxGenre) * 100}%"></div>
                 </div>
                 <span class="bar-value">${count}</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-
-        <div class="stats-section">
-          <h3>Movies Per Month</h3>
-          <div class="bar-chart bar-chart-vertical">
-            ${stats.monthCounts.map(m => `
-              <div class="vbar-col">
-                <div class="vbar-track">
-                  <div class="vbar-fill" style="height: ${(m.count / maxMonth) * 100}%"></div>
-                </div>
-                <span class="vbar-label">${m.label}</span>
-                <span class="vbar-value">${m.count}</span>
               </div>
             `).join('')}
           </div>
