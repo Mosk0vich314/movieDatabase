@@ -2,12 +2,14 @@ const TMDB = (() => {
   const BASE_URL = 'https://api.themoviedb.org/3';
   const IMG_BASE = 'https://image.tmdb.org/t/p';
 
+  const API_KEY = '3dadc2d1f1bf4bd38ef92969098e3051';
+
   function getApiKey() {
-    return localStorage.getItem('tmdb_api_key') || '';
+    return API_KEY;
   }
 
-  function setApiKey(key) {
-    localStorage.setItem('tmdb_api_key', key);
+  function setApiKey() {
+    // No-op: key is now built-in
   }
 
   async function searchMovies(query) {

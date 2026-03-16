@@ -360,8 +360,24 @@ const App = (() => {
 
   // --- Settings ---
 
-  function loadSettings() {
-    document.getElementById('tmdb-api-key').value = TMDB.getApiKey();
+  async function loadSettings() {
+    const movies = await MovieDB.getAllMovies();
+    const directors = new Set();
+    const genres = new Set();
+    movies.forEach(m => {
+      (m.directors || []).forEach(d => directors.add(d));
+      (m.genres || []).forEach(g => genres.add(g));
+    });
+    const avgRating = movies.length > 0
+      ? (movies.reduce((sum, m) => sum + (m.rating || 0), 0) / movies.length).toFixed(1)
+      : '0';
+
+    document.getElementById('settings-stats').innerHTML = `
+      <div class="settings-stat-item"><div class="settings-stat-value">${movies.length}</div><div class="settings-stat-label">Movies</div></div>
+      <div class="settings-stat-item"><div class="settings-stat-value">${directors.size}</div><div class="settings-stat-label">Directors</div></div>
+      <div class="settings-stat-item"><div class="settings-stat-value">${genres.size}</div><div class="settings-stat-label">Genres</div></div>
+      <div class="settings-stat-item"><div class="settings-stat-value">${avgRating}</div><div class="settings-stat-label">Avg Rating</div></div>
+    `;
   }
 
   // --- Event Listeners ---
@@ -402,10 +418,12 @@ const App = (() => {
     document.getElementById('sort-by').addEventListener('change', loadCatalogue);
     document.getElementById('catalogue-search').addEventListener('input', loadCatalogue);
 
-    document.getElementById('save-api-key').addEventListener('click', () => {
-      const key = document.getElementById('tmdb-api-key').value.trim();
-      TMDB.setApiKey(key);
-      UI.showToast(key ? 'API key saved!' : 'API key cleared.');
+    document.getElementById('clear-all-data').addEventListener('click', async () => {
+      if (confirm('Are you sure? This will permanently delete ALL your movies.')) {
+        await MovieDB.importData('[]');
+        UI.showToast('All data cleared.');
+        loadSettings();
+      }
     });
 
     document.getElementById('export-data').addEventListener('click', async () => {

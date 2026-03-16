@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon.svg">
-  <link rel="stylesheet" href="css/styles.css?v=2026.03.16.2111">
+  <link rel="stylesheet" href="css/styles.css?v=2026.03.16.2134">
 </head>
 <body>
   <header class="app-header">
@@ -131,18 +131,37 @@
     <section id="view-settings" class="view" style="display:none;">
       <div class="settings-container">
         <h2>Settings</h2>
-        <div class="form-group">
-          <label for="tmdb-api-key">TMDB API Key</label>
-          <p class="form-hint">Get a free key at <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org</a></p>
-          <input type="text" id="tmdb-api-key" class="form-input" placeholder="Enter your TMDB API key">
-          <button id="save-api-key" class="btn btn-primary">Save Key</button>
+
+        <div class="settings-section">
+          <h3>Your Collection</h3>
+          <div class="settings-stats" id="settings-stats"></div>
         </div>
+
         <hr>
-        <h3>Data Management</h3>
-        <div class="settings-actions">
-          <button id="export-data" class="btn btn-secondary">Export Data (JSON)</button>
-          <button id="import-data" class="btn btn-secondary">Import Data</button>
-          <input type="file" id="import-file" accept=".json" style="display:none;">
+
+        <div class="settings-section">
+          <h3>Backup & Restore</h3>
+          <p class="form-hint">Export your movie collection as a JSON file, or import a previously exported backup.</p>
+          <div class="settings-actions">
+            <button id="export-data" class="btn btn-secondary">Export Backup</button>
+            <button id="import-data" class="btn btn-secondary">Import Backup</button>
+            <input type="file" id="import-file" accept=".json" style="display:none;">
+          </div>
+        </div>
+
+        <hr>
+
+        <div class="settings-section">
+          <h3>Danger Zone</h3>
+          <p class="form-hint">This will permanently delete all movies from your collection. This cannot be undone.</p>
+          <button id="clear-all-data" class="btn btn-danger">Delete All Data</button>
+        </div>
+
+        <hr>
+
+        <div class="settings-section settings-about">
+          <p class="settings-app-name">Movie Catalogue</p>
+          <p class="form-hint">Powered by <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a></p>
         </div>
       </div>
     </section>
@@ -151,10 +170,10 @@
   <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <script src="js/db.js?v=2026.03.16.2111"></script>
-  <script src="js/api.js?v=2026.03.16.2111"></script>
-  <script src="js/ui.js?v=2026.03.16.2111"></script>
-  <script src="js/stats.js?v=2026.03.16.2111"></script>
-  <script src="js/app.js?v=2026.03.16.2111"></script>
+  <script src="js/db.js?v=2026.03.16.2134"></script>
+  <script src="js/api.js?v=2026.03.16.2134"></script>
+  <script src="js/ui.js?v=2026.03.16.2134"></script>
+  <script src="js/stats.js?v=2026.03.16.2134"></script>
+  <script src="js/app.js?v=2026.03.16.2134"></script>
 </body>
 </html>

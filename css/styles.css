@@ -602,11 +602,50 @@ a:hover { color: var(--accent-hover); }
 
 /* === Settings === */
 .settings-container { max-width: 500px; }
-.settings-container h2 { margin-bottom: 20px; font-weight: 800; }
-.settings-container h3 { margin: 16px 0 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.04em; }
+.settings-container h2 { margin-bottom: 24px; font-weight: 800; font-size: 1.4rem; }
+.settings-container h3 { margin: 0 0 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 0.82rem; letter-spacing: 0.05em; }
 .settings-container hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+.settings-section { margin-bottom: 4px; }
 .settings-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .settings-container .form-input { margin-bottom: 10px; }
+.settings-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.settings-stat-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  backdrop-filter: blur(10px);
+}
+.settings-stat-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.settings-stat-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  margin-top: 2px;
+}
+.settings-about {
+  text-align: center;
+  padding: 8px 0;
+}
+.settings-app-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
 
 /* === Empty State === */
 .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
