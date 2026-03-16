@@ -1,4 +1,4 @@
-const CACHE_NAME = 'movie-catalogue-v4';
+const CACHE_NAME = 'movie-catalogue-v2026.03.16.2059';
 const ASSETS = [
   '/',
   '/index.html',
@@ -35,20 +35,21 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      return cached || fetch(e.request).then(response => {
-        // Cache successful same-origin responses
-        if (response.ok && url.origin === self.location.origin) {
+  // Network-first for same-origin: always try fresh, fall back to cache offline
+  if (url.origin === self.location.origin) {
+    e.respondWith(
+      fetch(e.request).then(response => {
+        if (response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
         }
         return response;
-      });
-    }).catch(() => {
-      if (e.request.mode === 'navigate') {
-        return caches.match('/index.html');
-      }
-    })
-  );
+      }).catch(() => {
+        return caches.match(e.request).then(cached => {
+          if (cached) return cached;
+          if (e.request.mode === 'navigate') return caches.match('/index.html');
+        });
+      })
+    );
+  }
 });

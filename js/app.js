@@ -7,6 +7,7 @@ const App = (() => {
     MovieDB.open().then(() => {
       setupRouting();
       setupEventListeners();
+      UI.initCustomSelects();
       navigate(window.location.hash || '#catalogue');
       registerServiceWorker();
     });

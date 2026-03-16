@@ -115,5 +115,74 @@ const UI = (() => {
     return div.innerHTML;
   }
 
-  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderSearchResult, renderMovieDetail, renderDirectorGroup, escapeHtml };
+  // --- Custom Dropdown ---
+  // Wraps native <select> elements with styled custom dropdowns
+  // The native select stays in the DOM (hidden) so existing change listeners work.
+
+  function initCustomSelects() {
+    document.querySelectorAll('.filter-select').forEach(select => {
+      if (select.dataset.customized) return;
+      select.dataset.customized = 'true';
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'custom-select';
+
+      const trigger = document.createElement('div');
+      trigger.className = 'custom-select-trigger';
+      trigger.innerHTML = `<span class="custom-select-label">${select.options[select.selectedIndex]?.text || ''}</span><span class="custom-select-arrow">&#9660;</span>`;
+
+      const optionsContainer = document.createElement('div');
+      optionsContainer.className = 'custom-select-options';
+
+      function buildOptions() {
+        optionsContainer.innerHTML = '';
+        Array.from(select.options).forEach(opt => {
+          const item = document.createElement('div');
+          item.className = 'custom-select-option' + (opt.selected ? ' selected' : '');
+          item.textContent = opt.text;
+          item.dataset.value = opt.value;
+          item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            select.value = opt.value;
+            select.dispatchEvent(new Event('change'));
+            trigger.querySelector('.custom-select-label').textContent = opt.text;
+            optionsContainer.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+            item.classList.add('selected');
+            wrapper.classList.remove('open');
+          });
+          optionsContainer.appendChild(item);
+        });
+      }
+
+      buildOptions();
+
+      // Observe the native select for options changes (genre/director filters get rebuilt)
+      const observer = new MutationObserver(() => {
+        buildOptions();
+        trigger.querySelector('.custom-select-label').textContent = select.options[select.selectedIndex]?.text || '';
+      });
+      observer.observe(select, { childList: true });
+
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Close any other open dropdowns
+        document.querySelectorAll('.custom-select.open').forEach(s => {
+          if (s !== wrapper) s.classList.remove('open');
+        });
+        wrapper.classList.toggle('open');
+      });
+
+      select.parentNode.insertBefore(wrapper, select);
+      wrapper.appendChild(trigger);
+      wrapper.appendChild(optionsContainer);
+      wrapper.appendChild(select);
+    });
+
+    // Close dropdowns on outside click
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.custom-select.open').forEach(s => s.classList.remove('open'));
+    });
+  }
+
+  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderSearchResult, renderMovieDetail, renderDirectorGroup, initCustomSelects, escapeHtml };
 })();
