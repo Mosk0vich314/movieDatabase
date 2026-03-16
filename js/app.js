@@ -32,7 +32,6 @@ const App = (() => {
       '#catalogue': 'catalogue',
       '#add': 'add',
       '#stats': 'stats',
-      '#settings': 'settings',
     };
 
     if (hash.startsWith('#detail/')) {
@@ -47,7 +46,6 @@ const App = (() => {
 
     if (view === 'catalogue') loadCatalogue();
     if (view === 'stats') loadStats();
-    if (view === 'settings') loadSettings();
     if (view === 'add') resetAddView();
   }
 
@@ -259,21 +257,26 @@ const App = (() => {
     if (editingMovie) {
       selectedRating = editingMovie.rating || 0;
       document.getElementById('form-notes').value = editingMovie.notes || '';
-      document.getElementById('form-date-watched').value = editingMovie.dateWatched ? editingMovie.dateWatched.substring(0, 10) : '';
       document.getElementById('form-id').value = editingMovie.id;
     } else {
       selectedRating = 0;
       document.getElementById('form-notes').value = '';
-      document.getElementById('form-date-watched').value = new Date().toISOString().substring(0, 10);
       document.getElementById('form-id').value = '';
     }
     updateStarDisplay();
   }
 
-  function updateStarDisplay() {
+  function updateStarDisplay(animate = false) {
     document.querySelectorAll('#star-rating .star').forEach(star => {
       const val = parseInt(star.dataset.value);
-      star.classList.toggle('filled', val <= selectedRating);
+      const wasFilled = star.classList.contains('filled');
+      const shouldFill = val <= selectedRating;
+      star.classList.toggle('filled', shouldFill);
+      if (animate && shouldFill && !wasFilled) {
+        star.classList.remove('animate');
+        void star.offsetWidth; // reflow
+        star.classList.add('animate');
+      }
     });
     document.getElementById('form-rating').value = selectedRating;
   }
@@ -291,7 +294,6 @@ const App = (() => {
       poster: form.dataset.poster,
       rating: selectedRating,
       notes: document.getElementById('form-notes').value.trim(),
-      dateWatched: document.getElementById('form-date-watched').value || null,
     };
 
     try {
@@ -358,28 +360,6 @@ const App = (() => {
     document.getElementById('stats-container').innerHTML = Stats.render(stats);
   }
 
-  // --- Settings ---
-
-  async function loadSettings() {
-    const movies = await MovieDB.getAllMovies();
-    const directors = new Set();
-    const genres = new Set();
-    movies.forEach(m => {
-      (m.directors || []).forEach(d => directors.add(d));
-      (m.genres || []).forEach(g => genres.add(g));
-    });
-    const avgRating = movies.length > 0
-      ? (movies.reduce((sum, m) => sum + (m.rating || 0), 0) / movies.length).toFixed(1)
-      : '0';
-
-    document.getElementById('settings-stats').innerHTML = `
-      <div class="settings-stat-item"><div class="settings-stat-value">${movies.length}</div><div class="settings-stat-label">Movies</div></div>
-      <div class="settings-stat-item"><div class="settings-stat-value">${directors.size}</div><div class="settings-stat-label">Directors</div></div>
-      <div class="settings-stat-item"><div class="settings-stat-value">${genres.size}</div><div class="settings-stat-label">Genres</div></div>
-      <div class="settings-stat-item"><div class="settings-stat-value">${avgRating}</div><div class="settings-stat-label">Avg Rating</div></div>
-    `;
-  }
-
   // --- Event Listeners ---
 
   function setupEventListeners() {
@@ -397,8 +377,22 @@ const App = (() => {
       const star = e.target.closest('.star');
       if (star) {
         selectedRating = parseInt(star.dataset.value);
-        updateStarDisplay();
+        updateStarDisplay(true);
       }
+    });
+
+    document.getElementById('star-rating').addEventListener('mouseover', (e) => {
+      const star = e.target.closest('.star');
+      if (star) {
+        const val = parseInt(star.dataset.value);
+        document.querySelectorAll('#star-rating .star').forEach(s => {
+          s.classList.toggle('hovered', parseInt(s.dataset.value) <= val);
+        });
+      }
+    });
+
+    document.getElementById('star-rating').addEventListener('mouseleave', () => {
+      document.querySelectorAll('#star-rating .star').forEach(s => s.classList.remove('hovered'));
     });
 
     document.getElementById('movie-form').addEventListener('submit', saveMovie);
@@ -422,7 +416,7 @@ const App = (() => {
       if (confirm('Are you sure? This will permanently delete ALL your movies.')) {
         await MovieDB.importData('[]');
         UI.showToast('All data cleared.');
-        loadSettings();
+        loadStats();
       }
     });
 

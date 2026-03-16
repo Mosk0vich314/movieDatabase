@@ -7,9 +7,9 @@
   <meta name="description" content="Track and catalogue all the movies you've watched">
   <title>Movie Catalogue</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icons/icon.svg">
-  <link rel="stylesheet" href="css/styles.css?v=2026.03.16.2134">
+  <link rel="icon" href="icons/logo.jpg" type="image/jpeg">
+  <link rel="apple-touch-icon" href="icons/logo.jpg">
+  <link rel="stylesheet" href="css/styles.css?v=2026.03.16.2214">
 </head>
 <body>
   <header class="app-header">
@@ -25,9 +25,6 @@
     </a>
     <a href="#stats" class="nav-link" data-view="stats">
       <span class="nav-icon">&#9776;</span> Stats
-    </a>
-    <a href="#settings" class="nav-link" data-view="settings">
-      <span class="nav-icon">&#9881;</span> Settings
     </a>
   </nav>
 
@@ -103,10 +100,6 @@
           <input type="hidden" id="form-rating" value="0">
         </div>
         <div class="form-group">
-          <label for="form-date-watched">Date Watched</label>
-          <input type="date" id="form-date-watched" class="form-input">
-        </div>
-        <div class="form-group">
           <label for="form-notes">Notes</label>
           <textarea id="form-notes" class="form-input" rows="3" placeholder="Your thoughts on this movie..."></textarea>
         </div>
@@ -125,22 +118,11 @@
     <!-- Stats View -->
     <section id="view-stats" class="view" style="display:none;">
       <div id="stats-container" class="stats-container"></div>
-    </section>
 
-    <!-- Settings View -->
-    <section id="view-settings" class="view" style="display:none;">
-      <div class="settings-container">
-        <h2>Settings</h2>
-
-        <div class="settings-section">
-          <h3>Your Collection</h3>
-          <div class="settings-stats" id="settings-stats"></div>
-        </div>
-
+      <div class="stats-manage">
         <hr>
-
-        <div class="settings-section">
-          <h3>Backup & Restore</h3>
+        <div class="stats-manage-section">
+          <h3 class="stats-section-title">Backup & Restore</h3>
           <p class="form-hint">Export your movie collection as a JSON file, or import a previously exported backup.</p>
           <div class="settings-actions">
             <button id="export-data" class="btn btn-secondary">Export Backup</button>
@@ -151,15 +133,13 @@
 
         <hr>
 
-        <div class="settings-section">
-          <h3>Danger Zone</h3>
+        <div class="stats-manage-section">
+          <h3 class="stats-section-title danger-title">Danger Zone</h3>
           <p class="form-hint">This will permanently delete all movies from your collection. This cannot be undone.</p>
           <button id="clear-all-data" class="btn btn-danger">Delete All Data</button>
         </div>
 
-        <hr>
-
-        <div class="settings-section settings-about">
+        <div class="stats-about">
           <p class="settings-app-name">Movie Catalogue</p>
           <p class="form-hint">Powered by <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a></p>
         </div>
@@ -170,10 +150,10 @@
   <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <script src="js/db.js?v=2026.03.16.2134"></script>
-  <script src="js/api.js?v=2026.03.16.2134"></script>
-  <script src="js/ui.js?v=2026.03.16.2134"></script>
-  <script src="js/stats.js?v=2026.03.16.2134"></script>
-  <script src="js/app.js?v=2026.03.16.2134"></script>
+  <script src="js/db.js?v=2026.03.16.2214"></script>
+  <script src="js/api.js?v=2026.03.16.2214"></script>
+  <script src="js/ui.js?v=2026.03.16.2214"></script>
+  <script src="js/stats.js?v=2026.03.16.2214"></script>
+  <script src="js/app.js?v=2026.03.16.2214"></script>
 </body>
 </html>

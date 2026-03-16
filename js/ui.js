@@ -84,7 +84,6 @@ const UI = (() => {
             <label>Your Rating:</label>
             ${renderStars(movie.rating)}
           </div>
-          ${movie.dateWatched ? `<p class="detail-date">&#128197; Watched: ${new Date(movie.dateWatched).toLocaleDateString()}</p>` : ''}
           ${movie.notes ? `<div class="detail-notes"><label>Notes</label><p>${escapeHtml(movie.notes)}</p></div>` : ''}
           <div class="detail-actions">
             <button class="btn btn-primary" id="detail-edit" data-id="${movie.id}">Edit</button>

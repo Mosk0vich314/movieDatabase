@@ -23,11 +23,14 @@
   --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* === Font === */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
 /* === Reset === */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 body {
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  font-family: 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -233,8 +236,11 @@ a:hover { color: var(--accent-hover); }
   font-weight: 600;
 }
 
+/* === Views === */
+.view { padding-top: 16px; }
+
 /* === Catalogue Controls === */
-.catalogue-controls { margin-bottom: 24px; padding-top: 16px; }
+.catalogue-controls { margin-bottom: 24px; }
 .filter-bar {
   display: flex;
   gap: 8px;
@@ -354,10 +360,17 @@ a:hover { color: var(--accent-hover); }
 
 /* === Stars === */
 .star-display, .star-rating { display: inline-flex; gap: 2px; }
-.star { color: var(--star-empty); font-size: 1rem; cursor: default; transition: color 0.15s; }
+.star { color: var(--star-empty); font-size: 1rem; cursor: default; transition: color 0.2s, transform 0.2s; }
 .star.filled { color: var(--star); }
+.star.filled.animate { animation: starPop 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+@keyframes starPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.4) rotate(-8deg); }
+  70% { transform: scale(0.9) rotate(4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
 .star-rating .star { cursor: pointer; font-size: 1.5rem; }
-.star-rating .star:hover, .star-rating .star:hover ~ .star { color: var(--star); }
+.star-rating .star.hovered { color: var(--star); transform: scale(1.15); }
 
 /* === Search Results === */
 .search-results { margin-top: 16px; }
@@ -599,6 +612,21 @@ a:hover { color: var(--accent-hover); }
 }
 .top-title { flex: 1; font-size: 0.9rem; }
 .top-rating { color: var(--star); font-size: 0.85rem; }
+
+/* === Stats Management (backup/restore/danger in stats tab) === */
+.stats-manage { margin-top: 40px; }
+.stats-manage hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+.stats-manage-section { margin-bottom: 4px; }
+.stats-section-title {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+}
+.stats-section-title.danger-title { color: #c0392b; }
+.stats-about { text-align: center; padding: 24px 0 8px; }
 
 /* === Settings === */
 .settings-container { max-width: 500px; }

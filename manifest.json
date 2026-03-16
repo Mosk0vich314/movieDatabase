@@ -5,13 +5,13 @@
   "start_url": "/movieDatabase/",
   "scope": "/movieDatabase/",
   "display": "standalone",
-  "background_color": "#1a1a2e",
+  "background_color": "#0a0a14",
   "theme_color": "#e94560",
   "icons": [
     {
-      "src": "icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "icons/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     }
   ]
