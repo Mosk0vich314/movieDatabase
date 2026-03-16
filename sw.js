@@ -1,14 +1,14 @@
-const CACHE_NAME = 'movie-catalogue-v2026.03.16.2100';
+const CACHE_NAME = 'movie-catalogue-v2026.03.16.2105';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/css/styles.css',
-  '/js/db.js',
-  '/js/api.js',
-  '/js/ui.js',
-  '/js/stats.js',
-  '/js/app.js',
-  '/manifest.json',
+  './',
+  './index.html',
+  './css/styles.css',
+  './js/db.js',
+  './js/api.js',
+  './js/ui.js',
+  './js/stats.js',
+  './js/app.js',
+  './manifest.json',
 ];
 
 self.addEventListener('install', (e) => {
@@ -47,7 +47,7 @@ self.addEventListener('fetch', (e) => {
       }).catch(() => {
         return caches.match(e.request).then(cached => {
           if (cached) return cached;
-          if (e.request.mode === 'navigate') return caches.match('/index.html');
+          if (e.request.mode === 'navigate') return caches.match('./index.html');
         });
       })
     );
