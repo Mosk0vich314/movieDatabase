@@ -68,6 +68,7 @@ const UI = (() => {
         <div class="detail-info">
           <h2>${escapeHtml(movie.title)} <span class="detail-year">(${movie.year || 'N/A'})</span></h2>
           <div class="detail-genres">${genres}</div>
+          ${(movie.directors || []).length > 0 ? `<p class="detail-directors">Directed by ${(movie.directors || []).map(d => escapeHtml(d)).join(', ')}</p>` : ''}
           <div class="detail-rating">
             <label>Your Rating:</label>
             ${renderStars(movie.rating)}

@@ -208,7 +208,9 @@ select option { background: var(--bg-card); color: var(--text); }
 .detail-info { flex: 1; min-width: 200px; }
 .detail-info h2 { font-size: 1.4rem; margin-bottom: 8px; }
 .detail-year { font-weight: 400; color: var(--text-muted); }
-.detail-genres { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.detail-genres { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.detail-directors { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; font-style: italic; }
+.form-directors { font-size: 0.85rem; color: var(--accent); font-style: italic; margin-top: 4px; }
 .genre-tag {
   display: inline-block;
   padding: 4px 10px;

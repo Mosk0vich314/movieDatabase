@@ -23,7 +23,7 @@ const TMDB = (() => {
   async function getMovieDetails(tmdbId) {
     const key = getApiKey();
     if (!key) throw new Error('No TMDB API key set.');
-    const url = `${BASE_URL}/movie/${tmdbId}?api_key=${encodeURIComponent(key)}`;
+    const url = `${BASE_URL}/movie/${tmdbId}?api_key=${encodeURIComponent(key)}&append_to_response=credits`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`TMDB detail failed: ${res.status}`);
     return res.json();

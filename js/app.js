@@ -158,11 +158,15 @@ const App = (() => {
   async function selectSearchResult(tmdbId) {
     try {
       const details = await TMDB.getMovieDetails(tmdbId);
+      const directors = (details.credits?.crew || [])
+        .filter(c => c.job === 'Director')
+        .map(c => c.name);
       populateForm({
         tmdbId: details.id,
         title: details.title,
         year: details.release_date ? details.release_date.substring(0, 4) : '',
         genres: (details.genres || []).map(g => g.name),
+        directors,
         poster: TMDB.posterUrl(details.poster_path),
         overview: details.overview || '',
       });
@@ -180,6 +184,9 @@ const App = (() => {
     document.getElementById('form-title').textContent = data.title;
     document.getElementById('form-year').textContent = data.year;
     document.getElementById('form-genres').textContent = (data.genres || []).join(', ');
+    document.getElementById('form-directors').textContent = (data.directors || []).length > 0
+      ? 'Directed by ' + (data.directors || []).join(', ')
+      : '';
 
     const posterEl = document.getElementById('form-poster');
     if (data.poster) {
@@ -193,6 +200,7 @@ const App = (() => {
     form.dataset.title = data.title;
     form.dataset.year = data.year;
     form.dataset.genres = JSON.stringify(data.genres || []);
+    form.dataset.directors = JSON.stringify(data.directors || []);
     form.dataset.poster = data.poster || '';
 
     // Reset rating & notes
@@ -227,6 +235,7 @@ const App = (() => {
       title: form.dataset.title,
       year: form.dataset.year,
       genres: JSON.parse(form.dataset.genres),
+      directors: JSON.parse(form.dataset.directors || '[]'),
       poster: form.dataset.poster,
       rating: selectedRating,
       notes: document.getElementById('form-notes').value.trim(),
@@ -275,6 +284,7 @@ const App = (() => {
         title: movie.title,
         year: movie.year,
         genres: movie.genres,
+        directors: movie.directors,
         poster: movie.poster,
       });
     });
