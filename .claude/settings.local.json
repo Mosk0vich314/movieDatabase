@@ -5,7 +5,8 @@
       "Bash(grep -E \"\\\\.\\(md|txt|json\\)$\")",
       "Bash(gh repo:*)",
       "Bash(where gh:*)",
-      "Bash(python tools/deploy.py \"Fix PWA start_url for GitHub Pages subdirectory\")"
+      "Bash(python tools/deploy.py \"Fix PWA start_url for GitHub Pages subdirectory\")",
+      "Bash(python tools/deploy.py \"Fix manifest start_url with explicit path for Brave\")"
     ]
   }
 }
