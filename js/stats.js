@@ -14,19 +14,28 @@ const Stats = (() => {
     });
     const genresSorted = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]);
 
+    // Director distribution
+    const directorCounts = {};
+    movies.forEach(m => {
+      (m.directors || []).forEach(d => {
+        directorCounts[d] = (directorCounts[d] || 0) + 1;
+      });
+    });
+    const directorsSorted = Object.entries(directorCounts).sort((a, b) => b[1] - a[1]);
+    const uniqueDirectors = directorsSorted.length;
+
     // Movies per month (last 12 months)
     const now = new Date();
     const monthCounts = [];
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const label = d.toLocaleString('default', { month: 'short', year: '2-digit' });
       const count = movies.filter(m => {
         if (!m.dateAdded) return false;
         const added = new Date(m.dateAdded);
         return added.getFullYear() === d.getFullYear() && added.getMonth() === d.getMonth();
       }).length;
-      monthCounts.push({ key, label, count });
+      monthCounts.push({ label, count });
     }
 
     // Rating distribution
@@ -38,12 +47,13 @@ const Stats = (() => {
     // Top rated movies
     const topRated = [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 5);
 
-    return { total, avgRating, genresSorted, monthCounts, ratingDist, topRated };
+    return { total, avgRating, genresSorted, directorsSorted, uniqueDirectors, monthCounts, ratingDist, topRated };
   }
 
   function render(stats) {
     const maxGenre = stats.genresSorted.length > 0 ? stats.genresSorted[0][1] : 1;
     const maxMonth = Math.max(...stats.monthCounts.map(m => m.count), 1);
+    const maxDirector = stats.directorsSorted.length > 0 ? stats.directorsSorted[0][1] : 1;
 
     return `
       <div class="stats-overview">
@@ -56,12 +66,33 @@ const Stats = (() => {
           <div class="stat-label">Avg Rating</div>
         </div>
         <div class="stat-card">
+          <div class="stat-number">${stats.uniqueDirectors}</div>
+          <div class="stat-label">Directors</div>
+        </div>
+        <div class="stat-card">
           <div class="stat-number">${stats.genresSorted.length}</div>
           <div class="stat-label">Genres</div>
         </div>
       </div>
 
       ${stats.total === 0 ? '<p class="stats-empty">Add some movies to see your stats!</p>' : `
+        ${stats.directorsSorted.length > 0 ? `
+          <div class="stats-section">
+            <h3>Top Directors</h3>
+            <div class="bar-chart">
+              ${stats.directorsSorted.slice(0, 10).map(([director, count]) => `
+                <div class="bar-row">
+                  <span class="bar-label">${director}</span>
+                  <div class="bar-track">
+                    <div class="bar-fill" style="width: ${(count / maxDirector) * 100}%"></div>
+                  </div>
+                  <span class="bar-value">${count}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
         <div class="stats-section">
           <h3>Genre Distribution</h3>
           <div class="bar-chart">

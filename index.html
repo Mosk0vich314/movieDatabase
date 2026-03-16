@@ -39,6 +39,9 @@
           <select id="filter-genre" class="filter-select">
             <option value="">All Genres</option>
           </select>
+          <select id="filter-director" class="filter-select">
+            <option value="">All Directors</option>
+          </select>
           <select id="filter-rating" class="filter-select">
             <option value="">All Ratings</option>
             <option value="5">5 Stars</option>
@@ -56,6 +59,7 @@
             <option value="rating-asc">Lowest Rated</option>
             <option value="year-desc">Newest Release</option>
             <option value="year-asc">Oldest Release</option>
+            <option value="director-asc">Group by Director</option>
           </select>
         </div>
         <input type="text" id="catalogue-search" class="search-input" placeholder="Search your movies...">
@@ -84,7 +88,7 @@
             <h3 id="form-title"></h3>
             <p id="form-year"></p>
             <p id="form-genres"></p>
-            <p id="form-directors" class="form-directors"></p>
+            <div id="form-directors" class="form-directors"></div>
           </div>
         </div>
         <div class="form-group">

@@ -17,10 +17,20 @@ const UI = (() => {
     return html;
   }
 
+  function renderDirectorBadge(directors) {
+    if (!directors || directors.length === 0) return '';
+    const names = directors.map(d => escapeHtml(d)).join(', ');
+    return `<div class="director-badge"><span class="director-badge-icon">&#127916;</span> ${names}</div>`;
+  }
+
   function renderMovieCard(movie) {
     const poster = movie.poster
       ? `<img src="${movie.poster}" alt="${escapeHtml(movie.title)}" loading="lazy">`
       : `<div class="no-poster">${escapeHtml(movie.title)}</div>`;
+
+    const directorLine = (movie.directors || []).length > 0
+      ? `<p class="movie-card-director">${escapeHtml(movie.directors[0])}</p>`
+      : '';
 
     return `
       <div class="movie-card" data-id="${movie.id}">
@@ -28,6 +38,7 @@ const UI = (() => {
         <div class="movie-card-info">
           <h3 class="movie-card-title">${escapeHtml(movie.title)}</h3>
           <p class="movie-card-year">${movie.year || 'N/A'}</p>
+          ${directorLine}
           ${renderStars(movie.rating)}
         </div>
       </div>
@@ -68,18 +79,32 @@ const UI = (() => {
         <div class="detail-info">
           <h2>${escapeHtml(movie.title)} <span class="detail-year">(${movie.year || 'N/A'})</span></h2>
           <div class="detail-genres">${genres}</div>
-          ${(movie.directors || []).length > 0 ? `<p class="detail-directors">Directed by ${(movie.directors || []).map(d => escapeHtml(d)).join(', ')}</p>` : ''}
+          <div class="detail-directors">${renderDirectorBadge(movie.directors)}</div>
           <div class="detail-rating">
             <label>Your Rating:</label>
             ${renderStars(movie.rating)}
           </div>
-          ${movie.dateWatched ? `<p class="detail-date">Watched: ${new Date(movie.dateWatched).toLocaleDateString()}</p>` : ''}
-          ${movie.notes ? `<div class="detail-notes"><label>Notes:</label><p>${escapeHtml(movie.notes)}</p></div>` : ''}
+          ${movie.dateWatched ? `<p class="detail-date">&#128197; Watched: ${new Date(movie.dateWatched).toLocaleDateString()}</p>` : ''}
+          ${movie.notes ? `<div class="detail-notes"><label>Notes</label><p>${escapeHtml(movie.notes)}</p></div>` : ''}
           <div class="detail-actions">
             <button class="btn btn-primary" id="detail-edit" data-id="${movie.id}">Edit</button>
             <button class="btn btn-danger" id="detail-delete" data-id="${movie.id}">Delete</button>
           </div>
         </div>
+      </div>
+    `;
+  }
+
+  function renderDirectorGroup(directorName, movies) {
+    const cards = movies.map(m => renderMovieCard(m)).join('');
+    return `
+      <div class="director-group">
+        <div class="director-group-header" data-director="${escapeHtml(directorName)}">
+          <span class="director-group-name">${escapeHtml(directorName)}</span>
+          <span class="director-group-count">${movies.length} film${movies.length !== 1 ? 's' : ''}</span>
+          <span class="director-group-toggle">&#9660;</span>
+        </div>
+        <div class="director-group-grid">${cards}</div>
       </div>
     `;
   }
@@ -90,5 +115,5 @@ const UI = (() => {
     return div.innerHTML;
   }
 
-  return { showToast, renderStars, renderMovieCard, renderSearchResult, renderMovieDetail, escapeHtml };
+  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderSearchResult, renderMovieDetail, renderDirectorGroup, escapeHtml };
 })();
