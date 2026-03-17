@@ -98,6 +98,22 @@ a:hover { color: var(--accent-hover); }
   box-shadow: inset 0 0 0 1px var(--border-accent);
 }
 .nav-icon { font-size: 1.1rem; }
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  margin-left: 4px;
+  line-height: 1;
+  vertical-align: middle;
+}
 
 /* === Main === */
 .app-main { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
@@ -338,6 +354,22 @@ a:hover { color: var(--accent-hover); }
   transform: translateY(-6px) scale(1.02);
   box-shadow: var(--shadow-lg), 0 0 30px rgba(233, 69, 96, 0.1);
   border-color: var(--border-accent);
+}
+.movie-card.card-gold {
+  border-color: rgba(245, 197, 24, 0.35);
+  box-shadow: var(--shadow), 0 0 18px rgba(245, 197, 24, 0.12);
+}
+.movie-card.card-gold:hover {
+  border-color: rgba(245, 197, 24, 0.6);
+  box-shadow: var(--shadow-lg), 0 0 32px rgba(245, 197, 24, 0.25);
+}
+.movie-card.card-silver {
+  border-color: rgba(180, 195, 220, 0.22);
+  box-shadow: var(--shadow), 0 0 12px rgba(180, 195, 220, 0.08);
+}
+.movie-card.card-silver:hover {
+  border-color: rgba(180, 195, 220, 0.4);
+  box-shadow: var(--shadow-lg), 0 0 22px rgba(180, 195, 220, 0.15);
 }
 .movie-card-poster img {
   width: 100%;
@@ -771,6 +803,60 @@ a:hover { color: var(--accent-hover); }
 .toast.show {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
+}
+
+/* === Star burst particles === */
+.star-burst-particle {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  animation: starBurstOut 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+@keyframes starBurstOut {
+  0%   { opacity: 1; transform: translate(-50%, -50%) translate(0px, 0px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) scale(0); }
+}
+
+/* === Taste DNA card === */
+.taste-dna-card {
+  position: relative;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(233, 69, 96, 0.08), rgba(124, 92, 252, 0.12));
+  border: 1px solid rgba(233, 69, 96, 0.18);
+  overflow: hidden;
+  text-align: center;
+}
+.taste-dna-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.05) 50%, transparent 65%);
+  animation: dnaShimmer 3.5s ease-in-out infinite;
+}
+@keyframes dnaShimmer {
+  0%   { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+.taste-dna-label {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.taste-dna-value {
+  font-size: 1.55rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
 }
 
 /* === Watchlist === */

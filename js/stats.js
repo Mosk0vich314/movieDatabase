@@ -1,4 +1,29 @@
 const Stats = (() => {
+  function tasteDNA(movies) {
+    if (movies.length < 3) return null;
+
+    const genreAbbrev = {
+      'Science Fiction': 'Sci-Fi', 'Action': 'Action', 'Drama': 'Drama',
+      'Comedy': 'Comedy', 'Thriller': 'Thriller', 'Horror': 'Horror',
+      'Romance': 'Romance', 'Animation': 'Animation', 'Documentary': 'Documentary',
+      'Crime': 'Crime', 'Fantasy': 'Fantasy', 'Adventure': 'Adventure',
+      'Mystery': 'Mystery', 'Western': 'Western', 'War': 'War',
+      'History': 'History', 'Music': 'Music', 'Family': 'Family',
+    };
+
+    const genreCounts = {};
+    movies.forEach(m => (m.genres || []).forEach(g => { genreCounts[g] = (genreCounts[g] || 0) + 1; }));
+    const topGenreEntry = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0];
+    const genreWord = topGenreEntry ? (genreAbbrev[topGenreEntry[0]] || topGenreEntry[0]) : 'Cinema';
+
+    const directorCounts = {};
+    movies.forEach(m => (m.directors || []).forEach(d => { directorCounts[d] = (directorCounts[d] || 0) + 1; }));
+    const ratio = Object.keys(directorCounts).length / movies.length;
+    const descriptor = ratio < 0.5 ? 'Loyalist' : ratio < 0.8 ? 'Explorer' : 'Pioneer';
+
+    return `${genreWord} ${descriptor}`;
+  }
+
   function compute(movies) {
     const total = movies.length;
     const avgRating = total > 0
@@ -33,7 +58,7 @@ const Stats = (() => {
     // Top rated movies
     const topRated = [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 5);
 
-    return { total, avgRating, genresSorted, directorsSorted, uniqueDirectors, ratingDist, topRated };
+    return { total, avgRating, genresSorted, directorsSorted, uniqueDirectors, ratingDist, topRated, dna: tasteDNA(movies) };
   }
 
   function render(stats) {
@@ -43,22 +68,28 @@ const Stats = (() => {
     return `
       <div class="stats-overview">
         <div class="stat-card">
-          <div class="stat-number">${stats.total}</div>
+          <div class="stat-number" data-count="${stats.total}">0</div>
           <div class="stat-label">Movies Watched</div>
         </div>
         <div class="stat-card">
-          <div class="stat-number">${stats.avgRating}</div>
+          <div class="stat-number" data-count="${stats.avgRating}">0</div>
           <div class="stat-label">Avg Rating</div>
         </div>
         <div class="stat-card">
-          <div class="stat-number">${stats.uniqueDirectors}</div>
+          <div class="stat-number" data-count="${stats.uniqueDirectors}">0</div>
           <div class="stat-label">Directors</div>
         </div>
         <div class="stat-card">
-          <div class="stat-number">${stats.genresSorted.length}</div>
+          <div class="stat-number" data-count="${stats.genresSorted.length}">0</div>
           <div class="stat-label">Genres</div>
         </div>
       </div>
+
+      ${stats.dna ? `
+      <div class="taste-dna-card">
+        <div class="taste-dna-label">Your Taste DNA</div>
+        <div class="taste-dna-value">${stats.dna}</div>
+      </div>` : ''}
 
       ${stats.total === 0 ? '<p class="stats-empty">Add some movies to see your stats!</p>' : `
         ${stats.directorsSorted.length > 0 ? `

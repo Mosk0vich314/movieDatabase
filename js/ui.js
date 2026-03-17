@@ -32,8 +32,10 @@ const UI = (() => {
       ? `<p class="movie-card-director">${escapeHtml(movie.directors[0])}</p>`
       : '';
 
+    const ratingClass = movie.rating === 5 ? ' card-gold' : movie.rating === 4 ? ' card-silver' : '';
+
     return `
-      <div class="movie-card" data-id="${movie.id}">
+      <div class="movie-card${ratingClass}" data-id="${movie.id}">
         <div class="movie-card-poster">${poster}</div>
         <div class="movie-card-info">
           <h3 class="movie-card-title">${escapeHtml(movie.title)}</h3>

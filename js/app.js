@@ -9,6 +9,7 @@ const App = (() => {
       setupEventListeners();
       UI.initCustomSelects();
       navigate(window.location.hash || '#catalogue');
+      updateWatchlistBadge();
       registerServiceWorker();
     });
   }
@@ -211,6 +212,7 @@ const App = (() => {
         poster: TMDB.posterUrl(details.poster_path),
         watchlist: true,
       });
+      updateWatchlistBadge();
       UI.showToast(`"${details.title}" added to watchlist!`);
     } catch (err) {
       UI.showToast(err.message);
@@ -367,6 +369,7 @@ const App = (() => {
         UI.showToast('Movie added!');
       }
       editingMovie = null;
+      updateWatchlistBadge();
       window.location.hash = '#catalogue';
     } catch (err) {
       UI.showToast('Error saving movie: ' + err.message);
@@ -414,6 +417,7 @@ const App = (() => {
         : 'Delete this movie from your catalogue?';
       if (confirm(msg)) {
         await MovieDB.deleteMovie(movie.id);
+        updateWatchlistBadge();
         UI.showToast('Movie deleted');
         window.location.hash = movie.watchlist ? '#watchlist' : '#catalogue';
       }
@@ -425,7 +429,51 @@ const App = (() => {
   async function loadStats() {
     const movies = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
     const stats = Stats.compute(movies);
-    document.getElementById('stats-container').innerHTML = Stats.render(stats);
+    const container = document.getElementById('stats-container');
+    container.innerHTML = Stats.render(stats);
+    animateCounters(container);
+  }
+
+  function animateCounters(container) {
+    container.querySelectorAll('[data-count]').forEach(el => {
+      const target = parseFloat(el.dataset.count);
+      const isFloat = el.dataset.count.includes('.');
+      const duration = 700;
+      const start = performance.now();
+      function step(now) {
+        const p = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = isFloat ? (target * eased).toFixed(1) : Math.floor(target * eased);
+        if (p < 1) requestAnimationFrame(step);
+        else el.textContent = el.dataset.count;
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  async function updateWatchlistBadge() {
+    const movies = await MovieDB.getAllMovies();
+    const count = movies.filter(m => m.watchlist).length;
+    const badge = document.getElementById('watchlist-nav-badge');
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'inline-flex' : 'none';
+  }
+
+  function spawnStarBurst(triggerEl) {
+    const rect = triggerEl.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const colors = ['#f5c518', '#f5c518', '#fff', '#e94560', '#7c5cfc', '#f5c518'];
+    for (let i = 0; i < 10; i++) {
+      const p = document.createElement('span');
+      p.className = 'star-burst-particle';
+      const angle = (i / 10) * 2 * Math.PI;
+      const dist = 28 + Math.random() * 26;
+      const size = 4 + Math.random() * 5;
+      p.style.cssText = `left:${cx}px;top:${cy}px;width:${size}px;height:${size}px;background:${colors[i % colors.length]};--dx:${(Math.cos(angle) * dist).toFixed(1)}px;--dy:${(Math.sin(angle) * dist).toFixed(1)}px;animation-duration:${(0.45 + Math.random() * 0.2).toFixed(2)}s;`;
+      document.body.appendChild(p);
+      p.addEventListener('animationend', () => p.remove(), { once: true });
+    }
   }
 
   // --- Event Listeners ---
@@ -463,6 +511,7 @@ const App = (() => {
       if (star) {
         selectedRating = parseInt(star.dataset.value);
         updateStarDisplay(true);
+        if (selectedRating === 5) spawnStarBurst(star);
       }
     });
 
@@ -537,6 +586,7 @@ const App = (() => {
     document.getElementById('clear-all-data').addEventListener('click', async () => {
       if (confirm('Are you sure? This will permanently delete ALL your movies.')) {
         await MovieDB.importData('[]');
+        updateWatchlistBadge();
         UI.showToast('All data cleared.');
         loadStats();
       }
@@ -563,6 +613,7 @@ const App = (() => {
       try {
         const text = await file.text();
         const count = await MovieDB.importData(text);
+        updateWatchlistBadge();
         UI.showToast(`Imported ${count} movies!`);
         if (currentView === 'catalogue') loadCatalogue();
       } catch (err) {
