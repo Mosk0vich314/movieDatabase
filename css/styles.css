@@ -24,7 +24,7 @@
 }
 
 /* === Font === */
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@400;500;600;700;800&display=swap');
 
 /* === Reset === */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -56,9 +56,10 @@ a:hover { color: var(--accent-hover); }
   padding: 28px 16px 12px;
 }
 .app-title {
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.5px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
   background: linear-gradient(135deg, var(--accent), var(--accent2));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -916,11 +917,11 @@ a:hover { color: var(--accent-hover); }
 }
 
 .decade-label {
-  font-size: 0.82rem;
-  font-weight: 800;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 400;
   color: var(--text);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.06em;
 }
 
 .decade-count {
