@@ -518,6 +518,21 @@ const App = (() => {
     document.getElementById('filter-rating').addEventListener('change', onFilterChange);
     document.getElementById('sort-by').addEventListener('change', onFilterChange);
     document.getElementById('catalogue-search').addEventListener('input', loadCatalogue);
+    document.getElementById('catalogue-search-clear').addEventListener('click', () => {
+      const input = document.getElementById('catalogue-search');
+      input.value = '';
+      input.focus();
+      loadCatalogue();
+    });
+
+    document.getElementById('tmdb-search-clear').addEventListener('click', () => {
+      const input = document.getElementById('tmdb-search');
+      input.value = '';
+      input.focus();
+      document.getElementById('search-results').innerHTML = '';
+      document.getElementById('movie-form').style.display = 'none';
+      editingMovie = null;
+    });
 
     document.getElementById('clear-all-data').addEventListener('click', async () => {
       if (confirm('Are you sure? This will permanently delete ALL your movies.')) {

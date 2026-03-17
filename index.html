@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/logo.jpg" type="image/jpeg">
   <link rel="apple-touch-icon" href="icons/logo.jpg">
-  <link rel="stylesheet" href="css/styles.css?v=2026.03.17.2233">
+  <link rel="stylesheet" href="css/styles.css?v=2026.03.17.2237">
 </head>
 <body>
   <header class="app-header">
@@ -36,7 +36,10 @@
     <section id="view-catalogue" class="view">
       <div class="catalogue-controls">
         <div class="catalogue-top-bar">
-          <input type="text" id="catalogue-search" class="search-input" placeholder="Search your movies...">
+          <div class="input-wrap">
+            <input type="text" id="catalogue-search" class="search-input" placeholder="Search your movies...">
+            <button class="input-clear" type="button" id="catalogue-search-clear">&#215;</button>
+          </div>
           <button id="filter-toggle" class="filter-toggle-btn">
             Filters <span id="filter-badge" class="filter-badge" style="display:none;"></span><span class="filter-toggle-arrow">&#9660;</span>
           </button>
@@ -88,7 +91,10 @@
     <!-- Add Movie View -->
     <section id="view-add" class="view" style="display:none;">
       <div class="add-movie-search">
-        <input type="text" id="tmdb-search" class="search-input" placeholder="Search for a movie...">
+        <div class="input-wrap">
+          <input type="text" id="tmdb-search" class="search-input" placeholder="Search for a movie...">
+          <button class="input-clear" type="button" id="tmdb-search-clear">&#215;</button>
+        </div>
         <button id="tmdb-search-btn" class="btn btn-primary">Search</button>
       </div>
       <div id="search-results" class="search-results"></div>
@@ -168,10 +174,10 @@
   <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <script src="js/db.js?v=2026.03.17.2233"></script>
-  <script src="js/api.js?v=2026.03.17.2233"></script>
-  <script src="js/ui.js?v=2026.03.17.2233"></script>
-  <script src="js/stats.js?v=2026.03.17.2233"></script>
-  <script src="js/app.js?v=2026.03.17.2233"></script>
+  <script src="js/db.js?v=2026.03.17.2237"></script>
+  <script src="js/api.js?v=2026.03.17.2237"></script>
+  <script src="js/ui.js?v=2026.03.17.2237"></script>
+  <script src="js/stats.js?v=2026.03.17.2237"></script>
+  <script src="js/app.js?v=2026.03.17.2237"></script>
 </body>
 </html>
