@@ -136,6 +136,58 @@ const UI = (() => {
     `;
   }
 
+  function renderFilmCard(movie) {
+    const poster = movie.poster
+      ? `<img src="${movie.poster}" alt="${escapeHtml(movie.title)}" loading="lazy">`
+      : `<div class="no-poster-lane">${escapeHtml(movie.title)}</div>`;
+
+    const sizeClass = movie.rating === 5 ? 'card-xl' : movie.rating === 4 ? 'card-lg' : 'card-sm';
+    const glowClass = movie.rating === 5 ? ' card-gold' : movie.rating === 4 ? ' card-silver' : '';
+
+    return `
+      <div class="film-card ${sizeClass}${glowClass}" data-id="${movie.id}">
+        ${poster}
+        <div class="film-card-overlay">
+          <span class="film-card-title">${escapeHtml(movie.title)}</span>
+          <span class="film-card-year">${movie.year || ''}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderDecadeLanes(movies) {
+    const groups = {};
+    movies.forEach(m => {
+      const yr = parseInt(m.year);
+      const decade = !isNaN(yr) ? Math.floor(yr / 10) * 10 : null;
+      const key = decade !== null ? `${decade}s` : 'Unknown';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(m);
+    });
+
+    const sortedKeys = Object.keys(groups).sort((a, b) => {
+      if (a === 'Unknown') return 1;
+      if (b === 'Unknown') return -1;
+      return parseInt(b) - parseInt(a);
+    });
+
+    return `<div class="decade-lanes">${
+      sortedKeys.map(decade => {
+        const films = [...groups[decade]].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        const cards = films.map(m => renderFilmCard(m)).join('');
+        return `
+          <div class="decade-section">
+            <div class="decade-header">
+              <span class="decade-label">${decade}</span>
+              <span class="decade-count">${films.length} film${films.length !== 1 ? 's' : ''}</span>
+            </div>
+            <div class="decade-scroll">${cards}</div>
+          </div>
+        `;
+      }).join('')
+    }</div>`;
+  }
+
   function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text || '';
@@ -211,5 +263,5 @@ const UI = (() => {
     });
   }
 
-  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderSearchResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, initCustomSelects, escapeHtml };
+  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderSearchResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, initCustomSelects, escapeHtml };
 })();

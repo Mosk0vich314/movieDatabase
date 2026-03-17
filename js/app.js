@@ -88,8 +88,8 @@ const App = (() => {
         grid.innerHTML = renderGroupedByDirector(filtered);
         setupDirectorGroupToggles();
       } else {
-        grid.classList.add('movie-grid');
-        grid.innerHTML = filtered.map(m => UI.renderMovieCard(m)).join('');
+        grid.classList.remove('movie-grid');
+        grid.innerHTML = UI.renderDecadeLanes(filtered);
       }
     }
   }
@@ -536,7 +536,7 @@ const App = (() => {
     });
 
     document.getElementById('movie-grid').addEventListener('click', (e) => {
-      const card = e.target.closest('.movie-card');
+      const card = e.target.closest('.movie-card, .film-card');
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
     });
 
