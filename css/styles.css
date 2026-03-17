@@ -241,13 +241,58 @@ a:hover { color: var(--accent-hover); }
 
 /* === Catalogue Controls === */
 .catalogue-controls { margin-bottom: 24px; }
-.filter-bar {
+.catalogue-top-bar {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
+  align-items: center;
+  margin-bottom: 10px;
 }
-.catalogue-controls .search-input { max-width: 100%; }
+.catalogue-top-bar .search-input { flex: 1; }
+.filter-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+.filter-toggle-btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); }
+.filter-toggle-btn.active { border-color: var(--border-accent); color: var(--accent); background: rgba(233,69,96,0.08); }
+.filter-toggle-arrow { font-size: 0.6rem; color: var(--text-muted); transition: transform var(--transition); }
+.filter-toggle-btn.open .filter-toggle-arrow { transform: rotate(180deg); }
+.filter-badge {
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+  line-height: 1.5;
+}
+.filter-panel { display: none; margin-bottom: 4px; }
+.filter-panel.open {
+  display: block;
+  animation: panelIn 0.18s ease-out;
+}
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.filter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.filter-grid .custom-select { min-width: 0; width: 100%; }
 
 /* === Movie Grid === */
 .movie-grid {
@@ -751,8 +796,6 @@ a:hover { color: var(--accent-hover); }
   .detail-content { flex-direction: column; }
   .detail-poster { width: 100%; max-width: 250px; }
   .nav-link { padding: 8px 12px; font-size: 0.8rem; }
-  .filter-bar { flex-direction: column; }
-  .filter-select { width: 100%; }
   .bar-label { width: 70px; }
   .app-title { font-size: 1.4rem; }
   .director-group-name { font-size: 1rem; }

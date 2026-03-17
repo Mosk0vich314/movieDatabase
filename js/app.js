@@ -491,10 +491,32 @@ const App = (() => {
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
     });
 
-    document.getElementById('filter-genre').addEventListener('change', loadCatalogue);
-    document.getElementById('filter-director').addEventListener('change', loadCatalogue);
-    document.getElementById('filter-rating').addEventListener('change', loadCatalogue);
-    document.getElementById('sort-by').addEventListener('change', loadCatalogue);
+    document.getElementById('filter-toggle').addEventListener('click', () => {
+      const panel = document.getElementById('filter-panel');
+      const btn = document.getElementById('filter-toggle');
+      panel.classList.toggle('open');
+      btn.classList.toggle('open');
+    });
+
+    function updateFilterBadge() {
+      const active = [
+        document.getElementById('filter-genre').value,
+        document.getElementById('filter-director').value,
+        document.getElementById('filter-rating').value,
+      ].filter(Boolean).length + (document.getElementById('sort-by').value !== 'dateAdded-desc' ? 1 : 0);
+      const badge = document.getElementById('filter-badge');
+      const btn = document.getElementById('filter-toggle');
+      badge.textContent = active;
+      badge.style.display = active > 0 ? 'inline' : 'none';
+      btn.classList.toggle('active', active > 0);
+    }
+
+    function onFilterChange() { loadCatalogue(); updateFilterBadge(); }
+
+    document.getElementById('filter-genre').addEventListener('change', onFilterChange);
+    document.getElementById('filter-director').addEventListener('change', onFilterChange);
+    document.getElementById('filter-rating').addEventListener('change', onFilterChange);
+    document.getElementById('sort-by').addEventListener('change', onFilterChange);
     document.getElementById('catalogue-search').addEventListener('input', loadCatalogue);
 
     document.getElementById('clear-all-data').addEventListener('click', async () => {

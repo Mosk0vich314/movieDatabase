@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/logo.jpg" type="image/jpeg">
   <link rel="apple-touch-icon" href="icons/logo.jpg">
-  <link rel="stylesheet" href="css/styles.css?v=2026.03.17.2227">
+  <link rel="stylesheet" href="css/styles.css?v=2026.03.17.2233">
 </head>
 <body>
   <header class="app-header">
@@ -35,34 +35,41 @@
     <!-- Catalogue View -->
     <section id="view-catalogue" class="view">
       <div class="catalogue-controls">
-        <div class="filter-bar">
-          <select id="filter-genre" class="filter-select">
-            <option value="">All Genres</option>
-          </select>
-          <select id="filter-director" class="filter-select">
-            <option value="">All Directors</option>
-          </select>
-          <select id="filter-rating" class="filter-select">
-            <option value="">All Ratings</option>
-            <option value="5">5 Stars</option>
-            <option value="4">4+ Stars</option>
-            <option value="3">3+ Stars</option>
-            <option value="2">2+ Stars</option>
-            <option value="1">1+ Stars</option>
-          </select>
-          <select id="sort-by" class="filter-select">
-            <option value="dateAdded-desc">Newest Added</option>
-            <option value="dateAdded-asc">Oldest Added</option>
-            <option value="title-asc">Title A-Z</option>
-            <option value="title-desc">Title Z-A</option>
-            <option value="rating-desc">Highest Rated</option>
-            <option value="rating-asc">Lowest Rated</option>
-            <option value="year-desc">Newest Release</option>
-            <option value="year-asc">Oldest Release</option>
-            <option value="director-asc">Group by Director</option>
-          </select>
+        <div class="catalogue-top-bar">
+          <input type="text" id="catalogue-search" class="search-input" placeholder="Search your movies...">
+          <button id="filter-toggle" class="filter-toggle-btn">
+            Filters <span id="filter-badge" class="filter-badge" style="display:none;"></span><span class="filter-toggle-arrow">&#9660;</span>
+          </button>
         </div>
-        <input type="text" id="catalogue-search" class="search-input" placeholder="Search your movies...">
+        <div id="filter-panel" class="filter-panel">
+          <div class="filter-grid">
+            <select id="filter-genre" class="filter-select">
+              <option value="">All Genres</option>
+            </select>
+            <select id="filter-director" class="filter-select">
+              <option value="">All Directors</option>
+            </select>
+            <select id="filter-rating" class="filter-select">
+              <option value="">All Ratings</option>
+              <option value="5">5 Stars</option>
+              <option value="4">4+ Stars</option>
+              <option value="3">3+ Stars</option>
+              <option value="2">2+ Stars</option>
+              <option value="1">1+ Stars</option>
+            </select>
+            <select id="sort-by" class="filter-select">
+              <option value="dateAdded-desc">Newest Added</option>
+              <option value="dateAdded-asc">Oldest Added</option>
+              <option value="title-asc">Title A-Z</option>
+              <option value="title-desc">Title Z-A</option>
+              <option value="rating-desc">Highest Rated</option>
+              <option value="rating-asc">Lowest Rated</option>
+              <option value="year-desc">Newest Release</option>
+              <option value="year-asc">Oldest Release</option>
+              <option value="director-asc">Group by Director</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div id="movie-grid" class="movie-grid"></div>
       <div id="empty-catalogue" class="empty-state" style="display:none;">
@@ -161,10 +168,10 @@
   <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <script src="js/db.js?v=2026.03.17.2227"></script>
-  <script src="js/api.js?v=2026.03.17.2227"></script>
-  <script src="js/ui.js?v=2026.03.17.2227"></script>
-  <script src="js/stats.js?v=2026.03.17.2227"></script>
-  <script src="js/app.js?v=2026.03.17.2227"></script>
+  <script src="js/db.js?v=2026.03.17.2233"></script>
+  <script src="js/api.js?v=2026.03.17.2233"></script>
+  <script src="js/ui.js?v=2026.03.17.2233"></script>
+  <script src="js/stats.js?v=2026.03.17.2233"></script>
+  <script src="js/app.js?v=2026.03.17.2233"></script>
 </body>
 </html>
