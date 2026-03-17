@@ -31,6 +31,7 @@ const App = (() => {
     const viewMap = {
       '#catalogue': 'catalogue',
       '#add': 'add',
+      '#watchlist': 'watchlist',
       '#stats': 'stats',
     };
 
@@ -45,6 +46,7 @@ const App = (() => {
     showView(view);
 
     if (view === 'catalogue') loadCatalogue();
+    if (view === 'watchlist') loadWatchlist();
     if (view === 'stats') loadStats();
     if (view === 'add') resetAddView();
   }
@@ -63,7 +65,7 @@ const App = (() => {
   // --- Catalogue ---
 
   async function loadCatalogue() {
-    const movies = await MovieDB.getAllMovies();
+    const movies = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
     const grid = document.getElementById('movie-grid');
     const empty = document.getElementById('empty-catalogue');
 
@@ -173,6 +175,63 @@ const App = (() => {
     }
 
     return result;
+  }
+
+  // --- Watchlist ---
+
+  async function loadWatchlist() {
+    const movies = (await MovieDB.getAllMovies()).filter(m => m.watchlist);
+    const grid = document.getElementById('watchlist-grid');
+    const empty = document.getElementById('empty-watchlist');
+    if (movies.length === 0) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+    } else {
+      empty.style.display = 'none';
+      grid.innerHTML = movies.map(m => UI.renderWatchlistCard(m)).join('');
+    }
+  }
+
+  async function addToWatchlist(tmdbId) {
+    if (!TMDB.getApiKey()) {
+      UI.showToast('No TMDB API key configured.');
+      return;
+    }
+    try {
+      const details = await TMDB.getMovieDetails(tmdbId);
+      const directors = (details.credits?.crew || [])
+        .filter(c => c.job === 'Director')
+        .map(c => c.name);
+      await MovieDB.addMovie({
+        tmdbId: details.id,
+        title: details.title,
+        year: details.release_date ? details.release_date.substring(0, 4) : '',
+        genres: (details.genres || []).map(g => g.name),
+        directors,
+        poster: TMDB.posterUrl(details.poster_path),
+        watchlist: true,
+      });
+      UI.showToast(`"${details.title}" added to watchlist!`);
+    } catch (err) {
+      UI.showToast(err.message);
+    }
+  }
+
+  async function markAsWatched(id) {
+    const movie = await MovieDB.getMovie(id);
+    if (!movie) return;
+    editingMovie = movie;
+    showView('add');
+    document.getElementById('tmdb-search').value = '';
+    document.getElementById('search-results').innerHTML = '';
+    populateForm({
+      tmdbId: movie.tmdbId,
+      title: movie.title,
+      year: movie.year,
+      genres: movie.genres,
+      directors: movie.directors,
+      poster: movie.poster,
+    });
   }
 
   // --- Add Movie ---
@@ -326,28 +385,37 @@ const App = (() => {
     document.getElementById('movie-detail').innerHTML = UI.renderMovieDetail(movie);
 
     document.getElementById('detail-back').addEventListener('click', () => {
-      window.location.hash = '#catalogue';
+      window.location.hash = movie.watchlist ? '#watchlist' : '#catalogue';
     });
 
-    document.getElementById('detail-edit').addEventListener('click', () => {
-      editingMovie = movie;
-      showView('add');
-      document.getElementById('view-add').style.display = 'block';
-      populateForm({
-        tmdbId: movie.tmdbId,
-        title: movie.title,
-        year: movie.year,
-        genres: movie.genres,
-        directors: movie.directors,
-        poster: movie.poster,
+    if (movie.watchlist) {
+      document.getElementById('detail-mark-watched').addEventListener('click', () => {
+        markAsWatched(movie.id);
       });
-    });
+    } else {
+      document.getElementById('detail-edit').addEventListener('click', () => {
+        editingMovie = movie;
+        showView('add');
+        document.getElementById('view-add').style.display = 'block';
+        populateForm({
+          tmdbId: movie.tmdbId,
+          title: movie.title,
+          year: movie.year,
+          genres: movie.genres,
+          directors: movie.directors,
+          poster: movie.poster,
+        });
+      });
+    }
 
     document.getElementById('detail-delete').addEventListener('click', async () => {
-      if (confirm('Delete this movie from your catalogue?')) {
+      const msg = movie.watchlist
+        ? 'Remove this movie from your watchlist?'
+        : 'Delete this movie from your catalogue?';
+      if (confirm(msg)) {
         await MovieDB.deleteMovie(movie.id);
         UI.showToast('Movie deleted');
-        window.location.hash = '#catalogue';
+        window.location.hash = movie.watchlist ? '#watchlist' : '#catalogue';
       }
     });
   }
@@ -355,7 +423,7 @@ const App = (() => {
   // --- Stats ---
 
   async function loadStats() {
-    const movies = await MovieDB.getAllMovies();
+    const movies = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
     const stats = Stats.compute(movies);
     document.getElementById('stats-container').innerHTML = Stats.render(stats);
   }
@@ -369,8 +437,25 @@ const App = (() => {
     });
 
     document.getElementById('search-results').addEventListener('click', (e) => {
+      const watchlistBtn = e.target.closest('.search-result-watchlist-btn');
+      if (watchlistBtn) {
+        e.stopPropagation();
+        addToWatchlist(parseInt(watchlistBtn.dataset.tmdbId));
+        return;
+      }
       const result = e.target.closest('.search-result');
       if (result) selectSearchResult(parseInt(result.dataset.tmdbId));
+    });
+
+    document.getElementById('watchlist-grid').addEventListener('click', (e) => {
+      const btn = e.target.closest('.watchlist-card-btn');
+      if (btn) {
+        e.stopPropagation();
+        markAsWatched(parseInt(btn.dataset.id));
+        return;
+      }
+      const card = e.target.closest('.movie-card');
+      if (card) window.location.hash = `#detail/${card.dataset.id}`;
     });
 
     document.getElementById('star-rating').addEventListener('click', (e) => {

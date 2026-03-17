@@ -704,6 +704,47 @@ a:hover { color: var(--accent-hover); }
   opacity: 1;
 }
 
+/* === Watchlist === */
+.watchlist-card-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px 10px;
+  background: rgba(124, 92, 252, 0.12);
+  color: var(--accent2);
+  border: 1px solid rgba(124, 92, 252, 0.25);
+  border-radius: var(--radius);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition);
+  letter-spacing: 0.01em;
+}
+.watchlist-card-btn:hover {
+  background: var(--accent2);
+  color: #fff;
+  border-color: var(--accent2);
+  box-shadow: 0 2px 12px var(--accent2-glow);
+}
+.search-result-watchlist-btn {
+  flex-shrink: 0;
+  align-self: center;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 11px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.search-result-watchlist-btn:hover {
+  background: rgba(124, 92, 252, 0.1);
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+
 /* === Responsive === */
 @media (max-width: 600px) {
   .movie-grid, .director-group-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }

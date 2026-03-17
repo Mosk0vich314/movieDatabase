@@ -59,6 +59,29 @@ const UI = (() => {
           <p>${year}</p>
           <p class="search-result-overview">${escapeHtml((result.overview || '').substring(0, 120))}${result.overview && result.overview.length > 120 ? '...' : ''}</p>
         </div>
+        <button class="search-result-watchlist-btn" data-tmdb-id="${result.id}" title="Add to Watchlist">+ Watchlist</button>
+      </div>
+    `;
+  }
+
+  function renderWatchlistCard(movie) {
+    const poster = movie.poster
+      ? `<img src="${movie.poster}" alt="${escapeHtml(movie.title)}" loading="lazy">`
+      : `<div class="no-poster">${escapeHtml(movie.title)}</div>`;
+
+    const directorLine = (movie.directors || []).length > 0
+      ? `<p class="movie-card-director">${escapeHtml(movie.directors[0])}</p>`
+      : '';
+
+    return `
+      <div class="movie-card watchlist-card" data-id="${movie.id}">
+        <div class="movie-card-poster">${poster}</div>
+        <div class="movie-card-info">
+          <h3 class="movie-card-title">${escapeHtml(movie.title)}</h3>
+          <p class="movie-card-year">${movie.year || 'N/A'}</p>
+          ${directorLine}
+          <button class="watchlist-card-btn" data-id="${movie.id}">&#10003; Watched</button>
+        </div>
       </div>
     `;
   }
@@ -86,7 +109,10 @@ const UI = (() => {
           </div>
           ${movie.notes ? `<div class="detail-notes"><label>Notes</label><p>${escapeHtml(movie.notes)}</p></div>` : ''}
           <div class="detail-actions">
-            <button class="btn btn-primary" id="detail-edit" data-id="${movie.id}">Edit</button>
+            ${movie.watchlist
+              ? `<button class="btn btn-primary" id="detail-mark-watched">&#10003; Mark as Watched</button>`
+              : `<button class="btn btn-primary" id="detail-edit" data-id="${movie.id}">Edit</button>`
+            }
             <button class="btn btn-danger" id="detail-delete" data-id="${movie.id}">Delete</button>
           </div>
         </div>
@@ -183,5 +209,5 @@ const UI = (() => {
     });
   }
 
-  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderSearchResult, renderMovieDetail, renderDirectorGroup, initCustomSelects, escapeHtml };
+  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderSearchResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, initCustomSelects, escapeHtml };
 })();

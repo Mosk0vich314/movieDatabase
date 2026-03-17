@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/logo.jpg" type="image/jpeg">
   <link rel="apple-touch-icon" href="icons/logo.jpg">
-  <link rel="stylesheet" href="css/styles.css?v=2026.03.16.2228">
+  <link rel="stylesheet" href="css/styles.css?v=2026.03.17.2227">
 </head>
 <body>
   <header class="app-header">
@@ -22,6 +22,9 @@
     </a>
     <a href="#add" class="nav-link" data-view="add">
       <span class="nav-icon">+</span> Add
+    </a>
+    <a href="#watchlist" class="nav-link" data-view="watchlist">
+      <span class="nav-icon">&#9734;</span> Watchlist
     </a>
     <a href="#stats" class="nav-link" data-view="stats">
       <span class="nav-icon">&#9776;</span> Stats
@@ -64,6 +67,14 @@
       <div id="movie-grid" class="movie-grid"></div>
       <div id="empty-catalogue" class="empty-state" style="display:none;">
         <p>No movies yet! Start by <a href="#add">adding a movie</a>.</p>
+      </div>
+    </section>
+
+    <!-- Watchlist View -->
+    <section id="view-watchlist" class="view" style="display:none;">
+      <div id="watchlist-grid" class="movie-grid"></div>
+      <div id="empty-watchlist" class="empty-state" style="display:none;">
+        <p>No movies on your watchlist. Search for a movie and hit <strong>+ Watchlist</strong> to add one.</p>
       </div>
     </section>
 
@@ -150,10 +161,10 @@
   <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <script src="js/db.js?v=2026.03.16.2228"></script>
-  <script src="js/api.js?v=2026.03.16.2228"></script>
-  <script src="js/ui.js?v=2026.03.16.2228"></script>
-  <script src="js/stats.js?v=2026.03.16.2228"></script>
-  <script src="js/app.js?v=2026.03.16.2228"></script>
+  <script src="js/db.js?v=2026.03.17.2227"></script>
+  <script src="js/api.js?v=2026.03.17.2227"></script>
+  <script src="js/ui.js?v=2026.03.17.2227"></script>
+  <script src="js/stats.js?v=2026.03.17.2227"></script>
+  <script src="js/app.js?v=2026.03.17.2227"></script>
 </body>
 </html>
