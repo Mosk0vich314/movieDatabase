@@ -210,6 +210,7 @@ const App = (() => {
         genres: (details.genres || []).map(g => g.name),
         directors,
         poster: TMDB.posterUrl(details.poster_path),
+        overview: details.overview || '',
         watchlist: true,
       });
       updateWatchlistBadge();
@@ -318,6 +319,7 @@ const App = (() => {
     form.dataset.genres = JSON.stringify(data.genres || []);
     form.dataset.directors = JSON.stringify(data.directors || []);
     form.dataset.poster = data.poster || '';
+    form.dataset.overview = data.overview || '';
 
     if (editingMovie) {
       selectedRating = editingMovie.rating || 0;
@@ -357,6 +359,7 @@ const App = (() => {
       genres: JSON.parse(form.dataset.genres),
       directors: JSON.parse(form.dataset.directors || '[]'),
       poster: form.dataset.poster,
+      overview: form.dataset.overview || '',
       rating: selectedRating,
       notes: document.getElementById('form-notes').value.trim(),
     };
@@ -398,6 +401,18 @@ const App = (() => {
       window.location.hash = '#catalogue';
       return;
     }
+
+    // Backfill overview for movies saved before this field existed
+    if (!movie.overview && movie.tmdbId) {
+      try {
+        const details = await TMDB.getMovieDetails(movie.tmdbId);
+        if (details.overview) {
+          movie.overview = details.overview;
+          await MovieDB.updateMovie(movie);
+        }
+      } catch (_) { /* best-effort */ }
+    }
+
     document.getElementById('movie-detail').innerHTML = UI.renderMovieDetail(movie);
 
     document.getElementById('detail-back').addEventListener('click', () => {

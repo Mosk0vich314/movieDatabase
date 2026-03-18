@@ -561,16 +561,18 @@ a:hover { color: var(--accent-hover); }
 .detail-genres { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .detail-directors { margin-bottom: 16px; }
 .form-directors { margin-top: 6px; }
-.form-overview {
+.form-overview, .detail-overview, .movie-card-overview {
   font-size: 0.85rem;
   color: var(--text-muted);
   line-height: 1.5;
-  margin: 0 0 18px 0;
   padding: 10px 14px;
   background: rgba(255,255,255,0.04);
   border-radius: 8px;
   border-left: 3px solid var(--accent);
 }
+.form-overview { margin: 0 0 18px 0; }
+.detail-overview { margin: 0 0 16px 0; }
+.movie-card-overview { margin: 6px 0 8px 0; font-size: 0.78rem; padding: 6px 10px; }
 .genre-tag {
   display: inline-block;
   padding: 5px 12px;

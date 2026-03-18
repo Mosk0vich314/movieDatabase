@@ -75,6 +75,10 @@ const UI = (() => {
       ? `<p class="movie-card-director">${escapeHtml(movie.directors[0])}</p>`
       : '';
 
+    const overviewLine = movie.overview
+      ? `<p class="movie-card-overview">${escapeHtml(movie.overview.substring(0, 120))}${movie.overview.length > 120 ? '...' : ''}</p>`
+      : '';
+
     return `
       <div class="movie-card watchlist-card" data-id="${movie.id}">
         <div class="movie-card-poster">${poster}</div>
@@ -82,6 +86,7 @@ const UI = (() => {
           <h3 class="movie-card-title">${escapeHtml(movie.title)}</h3>
           <p class="movie-card-year">${movie.year || 'N/A'}</p>
           ${directorLine}
+          ${overviewLine}
           <button class="watchlist-card-btn" data-id="${movie.id}">&#10003; Watched</button>
         </div>
       </div>
@@ -105,6 +110,7 @@ const UI = (() => {
           <h2>${escapeHtml(movie.title)} <span class="detail-year">(${movie.year || 'N/A'})</span></h2>
           <div class="detail-genres">${genres}</div>
           <div class="detail-directors">${renderDirectorBadge(movie.directors)}</div>
+          ${movie.overview ? `<p class="detail-overview">${escapeHtml(movie.overview)}</p>` : ''}
           <div class="detail-rating">
             <label>Your Rating:</label>
             ${renderStars(movie.rating)}
