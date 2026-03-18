@@ -27,7 +27,7 @@ Each JS file is an IIFE that exposes a single module object:
 
 - **`js/api.js` → `TMDB`**: Calls the TMDB REST API. The API key is hardcoded. `searchMovies(query)` returns results; `getMovieDetails(tmdbId)` fetches full details including `credits` (used to extract directors from `credits.crew`).
 
-- **`js/ui.js` → `UI`**: Pure rendering — returns HTML strings from movie objects (`renderMovieCard`, `renderWatchlistCard`, `renderMovieDetail`, `renderSearchResult`, `renderDirectorGroup`). Also owns the custom `<select>` dropdown implementation (`initCustomSelects`) which wraps native selects with styled divs while keeping the native element in the DOM so existing `change` listeners work.
+- **`js/ui.js` → `UI`**: Pure rendering — returns HTML strings from movie objects (`renderMovieCard`, `renderFilmCard`, `renderDecadeLanes`, `renderWatchlistCard`, `renderMovieDetail`, `renderSearchResult`, `renderDirectorGroup`). Also owns the custom `<select>` dropdown implementation (`initCustomSelects`) which wraps native selects with styled divs while keeping the native element in the DOM so existing `change` listeners work.
 
 - **`js/stats.js` → `Stats`**: `compute(movies)` crunches an array of movies into stats including `tasteDNA`; `render(stats)` returns the HTML. Stat numbers use `data-count` attributes for animated counters.
 
@@ -37,7 +37,7 @@ Each JS file is an IIFE that exposes a single module object:
 
 ## Views & features
 
-- **Catalogue** (`#catalogue`): Movie grid with filter panel (genre, director, rating, sort) hidden behind a toggle button. Shows only non-watchlist movies. 5-star cards get a gold glow, 4-star a silver glow.
+- **Catalogue** (`#catalogue`): Decade swim-lanes view. Movies are grouped by release decade (newest first) in horizontal scroll rows. Within each lane, cards are sorted by rating descending. Card size reflects rating: 5★ = `card-xl` (255×170px), 4★ = `card-lg` (215×143px), others = `card-sm` (180×120px). 5-star cards get a gold glow, 4-star a silver glow. Decade labels use Bebas Neue font. Filter panel (genre, director, rating, sort) is hidden behind a toggle button.
 - **Add** (`#add`): TMDB search → select result to open the rate/notes form. Each search result also has a "+ Watchlist" quick-add button.
 - **Watchlist** (`#watchlist`): Movies saved with `watchlist: true`. Each card has a "✓ Watched" button that pre-fills the add form so the user can rate and move it to the catalogue. Nav tab shows a live count badge.
 - **Stats** (`#stats`): Animated counters, Taste DNA card (top genre + director loyalty ratio), bar charts, top rated list. Includes backup/restore and danger zone. Stats exclude watchlist movies.
@@ -68,6 +68,9 @@ Each JS file is an IIFE that exposes a single module object:
 - **Watchlist badge**: `updateWatchlistBadge()` in `app.js` must be called after any operation that adds or removes watchlist movies (addToWatchlist, saveMovie, deleteMovie, importData, clear-all).
 - **Taste DNA**: Derived in `stats.js` from top genre + ratio of unique directors to total movies. Needs ≥ 3 movies to appear.
 - **Star burst**: `spawnStarBurst(starEl)` in `app.js` spawns fixed-position CSS-animated particles. Only fires when rating === 5.
+- **Decade swim-lanes**: `UI.renderDecadeLanes(movies)` groups movies by decade and renders horizontal scroll sections with mosaic-sized `film-card` elements. `UI.renderFilmCard(movie)` renders a poster-only card with a hover overlay showing title, year, and interactive `.fcs` quick-rate stars.
+- **Quick-rate**: Clicking a `.fcs` star on a film card in the catalogue calls `App.quickRateMovie(id, rating, starEl)` — updates the rating in IndexedDB and reloads the catalogue. The click event is intercepted before card navigation. Star burst fires on 5★ quick-rates.
+- **Font**: Bebas Neue (Google Fonts, imported in CSS) is used for decade labels only. App title uses Montserrat 800.
 
 ## Hosting
 
