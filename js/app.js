@@ -489,7 +489,7 @@ const App = (() => {
   function updateClaudeKeyStatus() {
     const el = document.getElementById('claude-key-status');
     if (!el) return;
-    const set = !!localStorage.getItem('gemini_api_key');
+    const set = !!localStorage.getItem('groq_api_key');
     el.textContent = set ? '✓ API key is set' : 'No API key set.';
     el.style.color = set ? '#10b981' : '';
   }
@@ -646,14 +646,14 @@ const App = (() => {
     document.getElementById('claude-key-save').addEventListener('click', () => {
       const val = document.getElementById('claude-key-input').value.trim();
       if (!val) { UI.showToast('Please enter a key first.'); return; }
-      localStorage.setItem('gemini_api_key', val);
+      localStorage.setItem('groq_api_key', val);
       document.getElementById('claude-key-input').value = '';
       updateClaudeKeyStatus();
       UI.showToast('API key saved!');
     });
 
     document.getElementById('claude-key-clear').addEventListener('click', () => {
-      localStorage.removeItem('gemini_api_key');
+      localStorage.removeItem('groq_api_key');
       updateClaudeKeyStatus();
       UI.showToast('API key removed.');
     });

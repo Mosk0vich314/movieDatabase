@@ -1,7 +1,7 @@
 const Claude = (() => {
   async function suggest(movies, query) {
-    const API_KEY = localStorage.getItem('gemini_api_key');
-    if (!API_KEY) throw new Error('No Gemini API key set — add it in the Stats tab.');
+    const API_KEY = localStorage.getItem('groq_api_key');
+    if (!API_KEY) throw new Error('No Groq API key set — add it in the Stats tab.');
     const watched = movies.filter(m => !m.watchlist && m.rating);
 
     const fiveStars = watched.filter(m => m.rating === 5).map(m => m.title);
@@ -43,18 +43,21 @@ Rules:
 
     const userMessage = `${profile}\n\n${query || 'Suggest me something great based on my taste.'}`;
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(API_KEY)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: system }] },
-          contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-          generationConfig: { maxOutputTokens: 1024 },
-        }),
-      }
-    );
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 1024,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: userMessage },
+        ],
+      }),
+    });
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -62,7 +65,7 @@ Rules:
     }
 
     const data = await res.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+    const text = data.choices?.[0]?.message?.content || '[]';
 
     try {
       return JSON.parse(text);
