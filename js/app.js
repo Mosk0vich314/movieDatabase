@@ -301,6 +301,10 @@ const App = (() => {
     const directorsEl = document.getElementById('form-directors');
     directorsEl.innerHTML = UI.renderDirectorBadge(data.directors || []);
 
+    const overviewEl = document.getElementById('form-overview');
+    overviewEl.textContent = data.overview || '';
+    overviewEl.style.display = data.overview ? 'block' : 'none';
+
     const posterEl = document.getElementById('form-poster');
     if (data.poster) {
       posterEl.src = data.poster;
