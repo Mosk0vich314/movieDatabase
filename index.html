@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/logo.jpg" type="image/jpeg">
   <link rel="apple-touch-icon" href="icons/logo.jpg">
-  <link rel="stylesheet" href="css/styles.css?v=2026.03.18.0930">
+  <link rel="stylesheet" href="css/styles.css?v=2026.03.18.0956">
 </head>
 <body>
   <header class="app-header">
@@ -43,16 +43,6 @@
           <button id="filter-toggle" class="filter-toggle-btn">
             Filters <span id="filter-badge" class="filter-badge" style="display:none;"></span><span class="filter-toggle-arrow">&#9660;</span>
           </button>
-          <button id="ai-toggle" class="ai-toggle-btn">&#10022; Ask AI</button>
-        </div>
-        <div id="ai-panel" class="ai-panel">
-          <div class="ai-input-row">
-            <div class="input-wrap">
-              <input type="text" id="ai-query" class="search-input" placeholder="What are you in the mood for? Leave blank to let me decide...">
-            </div>
-            <button id="ai-ask-btn" class="btn btn-primary">Ask</button>
-          </div>
-          <div id="ai-response" class="ai-response"></div>
         </div>
         <div id="filter-panel" class="filter-panel">
           <div class="filter-grid">
@@ -156,17 +146,6 @@
       <div class="stats-manage">
         <hr>
         <div class="stats-manage-section">
-          <h3 class="stats-section-title">Groq AI Key</h3>
-          <p class="form-hint">Paste your Groq API key to enable the Ask AI feature. Stored locally on your device only.</p>
-          <div class="ai-key-row">
-            <input type="password" id="claude-key-input" class="form-input" placeholder="gsk_...">
-            <button id="claude-key-save" class="btn btn-primary">Save</button>
-            <button id="claude-key-clear" class="btn btn-secondary">Remove</button>
-          </div>
-          <p id="claude-key-status" class="form-hint" style="margin-top:8px;"></p>
-        </div>
-        <hr>
-        <div class="stats-manage-section">
           <h3 class="stats-section-title">Backup & Restore</h3>
           <p class="form-hint">Export your movie collection as a JSON file, or import a previously exported backup.</p>
           <div class="settings-actions">
@@ -195,11 +174,10 @@
   <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <script src="js/db.js?v=2026.03.18.0930"></script>
-  <script src="js/api.js?v=2026.03.18.0930"></script>
-  <script src="js/ui.js?v=2026.03.18.0930"></script>
-  <script src="js/stats.js?v=2026.03.18.0930"></script>
-  <script src="js/claude.js?v=2026.03.18.0930"></script>
-  <script src="js/app.js?v=2026.03.18.0930"></script>
+  <script src="js/db.js?v=2026.03.18.0956"></script>
+  <script src="js/api.js?v=2026.03.18.0956"></script>
+  <script src="js/ui.js?v=2026.03.18.0956"></script>
+  <script src="js/stats.js?v=2026.03.18.0956"></script>
+<script src="js/app.js?v=2026.03.18.0956"></script>
 </body>
 </html>

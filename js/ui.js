@@ -160,21 +160,6 @@ const UI = (() => {
     `;
   }
 
-  function renderAISuggestions(suggestions) {
-    if (!suggestions || suggestions.length === 0)
-      return '<p class="ai-empty">No suggestions found — try a different prompt.</p>';
-
-    return suggestions.map((s, i) => `
-      <div class="ai-card" style="--i:${i}">
-        <span class="ai-card-num">${String(i + 1).padStart(2, '0')}</span>
-        <div class="ai-card-body">
-          <div class="ai-card-title">${escapeHtml(s.title)} <span class="ai-card-year">(${escapeHtml(s.year || '')})</span></div>
-          <div class="ai-card-reason">${escapeHtml(s.reason)}</div>
-        </div>
-      </div>
-    `).join('');
-  }
-
   function renderDecadeLanes(movies) {
     const groups = {};
     movies.forEach(m => {
@@ -283,5 +268,5 @@ const UI = (() => {
     });
   }
 
-  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderFilmCard, renderAISuggestions, renderDecadeLanes, renderSearchResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, initCustomSelects, escapeHtml };
+  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderSearchResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, initCustomSelects, escapeHtml };
 })();
