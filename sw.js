@@ -1,4 +1,4 @@
-const CACHE_NAME = 'movie-catalogue-v2026.03.18.0957';
+const CACHE_NAME = 'movie-catalogue-v2026.03.18.2217';
 const ASSETS = [
   './',
   './index.html',
@@ -32,6 +32,11 @@ self.addEventListener('fetch', (e) => {
 
   // Let TMDB API and image requests go to network only
   if (url.hostname.includes('themoviedb.org') || url.hostname.includes('tmdb.org')) {
+    return;
+  }
+
+  // Let Wikipedia/Wikidata API requests go to network only
+  if (url.hostname.includes('wikipedia.org') || url.hostname.includes('wikidata.org')) {
     return;
   }
 

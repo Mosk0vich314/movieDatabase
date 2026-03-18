@@ -6,7 +6,18 @@
       "Bash(gh repo:*)",
       "Bash(where gh:*)",
       "Bash(python tools/deploy.py \"Fix PWA start_url for GitHub Pages subdirectory\")",
-      "Bash(python tools/deploy.py \"Fix manifest start_url with explicit path for Brave\")"
+      "Bash(python tools/deploy.py \"Fix manifest start_url with explicit path for Brave\")",
+      "Bash(curl -s \"https://api.themoviedb.org/3/search/movie?api_key=3dadc2d1f1bf4bd38ef92969098e3051&query=Kairo+Pulse&include_adult=false\")",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s \"https://api.themoviedb.org/3/search/keyword?api_key=3dadc2d1f1bf4bd38ef92969098e3051&query=Kairo\")",
+      "Bash(curl -s \"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=Kairo+film&format=json\")",
+      "Bash(curl -s \"https://www.wikidata.org/w/api.php?action=wbsearchentities&search=Kairo+film&language=en&format=json&type=item&limit=5\")",
+      "Bash(curl -s \"https://en.wikipedia.org/w/api.php?action=query&titles=Pulse+\\(2001+film\\)&prop=pageprops&format=json\")",
+      "Bash(curl -s \"https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q196184&props=claims&format=json\")",
+      "Bash(curl -s \"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=Mr.+Vengeance+film&format=json&srlimit=3\")",
+      "Bash(python -c \":*)",
+      "Bash(curl -s \"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBYk2ruPaqrfd5F7BqrTi6YGYMqqGxyT_8\" -H \"Content-Type: application/json\" -d '{\"\"\"\"contents\"\"\"\":[{\"\"\"\"parts\"\"\"\":[{\"\"\"\"text\"\"\"\":\"\"\"\"Say hello in one word\"\"\"\"}]}]}')",
+      "Bash(python -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\(json.dumps\\(data, indent=2\\)[:500]\\)\")"
     ]
   }
 }
