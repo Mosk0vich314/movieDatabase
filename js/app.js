@@ -376,6 +376,15 @@ const App = (() => {
     }
   }
 
+  async function quickRateMovie(id, rating, starEl) {
+    const movie = await MovieDB.getMovie(id);
+    if (!movie) return;
+    await MovieDB.updateMovie({ ...movie, rating });
+    if (rating === 5 && starEl) spawnStarBurst(starEl);
+    UI.showToast(rating === 5 ? 'Masterpiece! ★★★★★' : `Rated ${rating} star${rating !== 1 ? 's' : ''}`);
+    loadCatalogue();
+  }
+
   // --- Detail ---
 
   async function loadMovieDetail(id) {
@@ -424,6 +433,31 @@ const App = (() => {
     });
   }
 
+  // --- AI Suggestions ---
+
+  async function askAI() {
+    const query = document.getElementById('ai-query').value.trim();
+    const responseEl = document.getElementById('ai-response');
+    const btn = document.getElementById('ai-ask-btn');
+
+    responseEl.innerHTML = '<div class="ai-thinking"><span></span><span></span><span></span></div>';
+    btn.disabled = true;
+
+    try {
+      const movies = await MovieDB.getAllMovies();
+      if (movies.filter(m => !m.watchlist && m.rating).length < 3) {
+        responseEl.innerHTML = '<p class="ai-empty">Rate at least 3 films first so I can understand your taste.</p>';
+        return;
+      }
+      const suggestions = await Claude.suggest(movies, query);
+      responseEl.innerHTML = UI.renderAISuggestions(suggestions);
+    } catch (err) {
+      responseEl.innerHTML = `<p class="ai-error">${UI.escapeHtml(err.message)}</p>`;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   // --- Stats ---
 
   async function loadStats() {
@@ -432,6 +466,7 @@ const App = (() => {
     const container = document.getElementById('stats-container');
     container.innerHTML = Stats.render(stats);
     animateCounters(container);
+    updateClaudeKeyStatus();
   }
 
   function animateCounters(container) {
@@ -449,6 +484,14 @@ const App = (() => {
       }
       requestAnimationFrame(step);
     });
+  }
+
+  function updateClaudeKeyStatus() {
+    const el = document.getElementById('claude-key-status');
+    if (!el) return;
+    const set = !!localStorage.getItem('claude_api_key');
+    el.textContent = set ? '✓ API key is set' : 'No API key set.';
+    el.style.color = set ? '#10b981' : '';
   }
 
   async function updateWatchlistBadge() {
@@ -535,9 +578,26 @@ const App = (() => {
       editingMovie = null;
     });
 
-    document.getElementById('movie-grid').addEventListener('click', (e) => {
+    document.getElementById('movie-grid').addEventListener('click', async (e) => {
+      const star = e.target.closest('.fcs');
+      if (star) {
+        e.stopPropagation();
+        const card = star.closest('.film-card');
+        if (card) await quickRateMovie(parseInt(card.dataset.id), parseInt(star.dataset.value), star);
+        return;
+      }
       const card = e.target.closest('.movie-card, .film-card');
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
+    });
+
+    document.getElementById('ai-toggle').addEventListener('click', () => {
+      document.getElementById('ai-panel').classList.toggle('open');
+      document.getElementById('ai-toggle').classList.toggle('open');
+    });
+
+    document.getElementById('ai-ask-btn').addEventListener('click', askAI);
+    document.getElementById('ai-query').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') askAI();
     });
 
     document.getElementById('filter-toggle').addEventListener('click', () => {
@@ -581,6 +641,21 @@ const App = (() => {
       document.getElementById('search-results').innerHTML = '';
       document.getElementById('movie-form').style.display = 'none';
       editingMovie = null;
+    });
+
+    document.getElementById('claude-key-save').addEventListener('click', () => {
+      const val = document.getElementById('claude-key-input').value.trim();
+      if (!val) { UI.showToast('Please enter a key first.'); return; }
+      localStorage.setItem('claude_api_key', val);
+      document.getElementById('claude-key-input').value = '';
+      updateClaudeKeyStatus();
+      UI.showToast('API key saved!');
+    });
+
+    document.getElementById('claude-key-clear').addEventListener('click', () => {
+      localStorage.removeItem('claude_api_key');
+      updateClaudeKeyStatus();
+      UI.showToast('API key removed.');
     });
 
     document.getElementById('clear-all-data').addEventListener('click', async () => {

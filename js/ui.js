@@ -144,15 +144,35 @@ const UI = (() => {
     const sizeClass = movie.rating === 5 ? 'card-xl' : movie.rating === 4 ? 'card-lg' : 'card-sm';
     const glowClass = movie.rating === 5 ? ' card-gold' : movie.rating === 4 ? ' card-silver' : '';
 
+    const stars = [1,2,3,4,5].map(i =>
+      `<span class="fcs${i <= (movie.rating || 0) ? ' filled' : ''}" data-value="${i}">&#9733;</span>`
+    ).join('');
+
     return `
       <div class="film-card ${sizeClass}${glowClass}" data-id="${movie.id}">
         ${poster}
         <div class="film-card-overlay">
+          <div class="film-card-stars">${stars}</div>
           <span class="film-card-title">${escapeHtml(movie.title)}</span>
           <span class="film-card-year">${movie.year || ''}</span>
         </div>
       </div>
     `;
+  }
+
+  function renderAISuggestions(suggestions) {
+    if (!suggestions || suggestions.length === 0)
+      return '<p class="ai-empty">No suggestions found — try a different prompt.</p>';
+
+    return suggestions.map((s, i) => `
+      <div class="ai-card" style="--i:${i}">
+        <span class="ai-card-num">${String(i + 1).padStart(2, '0')}</span>
+        <div class="ai-card-body">
+          <div class="ai-card-title">${escapeHtml(s.title)} <span class="ai-card-year">(${escapeHtml(s.year || '')})</span></div>
+          <div class="ai-card-reason">${escapeHtml(s.reason)}</div>
+        </div>
+      </div>
+    `).join('');
   }
 
   function renderDecadeLanes(movies) {
@@ -263,5 +283,5 @@ const UI = (() => {
     });
   }
 
-  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderSearchResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, initCustomSelects, escapeHtml };
+  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderFilmCard, renderAISuggestions, renderDecadeLanes, renderSearchResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, initCustomSelects, escapeHtml };
 })();
