@@ -85,44 +85,23 @@ const App = (() => {
       empty.style.display = 'block';
     } else {
       empty.style.display = 'none';
-
-      if (sortVal === 'director-asc') {
-        grid.classList.remove('movie-grid');
-        grid.innerHTML = renderGroupedByDirector(filtered);
-        setupDirectorGroupToggles();
-      } else {
-        grid.classList.remove('movie-grid');
-        grid.innerHTML = UI.renderDecadeLanes(filtered);
-      }
+      grid.classList.remove('movie-grid');
+      grid.innerHTML = renderLanesForSort(filtered, sortVal);
     }
   }
 
-  function renderGroupedByDirector(movies) {
-    const groups = {};
-    movies.forEach(m => {
-      const dirs = (m.directors || []).length > 0 ? m.directors : ['Unknown Director'];
-      dirs.forEach(d => {
-        if (!groups[d]) groups[d] = [];
-        groups[d].push(m);
-      });
-    });
-
-    return Object.keys(groups).sort((a, b) => {
-      if (a === 'Unknown Director') return 1;
-      if (b === 'Unknown Director') return -1;
-      return a.localeCompare(b);
-    }).map(dir => UI.renderDirectorGroup(dir, groups[dir])).join('');
-  }
-
-  function setupDirectorGroupToggles() {
-    document.querySelectorAll('.director-group-header').forEach(header => {
-      header.addEventListener('click', () => {
-        const grid = header.nextElementSibling;
-        const toggle = header.querySelector('.director-group-toggle');
-        grid.classList.toggle('collapsed');
-        toggle.classList.toggle('collapsed');
-      });
-    });
+  function renderLanesForSort(movies, sortVal) {
+    switch (sortVal) {
+      case 'rating-desc':    return UI.renderRatingLanes(movies, 'desc');
+      case 'rating-asc':     return UI.renderRatingLanes(movies, 'asc');
+      case 'title-asc':      return UI.renderTitleLanes(movies, 'asc');
+      case 'title-desc':     return UI.renderTitleLanes(movies, 'desc');
+      case 'year-asc':       return UI.renderDecadeLanes(movies, 'asc');
+      case 'year-desc':      return UI.renderDecadeLanes(movies, 'desc');
+      case 'dateAdded-asc':  return UI.renderDecadeLanes(movies, 'asc');
+      case 'director-asc':   return UI.renderDirectorLanes(movies);
+      default:               return UI.renderDecadeLanes(movies, 'desc');
+    }
   }
 
   function populateGenreFilter(movies) {
@@ -151,34 +130,15 @@ const App = (() => {
     const genre = document.getElementById('filter-genre').value;
     const director = document.getElementById('filter-director').value;
     const minRating = parseInt(document.getElementById('filter-rating').value) || 0;
-    const sortVal = document.getElementById('sort-by').value;
     const search = document.getElementById('catalogue-search').value.toLowerCase().trim();
 
-    let result = movies.filter(m => {
+    return movies.filter(m => {
       if (genre && !(m.genres || []).includes(genre)) return false;
       if (director && !(m.directors || []).includes(director)) return false;
       if (minRating && (m.rating || 0) < minRating) return false;
       if (search && !m.title.toLowerCase().includes(search)) return false;
       return true;
     });
-
-    if (sortVal !== 'director-asc') {
-      const [sortField, sortDir] = sortVal.split('-');
-      result.sort((a, b) => {
-        let va, vb;
-        switch (sortField) {
-          case 'title': va = (a.title || '').toLowerCase(); vb = (b.title || '').toLowerCase(); break;
-          case 'rating': va = a.rating || 0; vb = b.rating || 0; break;
-          case 'year': va = a.year || 0; vb = b.year || 0; break;
-          default: va = a.dateAdded || ''; vb = b.dateAdded || '';
-        }
-        if (va < vb) return sortDir === 'asc' ? -1 : 1;
-        if (va > vb) return sortDir === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
   }
 
   // --- Watchlist ---

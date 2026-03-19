@@ -166,7 +166,21 @@ const UI = (() => {
     `;
   }
 
-  function renderDecadeLanes(movies) {
+  function renderLanes(sections) {
+    return `<div class="decade-lanes">${
+      sections.map(({ label, films }) => `
+        <div class="decade-section">
+          <div class="decade-header">
+            <span class="decade-label">${label}</span>
+            <span class="decade-count">${films.length} film${films.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div class="decade-scroll">${films.map(m => renderFilmCard(m)).join('')}</div>
+        </div>
+      `).join('')
+    }</div>`;
+  }
+
+  function renderDecadeLanes(movies, dir = 'desc') {
     const groups = {};
     movies.forEach(m => {
       const yr = parseInt(m.year);
@@ -176,27 +190,73 @@ const UI = (() => {
       groups[key].push(m);
     });
 
-    const sortedKeys = Object.keys(groups).sort((a, b) => {
+    const keys = Object.keys(groups).sort((a, b) => {
       if (a === 'Unknown') return 1;
       if (b === 'Unknown') return -1;
-      return parseInt(b) - parseInt(a);
+      return dir === 'asc' ? parseInt(a) - parseInt(b) : parseInt(b) - parseInt(a);
     });
 
-    return `<div class="decade-lanes">${
-      sortedKeys.map(decade => {
-        const films = [...groups[decade]].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        const cards = films.map(m => renderFilmCard(m)).join('');
-        return `
-          <div class="decade-section">
-            <div class="decade-header">
-              <span class="decade-label">${decade}</span>
-              <span class="decade-count">${films.length} film${films.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div class="decade-scroll">${cards}</div>
-          </div>
-        `;
-      }).join('')
-    }</div>`;
+    return renderLanes(keys.map(k => ({
+      label: k,
+      films: [...groups[k]].sort((a, b) => (b.rating || 0) - (a.rating || 0))
+    })));
+  }
+
+  function renderRatingLanes(movies, dir = 'desc') {
+    const groups = { 5: [], 4: [], 3: [], 2: [], 1: [], 0: [] };
+    movies.forEach(m => {
+      const r = m.rating >= 1 && m.rating <= 5 ? m.rating : 0;
+      groups[r].push(m);
+    });
+    const order = dir === 'desc' ? [5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5];
+    return renderLanes(
+      order.filter(r => groups[r].length > 0).map(r => ({
+        label: r === 0 ? 'Unrated' : '&#9733;'.repeat(r),
+        films: [...groups[r]].sort((a, b) => (b.year || 0) - (a.year || 0))
+      }))
+    );
+  }
+
+  function renderTitleLanes(movies, dir = 'asc') {
+    const groups = {};
+    movies.forEach(m => {
+      const first = (m.title || '#')[0].toUpperCase();
+      const key = /[A-Z]/.test(first) ? first : '#';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(m);
+    });
+    const keys = Object.keys(groups).sort((a, b) => {
+      if (a === '#') return 1;
+      if (b === '#') return -1;
+      return dir === 'asc' ? a.localeCompare(b) : b.localeCompare(a);
+    });
+    return renderLanes(keys.map(k => ({
+      label: k,
+      films: [...groups[k]].sort((a, b) => {
+        const ta = (a.title || '').toLowerCase(), tb = (b.title || '').toLowerCase();
+        return dir === 'asc' ? ta.localeCompare(tb) : tb.localeCompare(ta);
+      })
+    })));
+  }
+
+  function renderDirectorLanes(movies) {
+    const groups = {};
+    movies.forEach(m => {
+      const dirs = (m.directors || []).length > 0 ? m.directors : ['Unknown Director'];
+      dirs.forEach(d => {
+        if (!groups[d]) groups[d] = [];
+        groups[d].push(m);
+      });
+    });
+    const keys = Object.keys(groups).sort((a, b) => {
+      if (a === 'Unknown Director') return 1;
+      if (b === 'Unknown Director') return -1;
+      return a.localeCompare(b);
+    });
+    return renderLanes(keys.map(k => ({
+      label: escapeHtml(k),
+      films: [...groups[k]].sort((a, b) => (b.year || 0) - (a.year || 0))
+    })));
   }
 
   function escapeHtml(text) {
@@ -274,5 +334,5 @@ const UI = (() => {
     });
   }
 
-  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderSearchResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, initCustomSelects, escapeHtml };
+  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, initCustomSelects, escapeHtml };
 })();
