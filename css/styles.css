@@ -499,6 +499,43 @@ a:hover { color: var(--accent-hover); }
 .add-movie-search { display: flex; gap: 8px; }
 .add-movie-search .input-wrap { flex: 1; }
 
+/* === Search Autocomplete === */
+.search-autocomplete {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius);
+  z-index: 200;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.search-autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: background var(--transition);
+  border-bottom: 1px solid var(--border);
+}
+.search-autocomplete-item:last-child { border-bottom: none; }
+.search-autocomplete-item:hover,
+.search-autocomplete-item.ac-focused { background: rgba(233, 69, 96, 0.08); }
+.search-autocomplete-item img {
+  width: 30px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: var(--bg-input);
+}
+.ac-thumb-placeholder { width: 30px; height: 45px; flex-shrink: 0; }
+.ac-title { font-size: 0.88rem; font-weight: 600; }
+.ac-year { font-size: 0.78rem; color: var(--text-muted); margin-top: 1px; }
+
 /* === Movie Form === */
 .movie-form { margin-top: 20px; }
 .form-movie-preview {

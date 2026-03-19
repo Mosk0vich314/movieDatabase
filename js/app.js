@@ -2,6 +2,9 @@ const App = (() => {
   let currentView = 'catalogue';
   let selectedRating = 0;
   let editingMovie = null;
+  let acDebounce = null;
+  let acResults = [];
+  let acFocusIdx = -1;
 
   function init() {
     MovieDB.open().then(() => {
@@ -245,10 +248,56 @@ const App = (() => {
     document.getElementById('movie-form').style.display = 'none';
     editingMovie = null;
     selectedRating = 0;
+    closeAutocomplete();
+  }
+
+  // --- Autocomplete ---
+
+  async function fetchAutocomplete(q) {
+    if (!TMDB.getApiKey()) return;
+    try {
+      const results = await TMDB.searchMovies(q, true);
+      acResults = results.slice(0, 6);
+      renderAutocomplete();
+    } catch (_) { closeAutocomplete(); }
+  }
+
+  function renderAutocomplete() {
+    const container = document.getElementById('search-autocomplete');
+    if (acResults.length === 0) { closeAutocomplete(); return; }
+    acFocusIdx = -1;
+    container.innerHTML = acResults.map((r, i) => {
+      const year = r.release_date ? r.release_date.substring(0, 4) : '';
+      const thumb = r.poster_path ? TMDB.posterUrl(r.poster_path, 'w92') : '';
+      const title = r.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return `<div class="search-autocomplete-item" data-idx="${i}">
+        ${thumb ? `<img src="${thumb}" alt="">` : '<div class="ac-thumb-placeholder"></div>'}
+        <div><div class="ac-title">${title}</div>${year ? `<div class="ac-year">${year}</div>` : ''}</div>
+      </div>`;
+    }).join('');
+    container.style.display = 'block';
+  }
+
+  function closeAutocomplete() {
+    const container = document.getElementById('search-autocomplete');
+    if (container) { container.innerHTML = ''; container.style.display = 'none'; }
+    acResults = [];
+    acFocusIdx = -1;
+    clearTimeout(acDebounce);
+  }
+
+  function acMoveFocus(dir) {
+    const container = document.getElementById('search-autocomplete');
+    const items = container.querySelectorAll('.search-autocomplete-item');
+    if (!items.length) return;
+    if (acFocusIdx >= 0) items[acFocusIdx].classList.remove('ac-focused');
+    acFocusIdx = Math.max(0, Math.min(acResults.length - 1, acFocusIdx + dir));
+    items[acFocusIdx].classList.add('ac-focused');
   }
 
   async function searchTMDB() {
     const query = document.getElementById('tmdb-search').value.trim();
+    closeAutocomplete();
     if (!query) return;
 
     if (!TMDB.getApiKey()) {
@@ -509,7 +558,34 @@ const App = (() => {
   function setupEventListeners() {
     document.getElementById('tmdb-search-btn').addEventListener('click', searchTMDB);
     document.getElementById('tmdb-search').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); searchTMDB(); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); acMoveFocus(1); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); acMoveFocus(-1); return; }
+      if (e.key === 'Escape') { closeAutocomplete(); return; }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (acFocusIdx >= 0 && acResults[acFocusIdx]) {
+          const r = acResults[acFocusIdx];
+          closeAutocomplete();
+          selectSearchResult(r.id);
+        } else {
+          searchTMDB();
+        }
+      }
+    });
+    document.getElementById('tmdb-search').addEventListener('input', () => {
+      clearTimeout(acDebounce);
+      const q = document.getElementById('tmdb-search').value.trim();
+      if (q.length < 2) { closeAutocomplete(); return; }
+      acDebounce = setTimeout(() => fetchAutocomplete(q), 300);
+    });
+    document.getElementById('tmdb-search').addEventListener('blur', () => {
+      setTimeout(closeAutocomplete, 150);
+    });
+    document.getElementById('search-autocomplete').addEventListener('mousedown', (e) => {
+      const item = e.target.closest('.search-autocomplete-item');
+      if (!item) return;
+      const r = acResults[parseInt(item.dataset.idx)];
+      if (r) { closeAutocomplete(); selectSearchResult(r.id); }
     });
 
     document.getElementById('search-results').addEventListener('click', (e) => {
@@ -616,6 +692,7 @@ const App = (() => {
       document.getElementById('search-results').innerHTML = '';
       document.getElementById('movie-form').style.display = 'none';
       editingMovie = null;
+      closeAutocomplete();
     });
 
 

@@ -12,7 +12,7 @@ const TMDB = (() => {
     // No-op: key is now built-in
   }
 
-  async function searchMovies(query) {
+  async function searchMovies(query, quick = false) {
     const key = getApiKey();
     if (!key) throw new Error('No TMDB API key set. Go to Settings to add one.');
     const url = `${BASE_URL}/search/movie?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(query)}&include_adult=false`;
@@ -24,7 +24,7 @@ const TMDB = (() => {
     // If TMDB results are weak, try Wikipedia fallback to find films
     // by romanized/alternate titles that TMDB doesn't index
     const hasStrongMatch = tmdbResults.some(r => r.popularity > 5);
-    if (tmdbResults.length < 3 || !hasStrongMatch) {
+    if (!quick && (tmdbResults.length < 3 || !hasStrongMatch)) {
       try {
         const wikiResults = await _wikiSearchMovies(query, key);
         // Merge wiki results, skipping duplicates already in TMDB results
