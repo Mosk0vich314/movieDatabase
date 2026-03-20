@@ -25,20 +25,22 @@ Each JS file is an IIFE that exposes a single module object:
 
 - **`js/db.js` → `MovieDB`**: IndexedDB wrapper. All persistence goes through here: `addMovie`, `updateMovie`, `deleteMovie`, `getMovie`, `getAllMovies`, `exportData`, `importData`.
 
-- **`js/api.js` → `TMDB`**: Calls the TMDB REST API. The API key is hardcoded. `searchMovies(query)` returns results; `getMovieDetails(tmdbId)` fetches full details including `credits` (used to extract directors from `credits.crew`).
+- **`js/api.js` → `TMDB`**: Calls the TMDB REST API. The API key is hardcoded. `searchMovies(query)` returns results; `getMovieDetails(tmdbId)` fetches full details including `credits` (used to extract directors from `credits.crew`). `searchPerson(query)` searches for directors by name (filters to `known_for_department === 'Directing'`). `getPersonMovieCredits(personId)` returns the full crew credits for a person. `profileUrl(path)` is the person-photo equivalent of `posterUrl`.
 
-- **`js/ui.js` → `UI`**: Pure rendering — returns HTML strings from movie objects (`renderMovieCard`, `renderFilmCard`, `renderDecadeLanes`, `renderWatchlistCard`, `renderMovieDetail`, `renderSearchResult`, `renderDirectorGroup`). Also owns the custom `<select>` dropdown implementation (`initCustomSelects`) which wraps native selects with styled divs while keeping the native element in the DOM so existing `change` listeners work.
+- **`js/ui.js` → `UI`**: Pure rendering — returns HTML strings from movie objects (`renderMovieCard`, `renderFilmCard`, `renderDecadeLanes`, `renderWatchlistCard`, `renderMovieDetail`, `renderSearchResult`, `renderDirectorGroup`). Also: `renderPersonResult(person)` renders a director search result row (uses `data-person-id`); `renderFilmographyResult(film, addedSet)` renders a filmography row with an "Added" label and `.search-result--added` class when the film's TMDB ID is in `addedSet`. Also owns the custom `<select>` dropdown implementation (`initCustomSelects`) which wraps native selects with styled divs while keeping the native element in the DOM so existing `change` listeners work.
 
 - **`js/stats.js` → `Stats`**: `compute(movies)` crunches an array of movies into stats including `tasteDNA`; `render(stats)` returns the HTML. Stat numbers use `data-count` attributes for animated counters.
 
-- **`js/app.js` → `App`**: The main controller. Owns hash-based routing (`#catalogue`, `#add`, `#watchlist`, `#stats`, `#detail/:id`), all event listeners, filter/sort logic, and wires together `MovieDB`, `TMDB`, `UI`, and `Stats`. Also contains `animateCounters`, `updateWatchlistBadge`, and `spawnStarBurst`.
+- **`js/app.js` → `App`**: The main controller. Owns hash-based routing (`#catalogue`, `#add`, `#watchlist`, `#stats`, `#detail/:id`), all event listeners, filter/sort logic, and wires together `MovieDB`, `TMDB`, `UI`, and `Stats`. Also contains `animateCounters`, `updateWatchlistBadge`, and `spawnStarBurst`. Module-level `searchMode` (`'movie'|'director'`) and `selectedDirectorName` track Add-view state; `searchDirector()` and `loadFilmography(personId, name)` handle the director search flow.
 
 - **`sw.js`**: Service worker. Caches all local assets at install. Network-first strategy for same-origin requests (falls back to cache offline). TMDB API/image requests bypass the cache entirely.
 
 ## Views & features
 
 - **Catalogue** (`#catalogue`): Decade swim-lanes view. Movies are grouped by release decade (newest first) in horizontal scroll rows. Within each lane, cards are sorted by rating descending. Card size reflects rating: 5★ = `card-xl` (255×170px), 4★ = `card-lg` (215×143px), others = `card-sm` (180×120px). 5-star cards get a gold glow, 4-star a silver glow. Decade labels use Bebas Neue font. Filter panel (genre, director, rating, sort) is hidden behind a toggle button.
-- **Add** (`#add`): TMDB search → select result to open the rate/notes form. Each search result also has a "+ Watchlist" quick-add button.
+- **Add** (`#add`): A **Movie / Director** pill toggle (`#search-mode-toggle`, `.smt-btn`) switches between two search modes.
+  - *Movie mode*: TMDB text search, or paste a `themoviedb.org/movie/<id>` URL to fetch a film directly by ID. Each result has a "+ Watchlist" quick-add button.
+  - *Director mode*: Search for a director by name → select a person → see their full filmography (sorted newest-first, deduplicated). Films already in the user's DB are greyed out (`.search-result--added`) with an "Added" label instead of the watchlist button. A "← Name" back button returns to the person list. Autocomplete is suppressed in director mode.
 - **Watchlist** (`#watchlist`): Movies saved with `watchlist: true`. Each card has a "✓ Watched" button that pre-fills the add form so the user can rate and move it to the catalogue. Nav tab shows a live count badge.
 - **Stats** (`#stats`): Animated counters, Taste DNA card (top genre + director loyalty ratio), bar charts, top rated list. Includes backup/restore and danger zone. Stats exclude watchlist movies.
 - **Detail** (`#detail/:id`): Full movie info. Watchlist movies show "Mark as Watched" instead of "Edit".
@@ -70,6 +72,8 @@ Each JS file is an IIFE that exposes a single module object:
 - **Star burst**: `spawnStarBurst(starEl)` in `app.js` spawns fixed-position CSS-animated particles. Only fires when rating === 5.
 - **Decade swim-lanes**: `UI.renderDecadeLanes(movies)` groups movies by decade and renders horizontal scroll sections with mosaic-sized `film-card` elements. `UI.renderFilmCard(movie)` renders a poster-only card with a hover overlay showing title, year, and interactive `.fcs` quick-rate stars.
 - **Quick-rate**: Clicking a `.fcs` star on a film card in the catalogue calls `App.quickRateMovie(id, rating, starEl)` — updates the rating in IndexedDB and reloads the catalogue. The click event is intercepted before card navigation. Star burst fires on 5★ quick-rates.
+- **Direct TMDB URL entry**: In Movie mode, if the search input contains a `themoviedb.org/movie/<id>` URL, `searchTMDB()` extracts the ID and calls `selectSearchResult()` directly, bypassing the text search. Useful for obscure films that don't surface in popularity-ranked results.
+- **Director filmography**: `#search-results` click handler checks `data-person-id` before `data-tmdb-id`, so person rows route to `loadFilmography()` while film rows route to `selectSearchResult()`. Already-added films use `pointer-events: none` via `.search-result--added` so they never fire click events.
 - **Font**: Bebas Neue (Google Fonts, imported in CSS) is used for decade labels only. App title uses Montserrat 800.
 
 ## Hosting
