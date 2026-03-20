@@ -1,5 +1,4 @@
-const CACHE_NAME = 'movie-catalogue-v2026.03.20.1316';
-const ASSETS = [
+const CACHE_NAME = 'movie-catalogue-v2026.03.21.0039';const ASSETS = [
   './',
   './index.html',
   './css/styles.css',

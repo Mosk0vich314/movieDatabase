@@ -265,6 +265,14 @@ const App = (() => {
       return;
     }
 
+    // Direct TMDB URL or numeric ID lookup — bypasses search entirely
+    const tmdbUrlMatch = query.match(/themoviedb\.org\/movie\/(\d+)/);
+    const directId = tmdbUrlMatch ? parseInt(tmdbUrlMatch[1]) : null;
+    if (directId) {
+      selectSearchResult(directId);
+      return;
+    }
+
     try {
       const results = await TMDB.searchMovies(query);
       const container = document.getElementById('search-results');

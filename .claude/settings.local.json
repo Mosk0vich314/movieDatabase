@@ -17,7 +17,10 @@
       "Bash(curl -s \"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=Mr.+Vengeance+film&format=json&srlimit=3\")",
       "Bash(python -c \":*)",
       "Bash(curl -s \"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBYk2ruPaqrfd5F7BqrTi6YGYMqqGxyT_8\" -H \"Content-Type: application/json\" -d '{\"\"\"\"contents\"\"\"\":[{\"\"\"\"parts\"\"\"\":[{\"\"\"\"text\"\"\"\":\"\"\"\"Say hello in one word\"\"\"\"}]}]}')",
-      "Bash(python -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\(json.dumps\\(data, indent=2\\)[:500]\\)\")"
+      "Bash(python -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\(json.dumps\\(data, indent=2\\)[:500]\\)\")",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:api.themoviedb.org)",
+      "Bash(python tools/deploy.py \"Support pasting themoviedb.org URLs to add films directly by ID\")"
     ]
   }
 }
