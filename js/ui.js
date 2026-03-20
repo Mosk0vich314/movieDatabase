@@ -259,6 +259,50 @@ const UI = (() => {
     })));
   }
 
+  function renderPersonResult(person) {
+    const photo = person.profile_path
+      ? `<img src="${TMDB.profileUrl(person.profile_path)}" alt="${escapeHtml(person.name)}">`
+      : `<div class="no-poster-sm">?</div>`;
+    const knownFor = (person.known_for || [])
+      .slice(0, 2)
+      .map(f => escapeHtml(f.title || f.name || ''))
+      .filter(Boolean)
+      .join(', ');
+    return `
+      <div class="search-result" data-person-id="${person.id}">
+        <div class="search-result-poster">${photo}</div>
+        <div class="search-result-info">
+          <h4>${escapeHtml(person.name)}</h4>
+          <p>Director</p>
+          ${knownFor ? `<p class="search-result-overview">Known for: ${knownFor}</p>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderFilmographyResult(film, addedSet) {
+    const year = film.release_date ? film.release_date.substring(0, 4) : 'N/A';
+    const poster = film.poster_path
+      ? `<img src="${TMDB.posterUrl(film.poster_path, 'w92')}" alt="${escapeHtml(film.title)}">`
+      : `<div class="no-poster-sm">No Poster</div>`;
+    const isAdded = addedSet && addedSet.has(String(film.id));
+    const addedClass = isAdded ? ' search-result--added' : '';
+    const action = isAdded
+      ? `<span class="search-result-added-label">Added</span>`
+      : `<button class="search-result-watchlist-btn" data-tmdb-id="${film.id}" title="Add to Watchlist">+ Watchlist</button>`;
+    return `
+      <div class="search-result${addedClass}" data-tmdb-id="${film.id}">
+        <div class="search-result-poster">${poster}</div>
+        <div class="search-result-info">
+          <h4>${escapeHtml(film.title)}</h4>
+          <p>${year}</p>
+          <p class="search-result-overview">${escapeHtml((film.overview || '').substring(0, 120))}${film.overview && film.overview.length > 120 ? '...' : ''}</p>
+        </div>
+        ${action}
+      </div>
+    `;
+  }
+
   function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text || '';
@@ -334,5 +378,5 @@ const UI = (() => {
     });
   }
 
-  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, initCustomSelects, escapeHtml };
+  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, initCustomSelects, escapeHtml };
 })();

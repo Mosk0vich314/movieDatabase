@@ -5,6 +5,8 @@ const App = (() => {
   let acDebounce = null;
   let acResults = [];
   let acFocusIdx = -1;
+  let searchMode = 'movie';
+  let selectedDirectorName = '';
 
   function init() {
     MovieDB.open().then(() => {
@@ -209,6 +211,12 @@ const App = (() => {
     editingMovie = null;
     selectedRating = 0;
     closeAutocomplete();
+    searchMode = 'movie';
+    selectedDirectorName = '';
+    document.querySelectorAll('.smt-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.mode === 'movie')
+    );
+    document.getElementById('tmdb-search').placeholder = 'Search or paste a themoviedb.org URL...';
   }
 
   // --- Autocomplete ---
@@ -281,6 +289,58 @@ const App = (() => {
       } else {
         container.innerHTML = results.slice(0, 10).map(r => UI.renderSearchResult(r)).join('');
       }
+    } catch (err) {
+      UI.showToast(err.message);
+    }
+  }
+
+  async function searchDirector() {
+    const query = document.getElementById('tmdb-search').value.trim();
+    closeAutocomplete();
+    if (!query) return;
+    try {
+      const results = await TMDB.searchPerson(query);
+      const container = document.getElementById('search-results');
+      if (results.length === 0) {
+        container.innerHTML = '<p class="no-results">No directors found.</p>';
+      } else {
+        container.innerHTML = results.slice(0, 8).map(r => UI.renderPersonResult(r)).join('');
+      }
+    } catch (err) {
+      UI.showToast(err.message);
+    }
+  }
+
+  async function loadFilmography(personId, personName) {
+    selectedDirectorName = personName;
+    const container = document.getElementById('search-results');
+    container.innerHTML = '<p class="no-results">Loading filmography...</p>';
+    try {
+      const [credits, allMovies] = await Promise.all([
+        TMDB.getPersonMovieCredits(personId),
+        MovieDB.getAllMovies(),
+      ]);
+      const addedSet = new Set(allMovies.map(m => String(m.tmdbId)));
+      const seen = new Set();
+      const directed = (credits.crew || [])
+        .filter(c => c.job === 'Director' && c.release_date && !seen.has(c.id) && seen.add(c.id))
+        .sort((a, b) => b.release_date.localeCompare(a.release_date));
+
+      if (directed.length === 0) {
+        container.innerHTML = '<p class="no-results">No directed films found.</p>';
+        return;
+      }
+      const header = `<div class="filmography-header">
+        <button class="btn btn-secondary btn-back" id="filmography-back">&larr; ${UI.escapeHtml(personName)}</button>
+        <span class="filmography-count">${directed.length} film${directed.length !== 1 ? 's' : ''}</span>
+      </div>`;
+      container.innerHTML = header + directed.map(f => UI.renderFilmographyResult(f, addedSet)).join('');
+      document.getElementById('filmography-back').addEventListener('click', () => {
+        selectedDirectorName = '';
+        container.innerHTML = '';
+        document.getElementById('tmdb-search').value = '';
+        document.getElementById('tmdb-search').focus();
+      });
     } catch (err) {
       UI.showToast(err.message);
     }
@@ -524,7 +584,9 @@ const App = (() => {
   // --- Event Listeners ---
 
   function setupEventListeners() {
-    document.getElementById('tmdb-search-btn').addEventListener('click', searchTMDB);
+    document.getElementById('tmdb-search-btn').addEventListener('click', () => {
+      if (searchMode === 'director') searchDirector(); else searchTMDB();
+    });
     document.getElementById('tmdb-search').addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown') { e.preventDefault(); acMoveFocus(1); return; }
       if (e.key === 'ArrowUp') { e.preventDefault(); acMoveFocus(-1); return; }
@@ -535,12 +597,15 @@ const App = (() => {
           const r = acResults[acFocusIdx];
           closeAutocomplete();
           selectSearchResult(r.id);
+        } else if (searchMode === 'director') {
+          searchDirector();
         } else {
           searchTMDB();
         }
       }
     });
     document.getElementById('tmdb-search').addEventListener('input', () => {
+      if (searchMode === 'director') { closeAutocomplete(); return; }
       clearTimeout(acDebounce);
       const q = document.getElementById('tmdb-search').value.trim();
       if (q.length < 2) { closeAutocomplete(); return; }
@@ -556,6 +621,24 @@ const App = (() => {
       if (r) { closeAutocomplete(); selectSearchResult(r.id); }
     });
 
+    document.getElementById('search-mode-toggle').addEventListener('click', (e) => {
+      const btn = e.target.closest('.smt-btn');
+      if (!btn || btn.classList.contains('active')) return;
+      searchMode = btn.dataset.mode;
+      document.querySelectorAll('.smt-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.mode === searchMode)
+      );
+      document.getElementById('tmdb-search').value = '';
+      document.getElementById('search-results').innerHTML = '';
+      document.getElementById('movie-form').style.display = 'none';
+      editingMovie = null;
+      selectedDirectorName = '';
+      closeAutocomplete();
+      document.getElementById('tmdb-search').placeholder =
+        searchMode === 'director' ? 'Search for a director...' : 'Search or paste a themoviedb.org URL...';
+      document.getElementById('tmdb-search').focus();
+    });
+
     document.getElementById('search-results').addEventListener('click', (e) => {
       const watchlistBtn = e.target.closest('.search-result-watchlist-btn');
       if (watchlistBtn) {
@@ -563,7 +646,13 @@ const App = (() => {
         addToWatchlist(parseInt(watchlistBtn.dataset.tmdbId));
         return;
       }
-      const result = e.target.closest('.search-result');
+      const personResult = e.target.closest('.search-result[data-person-id]');
+      if (personResult) {
+        const name = personResult.querySelector('h4').textContent;
+        loadFilmography(parseInt(personResult.dataset.personId), name);
+        return;
+      }
+      const result = e.target.closest('.search-result[data-tmdb-id]');
       if (result) selectSearchResult(parseInt(result.dataset.tmdbId));
     });
 
