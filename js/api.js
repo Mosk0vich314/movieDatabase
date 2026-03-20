@@ -21,10 +21,14 @@ const TMDB = (() => {
     const data = await res.json();
     const tmdbResults = data.results || [];
 
-    // If TMDB results are weak, try Wikipedia fallback to find films
-    // by romanized/alternate titles that TMDB doesn't index
+    // If TMDB results are weak or none match the query title, try Wikipedia fallback
+    // to find films by romanized/alternate titles that TMDB doesn't index
     const hasStrongMatch = tmdbResults.some(r => r.popularity > 5);
-    if (!quick && (tmdbResults.length < 3 || !hasStrongMatch)) {
+    const q = query.toLowerCase();
+    const hasTitleMatch = tmdbResults.some(r =>
+      r.title?.toLowerCase().includes(q) || r.original_title?.toLowerCase().includes(q)
+    );
+    if (!quick && (tmdbResults.length < 3 || !hasStrongMatch || !hasTitleMatch)) {
       try {
         const wikiResults = await _wikiSearchMovies(query, key);
         // Merge wiki results, skipping duplicates already in TMDB results
