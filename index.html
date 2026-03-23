@@ -94,9 +94,13 @@
 
     <!-- Add Movie View -->
     <section id="view-add" class="view" style="display:none;">
+      <div class="search-mode-toggle" id="search-mode-toggle">
+        <button class="smt-btn active" data-mode="movie">Movie</button>
+        <button class="smt-btn" data-mode="director">Director</button>
+      </div>
       <div class="add-movie-search">
         <div class="input-wrap">
-          <input type="text" id="tmdb-search" class="search-input" placeholder="Search for a movie..." autocomplete="off">
+          <input type="text" id="tmdb-search" class="search-input" placeholder="Search or paste a themoviedb.org URL..." autocomplete="off">
           <button class="input-clear" type="button" id="tmdb-search-clear">&#215;</button>
           <div id="search-autocomplete" class="search-autocomplete" style="display:none;"></div>
         </div>
@@ -188,6 +192,6 @@
   <script src="js/api.js?v=2026.03.23.1027"></script>
   <script src="js/ui.js?v=2026.03.23.1027"></script>
   <script src="js/stats.js?v=2026.03.23.1027"></script>
-<script src="js/app.js?v=2026.03.23.1027"></script>
+  <script src="js/app.js?v=2026.03.23.1027"></script>
 </body>
 </html>

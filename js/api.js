@@ -119,10 +119,34 @@ const TMDB = (() => {
     return res.json();
   }
 
+  async function searchPerson(query) {
+    const key = getApiKey();
+    if (!key) throw new Error('No TMDB API key set.');
+    const url = `${BASE_URL}/search/person?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(query)}&include_adult=false`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`TMDB person search failed: ${res.status}`);
+    const data = await res.json();
+    return (data.results || []).filter(r => r.known_for_department === 'Directing');
+  }
+
+  async function getPersonMovieCredits(personId) {
+    const key = getApiKey();
+    if (!key) throw new Error('No TMDB API key set.');
+    const url = `${BASE_URL}/person/${personId}/movie_credits?api_key=${encodeURIComponent(key)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`TMDB credits fetch failed: ${res.status}`);
+    return res.json();
+  }
+
   function posterUrl(path, size = 'w342') {
     if (!path) return '';
     return `${IMG_BASE}/${size}${path}`;
   }
 
-  return { getApiKey, setApiKey, searchMovies, getMovieDetails, posterUrl };
+  function profileUrl(path, size = 'w185') {
+    if (!path) return '';
+    return `${IMG_BASE}/${size}${path}`;
+  }
+
+  return { getApiKey, setApiKey, searchMovies, getMovieDetails, searchPerson, getPersonMovieCredits, posterUrl, profileUrl };
 })();
