@@ -238,7 +238,6 @@ const App = (() => {
       overview: movie.overview || '',
       cast: movie.cast || [],
       runtime: movie.runtime || 0,
-      liked: movie.liked || false,
     });
   }
 
@@ -448,10 +447,8 @@ const App = (() => {
     form.dataset.backdrop = data.backdrop || '';
     form.dataset.cast = JSON.stringify(data.cast || []);
     form.dataset.runtime = data.runtime || 0;
-    form.dataset.liked = (data.liked || false).toString();
 
-    document.getElementById('form-date').value =
-      data.watchedDate || (editingMovie?.watchedDate) || new Date().toISOString().slice(0, 10);
+    document.getElementById('form-watchlist-btn').style.display = editingMovie ? 'none' : '';
 
     if (editingMovie) {
       selectedRating = editingMovie.rating || 0;
@@ -495,10 +492,8 @@ const App = (() => {
       overview: form.dataset.overview || '',
       cast: JSON.parse(form.dataset.cast || '[]'),
       runtime: parseInt(form.dataset.runtime) || 0,
-      liked: form.dataset.liked === 'true',
       rating: selectedRating,
       notes: document.getElementById('form-notes').value.trim(),
-      watchedDate: document.getElementById('form-date').value || '',
     };
 
     try {
@@ -527,22 +522,6 @@ const App = (() => {
     if (rating === 5 && starEl) spawnStarBurst(starEl);
     UI.showToast(rating === 5 ? 'Masterpiece! ★★★★★' : `Rated ${rating} star${rating !== 1 ? 's' : ''}`);
     loadCatalogue();
-  }
-
-  async function toggleLike(id) {
-    const movie = await MovieDB.getMovie(id);
-    if (!movie) return;
-    const newLiked = !movie.liked;
-    await MovieDB.updateMovie({ ...movie, liked: newLiked });
-    document.querySelectorAll(`[data-like-id="${id}"]`).forEach(el => {
-      el.classList.toggle('liked', newLiked);
-    });
-    const detailLike = document.getElementById('detail-like');
-    if (detailLike) {
-      detailLike.classList.toggle('liked', newLiked);
-      detailLike.innerHTML = `<span class="heart-icon">&#9829;</span>${newLiked ? ' Liked' : ' Like'}`;
-    }
-    UI.showToast(newLiked ? '&#9829; Liked!' : 'Removed from liked');
   }
 
   // --- Detail ---
@@ -603,15 +582,9 @@ const App = (() => {
           overview: movie.overview || '',
           cast: movie.cast || [],
           runtime: movie.runtime || 0,
-          liked: movie.liked || false,
-          watchedDate: movie.watchedDate || '',
         });
       });
     }
-
-    document.getElementById('detail-like').addEventListener('click', () => {
-      toggleLike(movie.id);
-    });
 
     document.getElementById('detail-delete').addEventListener('click', async () => {
       const msg = movie.watchlist
@@ -788,6 +761,14 @@ const App = (() => {
     });
 
     document.getElementById('movie-form').addEventListener('submit', saveMovie);
+    document.getElementById('form-watchlist-btn').addEventListener('click', () => {
+      const tmdbId = parseInt(document.getElementById('form-tmdb-id').value);
+      if (tmdbId) {
+        addToWatchlist(tmdbId);
+        document.getElementById('movie-form').style.display = 'none';
+        editingMovie = null;
+      }
+    });
     document.getElementById('form-cancel').addEventListener('click', () => {
       document.getElementById('movie-form').style.display = 'none';
       editingMovie = null;
@@ -799,12 +780,6 @@ const App = (() => {
         e.stopPropagation();
         const card = star.closest('.film-card');
         if (card) await quickRateMovie(parseInt(card.dataset.id), parseInt(star.dataset.value), star);
-        return;
-      }
-      const heart = e.target.closest('.film-card-heart, .poster-card-heart');
-      if (heart) {
-        e.stopPropagation();
-        await toggleLike(parseInt(heart.dataset.likeId));
         return;
       }
       const card = e.target.closest('.movie-card, .film-card, .poster-card');

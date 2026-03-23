@@ -111,10 +111,6 @@ const UI = (() => {
       ? `<div class="detail-runtime">&#9201; ${movie.runtime >= 60 ? `${Math.floor(movie.runtime / 60)}h ${movie.runtime % 60}m` : `${movie.runtime}m`}</div>`
       : '';
 
-    const watchedDateHtml = movie.watchedDate
-      ? `<div class="detail-watched-date">&#128197; Watched ${new Date(movie.watchedDate + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>`
-      : '';
-
     const castHtml = (movie.cast && movie.cast.length > 0)
       ? `<div class="detail-cast">
           <div class="cast-label">Cast</div>
@@ -132,8 +128,6 @@ const UI = (() => {
         </div>`
       : '';
 
-    const likeClass = movie.liked ? ' liked' : '';
-
     return `
       ${backdropHtml}
       <div class="detail-header">
@@ -144,7 +138,6 @@ const UI = (() => {
         <div class="detail-info">
           <h2>${escapeHtml(movie.title)} <span class="detail-year">(${movie.year || 'N/A'})</span></h2>
           ${runtimeHtml}
-          ${watchedDateHtml}
           <div class="detail-genres">${genres}</div>
           <div class="detail-directors">${renderDirectorBadge(movie.directors)}</div>
           ${movie.overview ? `<p class="detail-overview">${escapeHtml(movie.overview)}</p>` : ''}
@@ -158,7 +151,6 @@ const UI = (() => {
               ? `<button class="btn btn-primary" id="detail-mark-watched">&#10003; Mark as Watched</button>`
               : `<button class="btn btn-primary" id="detail-edit" data-id="${movie.id}">Edit</button>`
             }
-            <button class="like-btn${likeClass}" id="detail-like" data-id="${movie.id}"><span class="heart-icon">&#9829;</span>${movie.liked ? ' Liked' : ' Like'}</button>
             <button class="btn btn-danger" id="detail-delete" data-id="${movie.id}">Delete</button>
           </div>
         </div>
@@ -193,12 +185,9 @@ const UI = (() => {
       `<span class="fcs${i <= (movie.rating || 0) ? ' filled' : ''}" data-value="${i}">&#9733;</span>`
     ).join('');
 
-    const heartClass = movie.liked ? ' liked' : '';
-
     return `
       <div class="film-card ${sizeClass}${glowClass}" data-id="${movie.id}">
         ${poster}
-        <span class="film-card-heart${heartClass}" data-like-id="${movie.id}">&#9829;</span>
         <div class="film-card-overlay">
           <div class="film-card-stars">${stars}</div>
           <span class="film-card-title">${escapeHtml(movie.title)}</span>
@@ -308,11 +297,9 @@ const UI = (() => {
           ? `<img src="${m.poster}" alt="${escapeHtml(m.title)}" loading="lazy">`
           : `<div class="poster-card-no-img">${escapeHtml(m.title)}</div>`;
         const ratingClass = m.rating === 5 ? ' card-gold' : m.rating === 4 ? ' card-silver' : '';
-        const heartClass = m.liked ? ' liked' : '';
         return `
           <div class="poster-card${ratingClass}" data-id="${m.id}">
             ${img}
-            <span class="poster-card-heart${heartClass}" data-like-id="${m.id}">&#9829;</span>
             <div class="poster-card-overlay">
               <div class="poster-card-title">${escapeHtml(m.title)}</div>
               <div class="poster-card-year">${m.year || ''}</div>
