@@ -5,6 +5,7 @@ const App = (() => {
   let acDebounce = null;
   let acResults = [];
   let acFocusIdx = -1;
+  let viewMode = localStorage.getItem('viewMode') || 'lanes';
 
   function init() {
     MovieDB.open().then(() => {
@@ -76,6 +77,9 @@ const App = (() => {
     populateGenreFilter(movies);
     populateDirectorFilter(movies);
 
+    document.getElementById('view-lanes-btn').classList.toggle('active', viewMode === 'lanes');
+    document.getElementById('view-grid-btn').classList.toggle('active', viewMode === 'grid');
+
     const filtered = applyFilters(movies);
     const sortVal = document.getElementById('sort-by').value;
 
@@ -86,8 +90,31 @@ const App = (() => {
     } else {
       empty.style.display = 'none';
       grid.classList.remove('movie-grid');
-      grid.innerHTML = renderLanesForSort(filtered, sortVal);
+      if (viewMode === 'grid') {
+        grid.innerHTML = UI.renderPosterGrid(sortForGrid(filtered, sortVal));
+      } else {
+        grid.innerHTML = renderLanesForSort(filtered, sortVal);
+      }
     }
+  }
+
+  function sortForGrid(movies, sortVal) {
+    const copy = [...movies];
+    switch (sortVal) {
+      case 'title-asc':    return copy.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+      case 'title-desc':   return copy.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+      case 'rating-desc':  return copy.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      case 'rating-asc':   return copy.sort((a, b) => (a.rating || 0) - (b.rating || 0));
+      case 'year-desc':    return copy.sort((a, b) => (b.year || 0) - (a.year || 0));
+      case 'year-asc':     return copy.sort((a, b) => (a.year || 0) - (b.year || 0));
+      default:             return copy.sort((a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0));
+    }
+  }
+
+  function setViewMode(mode) {
+    viewMode = mode;
+    localStorage.setItem('viewMode', mode);
+    loadCatalogue();
   }
 
   function renderLanesForSort(movies, sortVal) {
@@ -166,6 +193,11 @@ const App = (() => {
       const directors = (details.credits?.crew || [])
         .filter(c => c.job === 'Director')
         .map(c => c.name);
+      const cast = (details.credits?.cast || []).slice(0, 6).map(c => ({
+        name: c.name,
+        character: c.character,
+        profileUrl: c.profile_path ? TMDB.posterUrl(c.profile_path, 'w185') : '',
+      }));
       await MovieDB.addMovie({
         tmdbId: details.id,
         title: details.title,
@@ -173,7 +205,10 @@ const App = (() => {
         genres: (details.genres || []).map(g => g.name),
         directors,
         poster: TMDB.posterUrl(details.poster_path),
+        backdrop: details.backdrop_path ? TMDB.posterUrl(details.backdrop_path, 'w1280') : '',
         overview: details.overview || '',
+        cast,
+        runtime: details.runtime || 0,
         watchlist: true,
       });
       updateWatchlistBadge();
@@ -197,6 +232,11 @@ const App = (() => {
       genres: movie.genres,
       directors: movie.directors,
       poster: movie.poster,
+      backdrop: movie.backdrop || '',
+      overview: movie.overview || '',
+      cast: movie.cast || [],
+      runtime: movie.runtime || 0,
+      liked: movie.liked || false,
     });
   }
 
@@ -284,6 +324,11 @@ const App = (() => {
       const directors = (details.credits?.crew || [])
         .filter(c => c.job === 'Director')
         .map(c => c.name);
+      const cast = (details.credits?.cast || []).slice(0, 6).map(c => ({
+        name: c.name,
+        character: c.character,
+        profileUrl: c.profile_path ? TMDB.posterUrl(c.profile_path, 'w185') : '',
+      }));
       populateForm({
         tmdbId: details.id,
         title: details.title,
@@ -291,7 +336,10 @@ const App = (() => {
         genres: (details.genres || []).map(g => g.name),
         directors,
         poster: TMDB.posterUrl(details.poster_path),
+        backdrop: details.backdrop_path ? TMDB.posterUrl(details.backdrop_path, 'w1280') : '',
         overview: details.overview || '',
+        cast,
+        runtime: details.runtime || 0,
       });
     } catch (err) {
       UI.showToast(err.message);
@@ -329,6 +377,13 @@ const App = (() => {
     form.dataset.directors = JSON.stringify(data.directors || []);
     form.dataset.poster = data.poster || '';
     form.dataset.overview = data.overview || '';
+    form.dataset.backdrop = data.backdrop || '';
+    form.dataset.cast = JSON.stringify(data.cast || []);
+    form.dataset.runtime = data.runtime || 0;
+    form.dataset.liked = (data.liked || false).toString();
+
+    document.getElementById('form-date').value =
+      data.watchedDate || (editingMovie?.watchedDate) || new Date().toISOString().slice(0, 10);
 
     if (editingMovie) {
       selectedRating = editingMovie.rating || 0;
@@ -368,9 +423,14 @@ const App = (() => {
       genres: JSON.parse(form.dataset.genres),
       directors: JSON.parse(form.dataset.directors || '[]'),
       poster: form.dataset.poster,
+      backdrop: form.dataset.backdrop || '',
       overview: form.dataset.overview || '',
+      cast: JSON.parse(form.dataset.cast || '[]'),
+      runtime: parseInt(form.dataset.runtime) || 0,
+      liked: form.dataset.liked === 'true',
       rating: selectedRating,
       notes: document.getElementById('form-notes').value.trim(),
+      watchedDate: document.getElementById('form-date').value || '',
     };
 
     try {
@@ -401,6 +461,22 @@ const App = (() => {
     loadCatalogue();
   }
 
+  async function toggleLike(id) {
+    const movie = await MovieDB.getMovie(id);
+    if (!movie) return;
+    const newLiked = !movie.liked;
+    await MovieDB.updateMovie({ ...movie, liked: newLiked });
+    document.querySelectorAll(`[data-like-id="${id}"]`).forEach(el => {
+      el.classList.toggle('liked', newLiked);
+    });
+    const detailLike = document.getElementById('detail-like');
+    if (detailLike) {
+      detailLike.classList.toggle('liked', newLiked);
+      detailLike.innerHTML = `<span class="heart-icon">&#9829;</span>${newLiked ? ' Liked' : ' Like'}`;
+    }
+    UI.showToast(newLiked ? '&#9829; Liked!' : 'Removed from liked');
+  }
+
   // --- Detail ---
 
   async function loadMovieDetail(id) {
@@ -411,14 +487,25 @@ const App = (() => {
       return;
     }
 
-    // Backfill overview for movies saved before this field existed
-    if (!movie.overview && movie.tmdbId) {
+    // Backfill fields for movies saved before these fields existed
+    if ((!movie.overview || !movie.cast || !movie.backdrop) && movie.tmdbId) {
       try {
         const details = await TMDB.getMovieDetails(movie.tmdbId);
-        if (details.overview) {
-          movie.overview = details.overview;
-          await MovieDB.updateMovie(movie);
+        let updated = false;
+        if (!movie.overview && details.overview) { movie.overview = details.overview; updated = true; }
+        if (!movie.cast && details.credits?.cast?.length) {
+          movie.cast = details.credits.cast.slice(0, 6).map(c => ({
+            name: c.name, character: c.character,
+            profileUrl: c.profile_path ? TMDB.posterUrl(c.profile_path, 'w185') : '',
+          }));
+          updated = true;
         }
+        if (!movie.backdrop && details.backdrop_path) {
+          movie.backdrop = TMDB.posterUrl(details.backdrop_path, 'w1280');
+          updated = true;
+        }
+        if (!movie.runtime && details.runtime) { movie.runtime = details.runtime; updated = true; }
+        if (updated) await MovieDB.updateMovie(movie);
       } catch (_) { /* best-effort */ }
     }
 
@@ -444,9 +531,19 @@ const App = (() => {
           genres: movie.genres,
           directors: movie.directors,
           poster: movie.poster,
+          backdrop: movie.backdrop || '',
+          overview: movie.overview || '',
+          cast: movie.cast || [],
+          runtime: movie.runtime || 0,
+          liked: movie.liked || false,
+          watchedDate: movie.watchedDate || '',
         });
       });
     }
+
+    document.getElementById('detail-like').addEventListener('click', () => {
+      toggleLike(movie.id);
+    });
 
     document.getElementById('detail-delete').addEventListener('click', async () => {
       const msg = movie.watchlist
@@ -607,7 +704,13 @@ const App = (() => {
         if (card) await quickRateMovie(parseInt(card.dataset.id), parseInt(star.dataset.value), star);
         return;
       }
-      const card = e.target.closest('.movie-card, .film-card');
+      const heart = e.target.closest('.film-card-heart, .poster-card-heart');
+      if (heart) {
+        e.stopPropagation();
+        await toggleLike(parseInt(heart.dataset.likeId));
+        return;
+      }
+      const card = e.target.closest('.movie-card, .film-card, .poster-card');
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
     });
 
@@ -637,6 +740,8 @@ const App = (() => {
     document.getElementById('filter-director').addEventListener('change', onFilterChange);
     document.getElementById('filter-rating').addEventListener('change', onFilterChange);
     document.getElementById('sort-by').addEventListener('change', onFilterChange);
+    document.getElementById('view-lanes-btn').addEventListener('click', () => setViewMode('lanes'));
+    document.getElementById('view-grid-btn').addEventListener('click', () => setViewMode('grid'));
     document.getElementById('catalogue-search').addEventListener('input', loadCatalogue);
     document.getElementById('catalogue-search-clear').addEventListener('click', () => {
       const input = document.getElementById('catalogue-search');
