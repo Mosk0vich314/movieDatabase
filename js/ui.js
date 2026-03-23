@@ -53,11 +53,16 @@ const UI = (() => {
       ? `<img src="${TMDB.posterUrl(result.poster_path, 'w92')}" alt="${escapeHtml(result.title)}">`
       : `<div class="no-poster-sm">No Poster</div>`;
 
+    const origTitle = result.original_title && result.original_title !== result.title
+      ? `<p class="search-result-orig-title">${escapeHtml(result.original_title)}</p>`
+      : '';
+
     return `
       <div class="search-result" data-tmdb-id="${result.id}">
         <div class="search-result-poster">${poster}</div>
         <div class="search-result-info">
           <h4>${escapeHtml(result.title)}</h4>
+          ${origTitle}
           <p>${year}</p>
           <p class="search-result-overview">${escapeHtml((result.overview || '').substring(0, 120))}${result.overview && result.overview.length > 120 ? '...' : ''}</p>
         </div>

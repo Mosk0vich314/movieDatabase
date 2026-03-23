@@ -42,6 +42,21 @@ const TMDB = (() => {
       } catch (_) { /* fallback is best-effort */ }
     }
 
+    // Re-rank: title/original_title matches bubble up above popularity-ranked results
+    const ql = query.toLowerCase();
+    const matchScore = r => {
+      const t = (r.title || '').toLowerCase();
+      const o = (r.original_title || '').toLowerCase();
+      if (t === ql || o === ql) return 3;
+      if (t.startsWith(ql) || o.startsWith(ql)) return 2;
+      if (t.includes(ql) || o.includes(ql)) return 1;
+      return 0;
+    };
+    tmdbResults.sort((a, b) => {
+      const diff = matchScore(b) - matchScore(a);
+      return diff !== 0 ? diff : (b.popularity || 0) - (a.popularity || 0);
+    });
+
     return tmdbResults;
   }
 

@@ -537,6 +537,7 @@ a:hover { color: var(--accent-hover); }
 .search-result-poster img { width: 60px; height: 90px; object-fit: cover; border-radius: 8px; }
 .search-result-info h4 { font-size: 0.95rem; margin-bottom: 2px; }
 .search-result-info p { font-size: 0.8rem; color: var(--text-muted); }
+.search-result-orig-title { font-style: italic; opacity: 0.7; margin-bottom: 2px; }
 .search-result-overview { margin-top: 4px; line-height: 1.4; }
 .no-results { text-align: center; color: var(--text-muted); padding: 20px; }
 .add-movie-search { display: flex; gap: 8px; }
