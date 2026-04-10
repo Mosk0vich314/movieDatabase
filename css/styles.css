@@ -867,6 +867,20 @@ a:hover { color: var(--accent-hover); }
 .sync-field .form-input { width: 100%; }
 .sync-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.04em; }
 .sync-label .form-hint { text-transform: none; letter-spacing: normal; font-weight: 400; }
+.sync-gist-display { margin-bottom: 14px; }
+.sync-gist-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.sync-gist-value {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  color: var(--text);
+  word-break: break-all;
+  user-select: all;
+}
+.btn-sm { padding: 7px 14px; font-size: 0.75rem; }
 .sync-status { margin-top: 10px; }
 .sync-controls .settings-actions { margin-bottom: 4px; }
 .btn-link { background: none; border: none; color: var(--text-muted); font-size: 0.75rem; cursor: pointer; padding: 4px 0; text-decoration: underline; }

@@ -896,11 +896,18 @@ const App = (() => {
       document.getElementById('sync-setup').style.display = hasToken ? 'none' : '';
       document.getElementById('sync-controls').style.display = hasToken ? '' : 'none';
       document.getElementById('sync-pull').disabled = !gistId;
-      const statusParts = [];
-      if (gistId) statusParts.push(`Gist: ${gistId.substring(0, 8)}...`);
+      // Show gist ID prominently so user can copy it to other devices
+      const gistDisplay = document.getElementById('sync-gist-display');
+      if (gistId) {
+        gistDisplay.style.display = '';
+        document.getElementById('sync-gist-value').textContent = gistId;
+      } else {
+        gistDisplay.style.display = 'none';
+      }
       const last = CloudSync.getLastSync();
-      if (last) statusParts.push(`Last synced: ${new Date(last).toLocaleString()}`);
-      document.getElementById('sync-status').textContent = statusParts.join(' \u00b7 ') || 'Not yet synced. Push to create your cloud backup.';
+      document.getElementById('sync-status').textContent = last
+        ? `Last synced: ${new Date(last).toLocaleString()}`
+        : 'Not yet synced. Push to create your cloud backup.';
     }
     updateSyncUI();
 
@@ -930,6 +937,13 @@ const App = (() => {
       }
       btns.forEach(b => b.disabled = false);
     }
+
+    document.getElementById('sync-copy-gist').addEventListener('click', () => {
+      const gistId = CloudSync.getGistId();
+      if (gistId) {
+        navigator.clipboard.writeText(gistId).then(() => UI.showToast('Gist ID copied!'));
+      }
+    });
 
     document.getElementById('sync-push').addEventListener('click', () => runSync(() => CloudSync.push(), 'Push'));
     document.getElementById('sync-pull').addEventListener('click', () => runSync(() => CloudSync.pull(), 'Pull'));
