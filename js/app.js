@@ -889,6 +889,58 @@ const App = (() => {
     });
 
 
+    // --- Cloud Sync ---
+    function updateSyncUI() {
+      const hasToken = !!CloudSync.getToken();
+      const gistId = CloudSync.getGistId();
+      document.getElementById('sync-setup').style.display = hasToken ? 'none' : '';
+      document.getElementById('sync-controls').style.display = hasToken ? '' : 'none';
+      document.getElementById('sync-pull').disabled = !gistId;
+      const statusParts = [];
+      if (gistId) statusParts.push(`Gist: ${gistId.substring(0, 8)}...`);
+      const last = CloudSync.getLastSync();
+      if (last) statusParts.push(`Last synced: ${new Date(last).toLocaleString()}`);
+      document.getElementById('sync-status').textContent = statusParts.join(' \u00b7 ') || 'Not yet synced. Push to create your cloud backup.';
+    }
+    updateSyncUI();
+
+    document.getElementById('sync-save').addEventListener('click', () => {
+      const token = document.getElementById('sync-token').value.trim();
+      if (!token) { UI.showToast('Please enter a GitHub token'); return; }
+      CloudSync.setToken(token);
+      const gistId = document.getElementById('sync-gist-id').value.trim();
+      if (gistId) CloudSync.setGistId(gistId);
+      updateSyncUI();
+      UI.showToast('Sync settings saved!');
+    });
+
+    async function runSync(action, label) {
+      const btns = document.querySelectorAll('#sync-controls .btn, #sync-controls .btn-primary, #sync-controls .btn-secondary');
+      btns.forEach(b => b.disabled = true);
+      document.getElementById('sync-status').textContent = `${label}...`;
+      try {
+        await action();
+        updateWatchlistBadge();
+        if (currentView === 'stats') loadStats();
+        updateSyncUI();
+        UI.showToast(`${label} complete!`);
+      } catch (err) {
+        UI.showToast(`Sync failed: ${err.message}`);
+        document.getElementById('sync-status').textContent = `Error: ${err.message}`;
+      }
+      btns.forEach(b => b.disabled = false);
+    }
+
+    document.getElementById('sync-push').addEventListener('click', () => runSync(() => CloudSync.push(), 'Push'));
+    document.getElementById('sync-pull').addEventListener('click', () => runSync(() => CloudSync.pull(), 'Pull'));
+    document.getElementById('sync-now').addEventListener('click', () => runSync(() => CloudSync.sync(), 'Sync'));
+
+    document.getElementById('sync-disconnect-2').addEventListener('click', () => {
+      CloudSync.disconnect();
+      updateSyncUI();
+      UI.showToast('Sync disconnected');
+    });
+
     document.getElementById('clear-all-data').addEventListener('click', async () => {
       if (confirm('Are you sure? This will permanently delete ALL your movies.')) {
         await MovieDB.importData('[]');

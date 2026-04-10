@@ -1,4 +1,4 @@
-const CACHE_NAME = 'movie-catalogue-v2026.04.10.2153';
+const CACHE_NAME = 'movie-catalogue-v2026.04.10.2202';
 const ASSETS = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const ASSETS = [
   './js/api.js',
   './js/ui.js',
   './js/stats.js',
+  './js/sync.js',
   './js/app.js',
   './manifest.json',
 ];
@@ -37,6 +38,11 @@ self.addEventListener('fetch', (e) => {
 
   // Let Wikipedia/Wikidata API requests go to network only
   if (url.hostname.includes('wikipedia.org') || url.hostname.includes('wikidata.org')) {
+    return;
+  }
+
+  // Let GitHub API requests go to network only
+  if (url.hostname.includes('github.com') || url.hostname.includes('api.github.com')) {
     return;
   }
 

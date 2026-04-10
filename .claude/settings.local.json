@@ -21,7 +21,9 @@
       "WebFetch(domain:en.wikipedia.org)",
       "WebFetch(domain:api.themoviedb.org)",
       "Bash(python tools/deploy.py \"Support pasting themoviedb.org URLs to add films directly by ID\")",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(grep:*)",
+      "Bash(python:*)"
     ]
   }
 }

@@ -860,6 +860,18 @@ a:hover { color: var(--accent-hover); }
   letter-spacing: 0.05em;
 }
 .stats-section-title.danger-title { color: #c0392b; }
+
+/* === Cloud Sync === */
+.sync-setup, .sync-controls { margin-top: 12px; }
+.sync-field { margin-bottom: 10px; }
+.sync-field .form-input { width: 100%; }
+.sync-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.04em; }
+.sync-label .form-hint { text-transform: none; letter-spacing: normal; font-weight: 400; }
+.sync-status { margin-top: 10px; }
+.sync-controls .settings-actions { margin-bottom: 4px; }
+.btn-link { background: none; border: none; color: var(--text-muted); font-size: 0.75rem; cursor: pointer; padding: 4px 0; text-decoration: underline; }
+.btn-link:hover { color: var(--accent); }
+
 .stats-about { text-align: center; padding: 24px 0 8px; }
 
 /* === Settings === */
