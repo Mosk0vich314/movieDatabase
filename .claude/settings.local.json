@@ -20,7 +20,8 @@
       "Bash(python -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\(json.dumps\\(data, indent=2\\)[:500]\\)\")",
       "WebFetch(domain:en.wikipedia.org)",
       "WebFetch(domain:api.themoviedb.org)",
-      "Bash(python tools/deploy.py \"Support pasting themoviedb.org URLs to add films directly by ID\")"
+      "Bash(python tools/deploy.py \"Support pasting themoviedb.org URLs to add films directly by ID\")",
+      "Bash(wc:*)"
     ]
   }
 }

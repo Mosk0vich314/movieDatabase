@@ -500,19 +500,55 @@ a:hover { color: var(--accent-hover); }
   display: none;
 }
 
-/* === Stars === */
-.star-display, .star-rating { display: inline-flex; gap: 2px; }
-.star { color: var(--star-empty); font-size: 1rem; cursor: default; transition: color 0.2s, transform 0.2s; }
-.star.filled { color: var(--star); }
-.star.filled.animate { animation: starPop 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
-@keyframes starPop {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.4) rotate(-8deg); }
-  70% { transform: scale(0.9) rotate(4deg); }
-  100% { transform: scale(1) rotate(0deg); }
+/* === Rating Badge === */
+.rating-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
 }
-.star-rating .star { cursor: pointer; font-size: 1.5rem; }
-.star-rating .star.hovered { color: var(--star); transform: scale(1.15); }
+.rating-badge.rating-na {
+  background: var(--bg-input);
+  color: var(--text-muted);
+}
+
+/* === Number Rating Input === */
+.number-rating {
+  display: inline-flex;
+  gap: 4px;
+}
+.nr-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.nr-btn:hover { transform: scale(1.1); }
+.nr-btn.filled { color: #fff; border-color: transparent; }
+.nr-btn.hovered { color: #fff; border-color: transparent; transform: scale(1.1); }
+.nr-btn.filled.animate { animation: nrPop 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+@keyframes nrPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
 
 /* === Search Results === */
 .search-results { margin-top: 16px; }
@@ -809,7 +845,7 @@ a:hover { color: var(--accent-hover); }
   text-align: center;
 }
 .top-title { flex: 1; font-size: 0.9rem; }
-.top-rating { color: var(--star); font-size: 0.85rem; }
+.top-rating { font-size: 0.85rem; font-weight: 800; }
 
 /* === Stats Management (backup/restore/danger in stats tab) === */
 .stats-manage { margin-top: 40px; }
@@ -1145,23 +1181,31 @@ a:hover { color: var(--accent-hover); }
   color: rgba(255, 255, 255, 0.6);
 }
 
-/* === Quick Rate Stars (film card overlay) === */
-.film-card-stars {
+/* === Quick Rate Numbers (film card overlay) === */
+.film-card-nums {
   display: flex;
-  gap: 3px;
+  gap: 1px;
   margin-bottom: 5px;
 }
 
 .fcs {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.25);
+  font-size: 0.55rem;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.06);
   cursor: pointer;
-  transition: color 0.1s, transform 0.1s;
+  transition: all 0.1s;
   line-height: 1;
+  font-weight: 700;
 }
 
-.fcs.filled { color: var(--star); }
-.fcs:hover { transform: scale(1.3); color: var(--star); }
+.fcs.filled { color: #fff; }
+.fcs:hover { transform: scale(1.2); color: #fff; }
 
 /* === Search Mode Toggle === */
 .search-mode-toggle {

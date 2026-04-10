@@ -50,9 +50,9 @@ const Stats = (() => {
     const uniqueDirectors = directorsSorted.length;
 
     // Rating distribution
-    const ratingDist = [0, 0, 0, 0, 0];
+    const ratingDist = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     movies.forEach(m => {
-      if (m.rating >= 1 && m.rating <= 5) ratingDist[m.rating - 1]++;
+      if (m.rating >= 1 && m.rating <= 10) ratingDist[m.rating - 1]++;
     });
 
     // Top rated movies
@@ -127,15 +127,18 @@ const Stats = (() => {
         <div class="stats-section">
           <h3>Rating Distribution</h3>
           <div class="bar-chart">
-            ${stats.ratingDist.map((count, i) => `
+            ${stats.ratingDist.map((count, i) => {
+              const r = i + 1;
+              const color = UI.ratingColor(r);
+              return `
               <div class="bar-row">
-                <span class="bar-label">${'&#9733;'.repeat(i + 1)}</span>
+                <span class="bar-label" style="color:${color};font-weight:700">${r}</span>
                 <div class="bar-track">
-                  <div class="bar-fill" style="width: ${stats.total > 0 ? (count / stats.total) * 100 : 0}%"></div>
+                  <div class="bar-fill" style="width: ${stats.total > 0 ? (count / stats.total) * 100 : 0}%;background:${color}"></div>
                 </div>
                 <span class="bar-value">${count}</span>
-              </div>
-            `).join('')}
+              </div>`;
+            }).join('')}
           </div>
         </div>
 
@@ -147,7 +150,7 @@ const Stats = (() => {
                 <div class="top-item">
                   <span class="top-rank">${i + 1}</span>
                   <span class="top-title">${m.title} (${m.year || 'N/A'})</span>
-                  <span class="top-rating">${'&#9733;'.repeat(m.rating)}</span>
+                  <span class="top-rating" style="color:${UI.ratingColor(m.rating)}">${m.rating}/10</span>
                 </div>
               `).join('')}
             </div>

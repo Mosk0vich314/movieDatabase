@@ -6,15 +6,17 @@ const UI = (() => {
     setTimeout(() => toast.classList.remove('show'), duration);
   }
 
-  function renderStars(rating, interactive = false) {
-    let html = '<div class="star-display">';
-    for (let i = 1; i <= 5; i++) {
-      const cls = i <= rating ? 'star filled' : 'star';
-      const attrs = interactive ? `data-value="${i}" role="button" tabindex="0"` : '';
-      html += `<span class="${cls}" ${attrs}>&#9733;</span>`;
-    }
-    html += '</div>';
-    return html;
+  function ratingColor(r) {
+    if (r >= 9) return '#21d07a';
+    if (r >= 7) return '#6bbd40';
+    if (r >= 5) return '#ccb833';
+    if (r >= 3) return '#d97c2e';
+    return '#db2360';
+  }
+
+  function renderRatingBadge(rating) {
+    if (!rating) return '<span class="rating-badge rating-na">-</span>';
+    return `<span class="rating-badge" style="background:${ratingColor(rating)}">${rating}</span>`;
   }
 
   function renderDirectorBadge(directors) {
@@ -32,7 +34,7 @@ const UI = (() => {
       ? `<p class="movie-card-director">${escapeHtml(movie.directors[0])}</p>`
       : '';
 
-    const ratingClass = movie.rating === 5 ? ' card-gold' : movie.rating === 4 ? ' card-silver' : '';
+    const ratingClass = movie.rating === 10 ? ' card-gold' : (movie.rating >= 8 ? ' card-silver' : '');
 
     return `
       <div class="movie-card${ratingClass}" data-id="${movie.id}">
@@ -41,7 +43,7 @@ const UI = (() => {
           <h3 class="movie-card-title">${escapeHtml(movie.title)}</h3>
           <p class="movie-card-year">${movie.year || 'N/A'}</p>
           ${directorLine}
-          ${renderStars(movie.rating)}
+          ${renderRatingBadge(movie.rating)}
         </div>
       </div>
     `;
@@ -148,7 +150,7 @@ const UI = (() => {
           ${movie.overview ? `<p class="detail-overview">${escapeHtml(movie.overview)}</p>` : ''}
           <div class="detail-rating">
             <label>Your Rating:</label>
-            ${renderStars(movie.rating)}
+            ${renderRatingBadge(movie.rating)}
           </div>
           ${movie.notes ? `<div class="detail-notes"><label>Notes</label><p>${escapeHtml(movie.notes)}</p></div>` : ''}
           <div class="detail-actions">
@@ -183,18 +185,19 @@ const UI = (() => {
       ? `<img src="${movie.poster}" alt="${escapeHtml(movie.title)}" loading="lazy">`
       : `<div class="no-poster-lane">${escapeHtml(movie.title)}</div>`;
 
-    const sizeClass = movie.rating === 5 ? 'card-xl' : movie.rating === 4 ? 'card-lg' : 'card-sm';
-    const glowClass = movie.rating === 5 ? ' card-gold' : movie.rating === 4 ? ' card-silver' : '';
+    const sizeClass = movie.rating === 10 ? 'card-xl' : (movie.rating >= 8 ? 'card-lg' : 'card-sm');
+    const glowClass = movie.rating === 10 ? ' card-gold' : (movie.rating >= 8 ? ' card-silver' : '');
 
-    const stars = [1,2,3,4,5].map(i =>
-      `<span class="fcs${i <= (movie.rating || 0) ? ' filled' : ''}" data-value="${i}">&#9733;</span>`
+    const rc = ratingColor(movie.rating || 0);
+    const nums = Array.from({length: 10}, (_, i) => i + 1).map(i =>
+      `<span class="fcs${i <= (movie.rating || 0) ? ' filled' : ''}" data-value="${i}" style="${i <= (movie.rating || 0) ? 'background:' + rc : ''}">${i}</span>`
     ).join('');
 
     return `
       <div class="film-card ${sizeClass}${glowClass}" data-id="${movie.id}">
         ${poster}
         <div class="film-card-overlay">
-          <div class="film-card-stars">${stars}</div>
+          <div class="film-card-nums" data-rating="${movie.rating || 0}">${nums}</div>
           <span class="film-card-title">${escapeHtml(movie.title)}</span>
           <span class="film-card-year">${movie.year || ''}</span>
         </div>
@@ -239,15 +242,16 @@ const UI = (() => {
   }
 
   function renderRatingLanes(movies, dir = 'desc') {
+    const labels = { 5: '9-10', 4: '7-8', 3: '5-6', 2: '3-4', 1: '1-2', 0: 'Unrated' };
     const groups = { 5: [], 4: [], 3: [], 2: [], 1: [], 0: [] };
     movies.forEach(m => {
-      const r = m.rating >= 1 && m.rating <= 5 ? m.rating : 0;
+      const r = m.rating >= 1 && m.rating <= 10 ? Math.ceil(m.rating / 2) : 0;
       groups[r].push(m);
     });
     const order = dir === 'desc' ? [5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5];
     return renderLanes(
       order.filter(r => groups[r].length > 0).map(r => ({
-        label: r === 0 ? 'Unrated' : '&#9733;'.repeat(r),
+        label: labels[r],
         films: [...groups[r]].sort((a, b) => (b.year || 0) - (a.year || 0))
       }))
     );
@@ -301,7 +305,7 @@ const UI = (() => {
         const img = m.poster
           ? `<img src="${m.poster}" alt="${escapeHtml(m.title)}" loading="lazy">`
           : `<div class="poster-card-no-img">${escapeHtml(m.title)}</div>`;
-        const ratingClass = m.rating === 5 ? ' card-gold' : m.rating === 4 ? ' card-silver' : '';
+        const ratingClass = m.rating === 10 ? ' card-gold' : (m.rating >= 8 ? ' card-silver' : '');
         return `
           <div class="poster-card${ratingClass}" data-id="${m.id}">
             ${img}
@@ -434,5 +438,5 @@ const UI = (() => {
     });
   }
 
-  return { showToast, renderStars, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, initCustomSelects, escapeHtml };
+  return { showToast, ratingColor, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, initCustomSelects, escapeHtml };
 })();

@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/logo.jpg" type="image/jpeg">
   <link rel="apple-touch-icon" href="icons/logo.jpg">
-  <link rel="stylesheet" href="css/styles.css?v=2026.03.24.0005">
+  <link rel="stylesheet" href="css/styles.css?v=2026.04.10.2153">
 </head>
 <body>
   <header class="app-header">
@@ -58,11 +58,15 @@
             </select>
             <select id="filter-rating" class="filter-select">
               <option value="">All Ratings</option>
-              <option value="5">5 Stars</option>
-              <option value="4">4+ Stars</option>
-              <option value="3">3+ Stars</option>
-              <option value="2">2+ Stars</option>
-              <option value="1">1+ Stars</option>
+              <option value="9">9+</option>
+              <option value="8">8+</option>
+              <option value="7">7+</option>
+              <option value="6">6+</option>
+              <option value="5">5+</option>
+              <option value="4">4+</option>
+              <option value="3">3+</option>
+              <option value="2">2+</option>
+              <option value="1">1+</option>
             </select>
             <select id="sort-by" class="filter-select">
               <option value="dateAdded-desc">Newest Added</option>
@@ -124,12 +128,17 @@
         <p id="form-overview" class="form-overview"></p>
         <div class="form-group">
           <label>Your Rating</label>
-          <div class="star-rating" id="star-rating">
-            <span class="star" data-value="1">&#9733;</span>
-            <span class="star" data-value="2">&#9733;</span>
-            <span class="star" data-value="3">&#9733;</span>
-            <span class="star" data-value="4">&#9733;</span>
-            <span class="star" data-value="5">&#9733;</span>
+          <div class="number-rating" id="number-rating">
+            <span class="nr-btn" data-value="1">1</span>
+            <span class="nr-btn" data-value="2">2</span>
+            <span class="nr-btn" data-value="3">3</span>
+            <span class="nr-btn" data-value="4">4</span>
+            <span class="nr-btn" data-value="5">5</span>
+            <span class="nr-btn" data-value="6">6</span>
+            <span class="nr-btn" data-value="7">7</span>
+            <span class="nr-btn" data-value="8">8</span>
+            <span class="nr-btn" data-value="9">9</span>
+            <span class="nr-btn" data-value="10">10</span>
           </div>
           <input type="hidden" id="form-rating" value="0">
         </div>
@@ -185,10 +194,10 @@
   <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <script src="js/db.js?v=2026.03.24.0005"></script>
-  <script src="js/api.js?v=2026.03.24.0005"></script>
-  <script src="js/ui.js?v=2026.03.24.0005"></script>
-  <script src="js/stats.js?v=2026.03.24.0005"></script>
-  <script src="js/app.js?v=2026.03.24.0005"></script>
+  <script src="js/db.js?v=2026.04.10.2153"></script>
+  <script src="js/api.js?v=2026.04.10.2153"></script>
+  <script src="js/ui.js?v=2026.04.10.2153"></script>
+  <script src="js/stats.js?v=2026.04.10.2153"></script>
+  <script src="js/app.js?v=2026.04.10.2153"></script>
 </body>
 </html>
