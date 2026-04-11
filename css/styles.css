@@ -892,6 +892,7 @@ a:hover { color: var(--accent-hover); }
   width: 1px;
   background: rgba(255,255,255,0.07);
 }
+.shelf-genre-divider--first::before { display: none; }
 .shelf-genre-divider span {
   writing-mode: vertical-rl;
   transform: rotate(180deg);

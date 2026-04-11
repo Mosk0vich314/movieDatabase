@@ -354,9 +354,7 @@ const UI = (() => {
     let casesHtml = '';
     sortedGenres.forEach((genre, i) => {
       const group = genre ? groups[genre] : noGenre;
-      if (i > 0) {
-        casesHtml += `<div class="shelf-genre-divider"><span>${escapeHtml(genre || '')}</span></div>`;
-      }
+      casesHtml += `<div class="shelf-genre-divider${i === 0 ? ' shelf-genre-divider--first' : ''}"><span>${escapeHtml(genre || '')}</span></div>`;
       group.forEach(m => {
         const pal = getGenrePalette(m.genres);
         casesHtml += `
