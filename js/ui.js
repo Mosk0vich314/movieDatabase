@@ -351,30 +351,58 @@ const UI = (() => {
     const sortedGenres = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length);
     if (noGenre.length) sortedGenres.push(null);
 
-    let casesHtml = '';
-    sortedGenres.forEach((genre, i) => {
+    // Build flat ordered item list: dividers + cases
+    const items = [];
+    sortedGenres.forEach(genre => {
       const group = genre ? groups[genre] : noGenre;
-      casesHtml += `<div class="shelf-genre-divider${i === 0 ? ' shelf-genre-divider--first' : ''}"><span>${escapeHtml(genre || '')}</span></div>`;
-      group.forEach(m => {
-        const pal = getGenrePalette(m.genres);
-        const posterVar = m.poster ? `;--poster:url('${m.poster}')` : '';
-        casesHtml += `
-          <div class="bluray-case" data-id="${m.id}" style="--sc:${pal.bg};--ac:${pal.accent}${posterVar}">
+      items.push({ type: 'divider', genre });
+      group.forEach(m => items.push({ type: 'case', movie: m }));
+    });
+
+    // Split into rows by available width
+    const CASE_W = 27;    // 24px case + 3px gap
+    const DIV_W  = 34;   // 22px + 12px margins
+    const availW = Math.max(260, (typeof window !== 'undefined' ? window.innerWidth : 390) - 40);
+
+    const rows = [];
+    let row = [], rowW = 0;
+    items.forEach(item => {
+      const w = item.type === 'case' ? CASE_W : DIV_W;
+      if (rowW + w > availW && row.length > 0) {
+        rows.push(row);
+        row = []; rowW = 0;
+      }
+      row.push(item);
+      rowW += w;
+    });
+    if (row.length) rows.push(row);
+
+    // Render each row as its own shelf + plank
+    function renderRow(rowItems) {
+      let html = '';
+      rowItems.forEach((item, i) => {
+        if (item.type === 'divider') {
+          const isFirst = i === 0;
+          html += `<div class="shelf-genre-divider${isFirst ? ' shelf-genre-divider--first' : ''}"><span>${escapeHtml(item.genre || '')}</span></div>`;
+        } else {
+          const m = item.movie;
+          const pal = getGenrePalette(m.genres);
+          const posterVar = m.poster ? `;--poster:url('${m.poster}')` : '';
+          html += `<div class="bluray-case" data-id="${m.id}" style="--sc:${pal.bg};--ac:${pal.accent}${posterVar}">
             <div class="case-spine">
               <span class="spine-title">${escapeHtml(m.title)}</span>
               <span class="spine-year">${m.year || ''}</span>
             </div>
-          </div>
-        `;
+          </div>`;
+        }
       });
-    });
+      return `<div class="bookcase-shelf"><div class="shelf-row">${html}</div><div class="shelf-plank"></div><div class="shelf-shadow"></div></div>`;
+    }
 
     return `
-      <div class="bluray-shelf-wrap">
+      <div class="bluray-bookcase">
         <div class="shelf-ambient"></div>
-        <div class="shelf-row">${casesHtml}</div>
-        <div class="shelf-plank"></div>
-        <div class="shelf-shadow"></div>
+        ${rows.map(renderRow).join('')}
       </div>
     `;
   }
