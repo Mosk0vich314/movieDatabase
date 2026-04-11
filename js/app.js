@@ -5,7 +5,8 @@ const App = (() => {
   let acDebounce = null;
   let acResults = [];
   let acFocusIdx = -1;
-  let viewMode = localStorage.getItem('viewMode') || 'lanes';
+  const _storedView = localStorage.getItem('viewMode');
+  let viewMode = (['array', 'decades', 'library'].includes(_storedView) ? _storedView : null) || 'decades';
   let searchMode = 'movie';
   let selectedDirectorName = '';
 
@@ -90,8 +91,9 @@ const App = (() => {
     populateGenreFilter(movies);
     populateDirectorFilter(movies);
 
-    document.getElementById('view-lanes-btn').classList.toggle('active', viewMode === 'lanes');
-    document.getElementById('view-grid-btn').classList.toggle('active', viewMode === 'grid');
+    document.getElementById('view-array-btn').classList.toggle('active', viewMode === 'array');
+    document.getElementById('view-decades-btn').classList.toggle('active', viewMode === 'decades');
+    document.getElementById('view-library-btn').classList.toggle('active', viewMode === 'library');
 
     const filtered = applyFilters(movies);
     const sortVal = document.getElementById('sort-by').value;
@@ -100,14 +102,26 @@ const App = (() => {
       grid.innerHTML = '';
       grid.classList.add('movie-grid');
       empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+    grid.classList.remove('movie-grid');
+
+    if (viewMode === 'array') {
+      grid.innerHTML = UI.renderPosterGrid(sortForGrid(filtered, sortVal));
+    } else if (viewMode === 'library') {
+      grid.innerHTML = UI.renderBlurayShelf(filtered);
+      grid.querySelectorAll('.bluray-case').forEach(caseEl => {
+        caseEl.addEventListener('click', () => {
+          const id = parseInt(caseEl.dataset.id);
+          const movie = filtered.find(m => m.id === id);
+          if (movie) extractBluray(caseEl, movie);
+        });
+      });
     } else {
-      empty.style.display = 'none';
-      grid.classList.remove('movie-grid');
-      if (viewMode === 'grid') {
-        grid.innerHTML = UI.renderPosterGrid(sortForGrid(filtered, sortVal));
-      } else {
-        grid.innerHTML = renderLanesForSort(filtered, sortVal);
-      }
+      // decades (default)
+      grid.innerHTML = UI.renderDecadeLanes(filtered, 'desc');
     }
   }
 
@@ -130,19 +144,6 @@ const App = (() => {
     loadCatalogue();
   }
 
-  function renderLanesForSort(movies, sortVal) {
-    switch (sortVal) {
-      case 'rating-desc':    return UI.renderRatingLanes(movies, 'desc');
-      case 'rating-asc':     return UI.renderRatingLanes(movies, 'asc');
-      case 'title-asc':      return UI.renderTitleLanes(movies, 'asc');
-      case 'title-desc':     return UI.renderTitleLanes(movies, 'desc');
-      case 'year-asc':       return UI.renderDecadeLanes(movies, 'asc');
-      case 'year-desc':      return UI.renderDecadeLanes(movies, 'desc');
-      case 'dateAdded-asc':  return UI.renderDecadeLanes(movies, 'asc');
-      case 'director-asc':   return UI.renderDirectorLanes(movies);
-      default:               return UI.renderDecadeLanes(movies, 'desc');
-    }
-  }
 
   function populateGenreFilter(movies) {
     const genres = new Set();
@@ -188,12 +189,20 @@ const App = (() => {
     const vw = window.innerWidth, vh = window.innerHeight;
     const wait = ms => new Promise(r => setTimeout(r, ms));
 
-    // Pre-render detail view invisibly to measure the actual poster position
+    // Pre-render detail view invisibly to measure the actual poster position.
+    // We simulate the post-navigation layout (all views hidden, only detail visible)
+    // so getBoundingClientRect matches where the poster actually lands after routing.
     const detailSection = document.getElementById('view-detail');
     const detailContent = document.getElementById('movie-detail');
     detailContent.innerHTML = UI.renderMovieDetail(movie);
-    const prevDisplay = detailSection.style.display;
-    detailSection.style.cssText = 'display:block;visibility:hidden;pointer-events:none;';
+
+    const allViews = Array.from(document.querySelectorAll('.view'));
+    const prevDisplays = allViews.map(v => v.style.display);
+    allViews.forEach(v => { v.style.display = 'none'; });
+    detailSection.style.visibility = 'hidden';
+    detailSection.style.pointerEvents = 'none';
+    detailSection.style.display = 'block';
+
     const detailImg = detailSection.querySelector('img.detail-poster');
     let dest;
     if (detailImg) {
@@ -202,9 +211,11 @@ const App = (() => {
       const fw = Math.min(150, Math.floor(vw * 0.4)), fh = Math.round(fw * 1.48);
       dest = { left: (vw - fw) / 2, top: (vh - fh) / 2, width: fw, height: fh };
     }
-    // Hide detail view again — watchlist stays visible
-    detailSection.style.cssText = '';
-    detailSection.style.display = prevDisplay || 'none';
+
+    // Restore all views to their original inline display values
+    allViews.forEach((v, i) => { v.style.display = prevDisplays[i]; });
+    detailSection.style.visibility = '';
+    detailSection.style.pointerEvents = '';
 
     const tx = dest.left - rect.left;
     const ty = dest.top  - rect.top;
@@ -900,7 +911,7 @@ const App = (() => {
         document.getElementById('filter-genre').value,
         document.getElementById('filter-director').value,
         document.getElementById('filter-rating').value,
-      ].filter(Boolean).length + (document.getElementById('sort-by').value !== 'dateAdded-desc' ? 1 : 0);
+      ].filter(Boolean).length;
       const badge = document.getElementById('filter-badge');
       const btn = document.getElementById('filter-toggle');
       badge.textContent = active;
@@ -914,8 +925,9 @@ const App = (() => {
     document.getElementById('filter-director').addEventListener('change', onFilterChange);
     document.getElementById('filter-rating').addEventListener('change', onFilterChange);
     document.getElementById('sort-by').addEventListener('change', onFilterChange);
-    document.getElementById('view-lanes-btn').addEventListener('click', () => setViewMode('lanes'));
-    document.getElementById('view-grid-btn').addEventListener('click', () => setViewMode('grid'));
+    document.getElementById('view-array-btn').addEventListener('click', () => setViewMode('array'));
+    document.getElementById('view-decades-btn').addEventListener('click', () => setViewMode('decades'));
+    document.getElementById('view-library-btn').addEventListener('click', () => setViewMode('library'));
     document.getElementById('catalogue-search').addEventListener('input', loadCatalogue);
     document.getElementById('catalogue-search-clear').addEventListener('click', () => {
       const input = document.getElementById('catalogue-search');
