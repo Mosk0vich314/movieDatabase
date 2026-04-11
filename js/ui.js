@@ -313,45 +313,69 @@ const UI = (() => {
     })));
   }
 
-  function renderBlurayShelf(movies) {
-    const SPINE_COLORS = [
-      '#0d1f33','#1c0d33','#0d2e12','#2e0d0d','#1a1a08',
-      '#08181a','#2e1a08','#0d2a2e','#2e0d1a','#162e08',
-    ];
-    function spineColor(title) {
-      let h = 0;
-      for (let i = 0; i < title.length; i++) h = Math.imul(31, h) + title.charCodeAt(i) | 0;
-      return SPINE_COLORS[Math.abs(h) % SPINE_COLORS.length];
-    }
+  const GENRE_PALETTE = {
+    'Action':          { bg: '#200a0a', accent: '#cc2200' },
+    'Adventure':       { bg: '#0a1a08', accent: '#2c9020' },
+    'Animation':       { bg: '#1a1500', accent: '#c8a800' },
+    'Comedy':          { bg: '#1a1200', accent: '#c09000' },
+    'Crime':           { bg: '#0a0a1f', accent: '#3840cc' },
+    'Documentary':     { bg: '#001814', accent: '#00a090' },
+    'Drama':           { bg: '#120018', accent: '#9030b0' },
+    'Family':          { bg: '#181000', accent: '#c06828' },
+    'Fantasy':         { bg: '#0e0a22', accent: '#6030d0' },
+    'History':         { bg: '#1a1200', accent: '#a87810' },
+    'Horror':          { bg: '#200000', accent: '#cc0000' },
+    'Music':           { bg: '#000f1a', accent: '#0090c8' },
+    'Mystery':         { bg: '#001018', accent: '#1050a8' },
+    'Romance':         { bg: '#1e0010', accent: '#c00060' },
+    'Science Fiction': { bg: '#001820', accent: '#00a8cc' },
+    'Thriller':        { bg: '#0c0a18', accent: '#283898' },
+    'War':             { bg: '#14100a', accent: '#787040' },
+    'Western':         { bg: '#1e1000', accent: '#a06820' },
+  };
 
-    const cases = movies.map(m => `
-      <div class="bluray-case" data-id="${m.id}" style="--sc:${spineColor(m.title)}">
-        <div class="case-spine">
-          <span class="spine-bd">BD</span>
-          <span class="spine-title">${escapeHtml(m.title)}</span>
-          <span class="spine-year">${m.year || ''}</span>
-        </div>
-      </div>
-    `).join('');
+  function getGenrePalette(genres) {
+    const g = genres && genres[0];
+    return GENRE_PALETTE[g] || { bg: '#0d1520', accent: '#304468' };
+  }
+
+  function renderBlurayShelf(movies) {
+    // Group by primary genre, sort groups by count desc
+    const groups = {};
+    const noGenre = [];
+    movies.forEach(m => {
+      const g = m.genres && m.genres[0];
+      if (g) { if (!groups[g]) groups[g] = []; groups[g].push(m); }
+      else noGenre.push(m);
+    });
+    const sortedGenres = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length);
+    if (noGenre.length) sortedGenres.push(null);
+
+    let casesHtml = '';
+    sortedGenres.forEach((genre, i) => {
+      const group = genre ? groups[genre] : noGenre;
+      if (i > 0) {
+        casesHtml += `<div class="shelf-genre-divider"><span>${escapeHtml(genre || '')}</span></div>`;
+      }
+      group.forEach(m => {
+        const pal = getGenrePalette(m.genres);
+        casesHtml += `
+          <div class="bluray-case" data-id="${m.id}" style="--sc:${pal.bg};--ac:${pal.accent}">
+            <div class="case-spine">
+              <span class="spine-title">${escapeHtml(m.title)}</span>
+              <span class="spine-year">${m.year || ''}</span>
+            </div>
+          </div>
+        `;
+      });
+    });
 
     return `
       <div class="bluray-shelf-wrap">
         <div class="shelf-ambient"></div>
-        <div class="shelf-row">${cases}</div>
+        <div class="shelf-row">${casesHtml}</div>
         <div class="shelf-plank"></div>
         <div class="shelf-shadow"></div>
-      </div>
-      <div class="bluray-detail" id="bluray-detail" style="display:none">
-        <img class="bd-cover" id="bd-cover" src="" alt="">
-        <div class="bd-info">
-          <h2 class="bd-title" id="bd-title"></h2>
-          <p class="bd-meta" id="bd-meta"></p>
-          <div class="bd-genres" id="bd-genres"></div>
-          <div class="bd-actions">
-            <button class="btn btn-primary" id="bd-watched-btn">&#10003; Watched</button>
-            <button class="btn btn-danger" id="bd-delete-btn">Remove</button>
-          </div>
-        </div>
       </div>
     `;
   }

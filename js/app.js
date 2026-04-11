@@ -183,6 +183,107 @@ const App = (() => {
 
   // --- Watchlist ---
 
+  async function extractBluray(caseEl, movie) {
+    const rect = caseEl.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const coverW = Math.min(130, Math.floor(vw * 0.36));
+    const coverH = Math.round(coverW * 1.48);
+    const cx = Math.round((vw - coverW) / 2);
+    const cy = Math.round((vh - coverH) / 2);
+    const tx = cx - rect.left;
+    const ty = cy - rect.top;
+    const sx = coverW / rect.width;
+    const sy = coverH / rect.height;
+
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+
+    // Scrim
+    const scrim = document.createElement('div');
+    scrim.style.cssText = 'position:fixed;inset:0;z-index:9000;background:transparent;pointer-events:all;transition:background 0.35s';
+    document.body.appendChild(scrim);
+    requestAnimationFrame(() => scrim.style.background = 'rgba(0,0,0,0.82)');
+
+    // Spine clone
+    const sc = caseEl.style.getPropertyValue('--sc') || '#0d1520';
+    const ac = caseEl.style.getPropertyValue('--ac') || '#304468';
+    const el = document.createElement('div');
+    el.style.cssText = `
+      position:fixed;
+      left:${rect.left}px;top:${rect.top}px;
+      width:${rect.width}px;height:${rect.height}px;
+      background:${sc};
+      border-radius:2px 3px 3px 2px;
+      box-shadow:inset -3px 0 8px rgba(0,0,0,0.45),inset 1px 0 4px rgba(255,255,255,0.07),2px 0 6px rgba(0,0,0,0.4);
+      transform-origin:top left;
+      transform:translate(0,0) scale(1,1) rotateY(0deg);
+      z-index:9001;
+      pointer-events:none;
+      overflow:hidden;
+    `;
+    el.innerHTML = `<div style="position:absolute;top:0;left:0;right:0;height:3px;background:${ac};border-radius:2px 3px 0 0;"></div>`;
+    document.body.appendChild(el);
+    caseEl.style.opacity = '0';
+
+    const setT = (dur, ease, transform) => {
+      el.style.transition = `transform ${dur}ms ${ease}`;
+      el.style.transform = transform;
+    };
+
+    // Phase 1: Lift (250ms)
+    setT(250, 'ease-out', 'translate(0,-42px) scale(1,1) rotateY(0deg)');
+    await wait(260);
+
+    // Phase 2: Glide to center + expand (580ms)
+    setT(580, 'cubic-bezier(0.4,0,0.2,1)', `translate(${tx}px,${ty}px) scale(${sx},${sy}) rotateY(0deg)`);
+    await wait(590);
+
+    // Phase 3: Flip spine out (200ms)
+    el.style.transition = 'transform 0.2s ease-in, opacity 0.2s ease-in';
+    el.style.transform = `translate(${tx}px,${ty}px) scale(${sx},${sy}) rotateY(-90deg)`;
+    el.style.opacity = '0';
+
+    // Poster cover fades in from flip reveal
+    const cover = document.createElement('div');
+    cover.style.cssText = `
+      position:fixed;
+      left:${cx}px;top:${cy}px;
+      width:${coverW}px;height:${coverH}px;
+      z-index:9002;
+      pointer-events:none;
+      border-radius:4px;
+      overflow:hidden;
+      opacity:0;
+      transform:scale(0.94);
+      box-shadow:0 24px 70px rgba(0,0,0,0.9),0 0 0 1px rgba(255,255,255,0.06);
+      transition:opacity 0.22s ease-out, transform 0.22s ease-out;
+    `;
+    if (movie.poster) {
+      cover.innerHTML = `<img src="${movie.poster}" style="width:100%;height:100%;object-fit:cover;display:block;" alt="">`;
+    }
+    document.body.appendChild(cover);
+
+    await wait(100);
+    cover.style.opacity = '1';
+    cover.style.transform = 'scale(1)';
+
+    await wait(600); // Hold poster
+
+    // Fade out
+    cover.style.transition = 'opacity 0.22s, transform 0.22s';
+    cover.style.opacity = '0';
+    cover.style.transform = 'scale(1.03)';
+    scrim.style.background = 'transparent';
+    await wait(240);
+
+    el.remove();
+    cover.remove();
+    scrim.remove();
+    caseEl.style.opacity = '';
+
+    window.location.hash = `#detail/${movie.id}`;
+  }
+
   async function loadWatchlist() {
     const movies = (await MovieDB.getAllMovies()).filter(m => m.watchlist);
     const container = document.getElementById('watchlist-grid');
@@ -199,58 +300,12 @@ const App = (() => {
     container.className = '';
     container.innerHTML = UI.renderBlurayShelf(movies);
 
-    let selectedId = null;
-
-    function openCase(id) {
-      const movie = movies.find(m => m.id === id);
-      if (!movie) return;
-
-      container.querySelectorAll('.bluray-case').forEach(c => c.classList.remove('open'));
-      container.querySelector(`.bluray-case[data-id="${id}"]`).classList.add('open');
-
-      const detail = document.getElementById('bluray-detail');
-      const cover = document.getElementById('bd-cover');
-      cover.src = movie.poster || '';
-      cover.alt = movie.title;
-      document.getElementById('bd-title').textContent = movie.title;
-      const meta = [movie.year, (movie.directors || []).join(', ')].filter(Boolean).join(' · ');
-      document.getElementById('bd-meta').textContent = meta;
-      document.getElementById('bd-genres').innerHTML = (movie.genres || []).slice(0, 4)
-        .map(g => `<span class="bd-genre-tag">${UI.escapeHtml(g)}</span>`).join('');
-      document.getElementById('bd-watched-btn').dataset.id = id;
-      document.getElementById('bd-delete-btn').dataset.id = id;
-      detail.style.display = '';
-      selectedId = id;
-
-      // Scroll case into view
-      const caseEl = container.querySelector(`.bluray-case[data-id="${id}"]`);
-      caseEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
-
-    function closeCase() {
-      container.querySelectorAll('.bluray-case').forEach(c => c.classList.remove('open'));
-      document.getElementById('bluray-detail').style.display = 'none';
-      selectedId = null;
-    }
-
     container.querySelectorAll('.bluray-case').forEach(caseEl => {
       caseEl.addEventListener('click', () => {
         const id = parseInt(caseEl.dataset.id);
-        if (selectedId === id) closeCase(); else openCase(id);
+        const movie = movies.find(m => m.id === id);
+        if (movie) extractBluray(caseEl, movie);
       });
-    });
-
-    document.getElementById('bd-watched-btn').addEventListener('click', (e) => {
-      markAsWatched(parseInt(e.currentTarget.dataset.id));
-    });
-
-    document.getElementById('bd-delete-btn').addEventListener('click', async (e) => {
-      const id = parseInt(e.currentTarget.dataset.id);
-      if (confirm('Remove from watchlist?')) {
-        await MovieDB.deleteMovie(id);
-        updateWatchlistBadge();
-        loadWatchlist();
-      }
     });
   }
 

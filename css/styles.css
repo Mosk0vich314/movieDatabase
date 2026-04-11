@@ -861,13 +861,47 @@ a:hover { color: var(--accent-hover); }
   align-items: flex-end;
   gap: 3px;
   padding: 28px 20px 0;
-  background: linear-gradient(180deg, #0e0e1c 0%, #12101a 100%);
+  background:
+    radial-gradient(ellipse 60% 40% at 30% 0%, rgba(255,190,80,0.04) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 60% at 85% 10%, rgba(80,120,255,0.04) 0%, transparent 70%),
+    linear-gradient(180deg, #090910 0%, #0e0c18 60%, #120f1c 100%);
   overflow-x: auto;
   scroll-snap-type: x proximity;
   scrollbar-width: none;
   min-height: 220px;
 }
 .shelf-row::-webkit-scrollbar { display: none; }
+
+.shelf-genre-divider {
+  flex-shrink: 0;
+  width: 22px;
+  height: 175px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0 6px;
+  scroll-snap-align: start;
+}
+.shelf-genre-divider::before {
+  content: '';
+  position: absolute;
+  top: 8%;
+  bottom: 8%;
+  left: 50%;
+  width: 1px;
+  background: rgba(255,255,255,0.07);
+}
+.shelf-genre-divider span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.4rem;
+  color: rgba(255,255,255,0.15);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 700;
+  user-select: none;
+}
 .shelf-plank {
   height: 20px;
   background: linear-gradient(180deg, #8B5E3C 0%, #6B4226 45%, #4A2C0A 100%);
@@ -916,6 +950,15 @@ a:hover { color: var(--accent-hover); }
   overflow: hidden;
   position: relative;
 }
+.case-spine::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--ac, rgba(255,255,255,0.2));
+  border-radius: 2px 3px 0 0;
+  pointer-events: none;
+}
 .case-spine::after {
   content: '';
   position: absolute;
@@ -931,16 +974,6 @@ a:hover { color: var(--accent-hover); }
     2px 0 6px rgba(0,0,0,0.4);
 }
 
-.spine-bd {
-  font-size: 0.42rem;
-  font-weight: 900;
-  color: #4fc3f7;
-  letter-spacing: 0.04em;
-  writing-mode: horizontal-tb;
-  margin-bottom: 5px;
-  text-shadow: 0 0 6px rgba(79,195,247,0.7);
-  flex-shrink: 0;
-}
 .spine-title {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
