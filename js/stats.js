@@ -49,10 +49,13 @@ const Stats = (() => {
     const directorsSorted = Object.entries(directorCounts).sort((a, b) => b[1] - a[1]);
     const uniqueDirectors = directorsSorted.length;
 
-    // Rating distribution
+    // Rating distribution (bucket decimals by floor, e.g. 9.7 → bucket "9")
     const ratingDist = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     movies.forEach(m => {
-      if (m.rating >= 1 && m.rating <= 10) ratingDist[m.rating - 1]++;
+      if (m.rating >= 1 && m.rating <= 10) {
+        const bucket = Math.min(Math.floor(m.rating), 10) - 1;
+        ratingDist[bucket]++;
+      }
     });
 
     // Top rated movies
@@ -150,7 +153,7 @@ const Stats = (() => {
                 <div class="top-item">
                   <span class="top-rank">${i + 1}</span>
                   <span class="top-title">${m.title} (${m.year || 'N/A'})</span>
-                  <span class="top-rating" style="color:${UI.ratingColor(m.rating)}">${m.rating}/10</span>
+                  <span class="top-rating" style="color:${UI.ratingColor(m.rating)}">${UI.formatRating(m.rating)}</span>
                 </div>
               `).join('')}
             </div>

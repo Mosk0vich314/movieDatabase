@@ -14,9 +14,23 @@ const UI = (() => {
     return '#db2360';
   }
 
+  function ratingColorRGB(r) {
+    if (r >= 9) return '33,208,122';
+    if (r >= 7) return '107,189,64';
+    if (r >= 5) return '204,184,51';
+    if (r >= 3) return '217,124,46';
+    return '219,35,96';
+  }
+
+  function formatRating(r) {
+    if (!r) return '-';
+    const s = r.toFixed(1);
+    return s.endsWith('.0') ? s.slice(0, -2) : s;
+  }
+
   function renderRatingBadge(rating) {
     if (!rating) return '<span class="rating-badge rating-na">-</span>';
-    return `<span class="rating-badge" style="background:${ratingColor(rating)}">${rating}</span>`;
+    return `<span class="rating-badge" style="background:${ratingColor(rating)}">${formatRating(rating)}</span>`;
   }
 
   function renderDirectorBadge(directors) {
@@ -34,10 +48,11 @@ const UI = (() => {
       ? `<p class="movie-card-director">${escapeHtml(movie.directors[0])}</p>`
       : '';
 
-    const ratingClass = movie.rating === 10 ? ' card-gold' : (movie.rating >= 8 ? ' card-silver' : '');
+    const rcAttr = movie.rating ? ` style="--rc:${ratingColorRGB(movie.rating)}"` : '';
+    const ratedClass = movie.rating ? ' rated' : '';
 
     return `
-      <div class="movie-card${ratingClass}" data-id="${movie.id}">
+      <div class="movie-card${ratedClass}"${rcAttr} data-id="${movie.id}">
         <div class="movie-card-poster">${poster}</div>
         <div class="movie-card-info">
           <h3 class="movie-card-title">${escapeHtml(movie.title)}</h3>
@@ -185,19 +200,18 @@ const UI = (() => {
       ? `<img src="${movie.poster}" alt="${escapeHtml(movie.title)}" loading="lazy">`
       : `<div class="no-poster-lane">${escapeHtml(movie.title)}</div>`;
 
-    const sizeClass = movie.rating === 10 ? 'card-xl' : (movie.rating >= 8 ? 'card-lg' : 'card-sm');
-    const glowClass = movie.rating === 10 ? ' card-gold' : (movie.rating >= 8 ? ' card-silver' : '');
-
-    const rc = ratingColor(movie.rating || 0);
-    const nums = Array.from({length: 10}, (_, i) => i + 1).map(i =>
-      `<span class="fcs${i <= (movie.rating || 0) ? ' filled' : ''}" data-value="${i}" style="${i <= (movie.rating || 0) ? 'background:' + rc : ''}">${i}</span>`
-    ).join('');
+    const sizeClass = movie.rating >= 9 ? 'card-xl' : (movie.rating >= 7 ? 'card-lg' : 'card-sm');
+    const ratedClass = movie.rating ? ' rated' : '';
+    const rcAttr = movie.rating ? ` style="--rc:${ratingColorRGB(movie.rating)}"` : '';
+    const ratingBadge = movie.rating
+      ? `<span class="film-card-rating" style="background:${ratingColor(movie.rating)}">${formatRating(movie.rating)}</span>`
+      : '';
 
     return `
-      <div class="film-card ${sizeClass}${glowClass}" data-id="${movie.id}">
+      <div class="film-card ${sizeClass}${ratedClass}"${rcAttr} data-id="${movie.id}">
         ${poster}
         <div class="film-card-overlay">
-          <div class="film-card-nums" data-rating="${movie.rating || 0}">${nums}</div>
+          ${ratingBadge}
           <span class="film-card-title">${escapeHtml(movie.title)}</span>
           <span class="film-card-year">${movie.year || ''}</span>
         </div>
@@ -305,9 +319,10 @@ const UI = (() => {
         const img = m.poster
           ? `<img src="${m.poster}" alt="${escapeHtml(m.title)}" loading="lazy">`
           : `<div class="poster-card-no-img">${escapeHtml(m.title)}</div>`;
-        const ratingClass = m.rating === 10 ? ' card-gold' : (m.rating >= 8 ? ' card-silver' : '');
+        const ratingClass = m.rating ? ' rated' : '';
+        const rcAttr = m.rating ? ` style="--rc:${ratingColorRGB(m.rating)}"` : '';
         return `
-          <div class="poster-card${ratingClass}" data-id="${m.id}">
+          <div class="poster-card${ratingClass}"${rcAttr} data-id="${m.id}">
             ${img}
             <div class="poster-card-overlay">
               <div class="poster-card-title">${escapeHtml(m.title)}</div>
@@ -438,5 +453,5 @@ const UI = (() => {
     });
   }
 
-  return { showToast, ratingColor, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, initCustomSelects, escapeHtml };
+  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, initCustomSelects, escapeHtml };
 })();

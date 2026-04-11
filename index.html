@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/logo.jpg" type="image/jpeg">
   <link rel="apple-touch-icon" href="icons/logo.jpg">
-  <link rel="stylesheet" href="css/styles.css?v=2026.04.10.2208">
+  <link rel="stylesheet" href="css/styles.css?v=2026.04.11.1159">
 </head>
 <body>
   <header class="app-header">
@@ -128,17 +128,13 @@
         <p id="form-overview" class="form-overview"></p>
         <div class="form-group">
           <label>Your Rating</label>
-          <div class="number-rating" id="number-rating">
-            <span class="nr-btn" data-value="1">1</span>
-            <span class="nr-btn" data-value="2">2</span>
-            <span class="nr-btn" data-value="3">3</span>
-            <span class="nr-btn" data-value="4">4</span>
-            <span class="nr-btn" data-value="5">5</span>
-            <span class="nr-btn" data-value="6">6</span>
-            <span class="nr-btn" data-value="7">7</span>
-            <span class="nr-btn" data-value="8">8</span>
-            <span class="nr-btn" data-value="9">9</span>
-            <span class="nr-btn" data-value="10">10</span>
+          <div class="rating-input" id="rating-input">
+            <div class="rating-display">
+              <span class="rating-display-value" id="rating-display-value">-</span>
+              <span class="rating-display-max" id="rating-display-max"></span>
+            </div>
+            <input type="range" id="rating-slider" class="rating-slider" min="1" max="10" step="0.1" value="5">
+            <button type="button" id="rating-clear" class="btn-link" style="display:none">Clear rating</button>
           </div>
           <input type="hidden" id="form-rating" value="0">
         </div>
@@ -233,11 +229,11 @@
   <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <script src="js/db.js?v=2026.04.10.2208"></script>
-  <script src="js/api.js?v=2026.04.10.2208"></script>
-  <script src="js/ui.js?v=2026.04.10.2208"></script>
-  <script src="js/stats.js?v=2026.04.10.2208"></script>
-  <script src="js/sync.js?v=2026.04.10.2208"></script>
-  <script src="js/app.js?v=2026.04.10.2208"></script>
+  <script src="js/db.js?v=2026.04.11.1159"></script>
+  <script src="js/api.js?v=2026.04.11.1159"></script>
+  <script src="js/ui.js?v=2026.04.11.1159"></script>
+  <script src="js/stats.js?v=2026.04.11.1159"></script>
+  <script src="js/sync.js?v=2026.04.11.1159"></script>
+  <script src="js/app.js?v=2026.04.11.1159"></script>
 </body>
 </html>

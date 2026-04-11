@@ -473,20 +473,29 @@ const App = (() => {
     updateRatingDisplay();
   }
 
-  function updateRatingDisplay(animate = false) {
-    const color = selectedRating ? UI.ratingColor(selectedRating) : '';
-    document.querySelectorAll('#number-rating .nr-btn').forEach(btn => {
-      const val = parseInt(btn.dataset.value);
-      const wasFilled = btn.classList.contains('filled');
-      const shouldFill = val <= selectedRating;
-      btn.classList.toggle('filled', shouldFill);
-      btn.style.background = shouldFill ? color : '';
-      if (animate && shouldFill && !wasFilled) {
-        btn.classList.remove('animate');
-        void btn.offsetWidth;
-        btn.classList.add('animate');
-      }
-    });
+  function updateRatingDisplay() {
+    const slider = document.getElementById('rating-slider');
+    const valueEl = document.getElementById('rating-display-value');
+    const maxEl = document.getElementById('rating-display-max');
+    const clearBtn = document.getElementById('rating-clear');
+
+    if (selectedRating > 0) {
+      const color = UI.ratingColor(selectedRating);
+      valueEl.textContent = UI.formatRating(selectedRating);
+      valueEl.style.color = color;
+      maxEl.textContent = '/10';
+      slider.value = selectedRating;
+      clearBtn.style.display = '';
+      const pct = ((selectedRating - 1) / 9) * 100;
+      slider.style.background = `linear-gradient(to right, ${color} 0%, ${color} ${pct}%, var(--star-empty) ${pct}%, var(--star-empty) 100%)`;
+    } else {
+      valueEl.textContent = '-';
+      valueEl.style.color = '';
+      maxEl.textContent = '';
+      slider.value = 5;
+      clearBtn.style.display = 'none';
+      slider.style.background = '';
+    }
     document.getElementById('form-rating').value = selectedRating;
   }
 
@@ -526,15 +535,6 @@ const App = (() => {
     } catch (err) {
       UI.showToast('Error saving movie: ' + err.message);
     }
-  }
-
-  async function quickRateMovie(id, rating, starEl) {
-    const movie = await MovieDB.getMovie(id);
-    if (!movie) return;
-    await MovieDB.updateMovie({ ...movie, rating });
-    if (rating === 10 && starEl) spawnStarBurst(starEl);
-    UI.showToast(rating === 10 ? 'Masterpiece! 10/10' : `Rated ${rating}/10`);
-    loadCatalogue();
   }
 
   // --- Detail ---
@@ -750,35 +750,19 @@ const App = (() => {
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
     });
 
-    document.getElementById('number-rating').addEventListener('click', (e) => {
-      const btn = e.target.closest('.nr-btn');
-      if (btn) {
-        selectedRating = parseInt(btn.dataset.value);
-        updateRatingDisplay(true);
-        if (selectedRating === 10) spawnStarBurst(btn);
-      }
+    let sliderWasTen = false;
+    document.getElementById('rating-slider').addEventListener('input', (e) => {
+      selectedRating = parseFloat(parseFloat(e.target.value).toFixed(1));
+      updateRatingDisplay();
     });
-
-    document.getElementById('number-rating').addEventListener('mouseover', (e) => {
-      const btn = e.target.closest('.nr-btn');
-      if (btn) {
-        const val = parseInt(btn.dataset.value);
-        const color = UI.ratingColor(val);
-        document.querySelectorAll('#number-rating .nr-btn').forEach(b => {
-          const bv = parseInt(b.dataset.value);
-          const hovered = bv <= val;
-          b.classList.toggle('hovered', hovered && !b.classList.contains('filled'));
-          if (hovered && !b.classList.contains('filled')) b.style.background = color;
-          else if (!b.classList.contains('filled')) b.style.background = '';
-        });
-      }
+    document.getElementById('rating-slider').addEventListener('change', (e) => {
+      const val = parseFloat(parseFloat(e.target.value).toFixed(1));
+      if (val === 10 && !sliderWasTen) spawnStarBurst(document.getElementById('rating-display-value'));
+      sliderWasTen = val === 10;
     });
-
-    document.getElementById('number-rating').addEventListener('mouseleave', () => {
-      document.querySelectorAll('#number-rating .nr-btn').forEach(b => {
-        b.classList.remove('hovered');
-        if (!b.classList.contains('filled')) b.style.background = '';
-      });
+    document.getElementById('rating-clear').addEventListener('click', () => {
+      selectedRating = 0;
+      updateRatingDisplay();
     });
 
     document.getElementById('movie-form').addEventListener('submit', saveMovie);
@@ -795,51 +779,9 @@ const App = (() => {
       editingMovie = null;
     });
 
-    document.getElementById('movie-grid').addEventListener('click', async (e) => {
-      const num = e.target.closest('.fcs');
-      if (num) {
-        e.stopPropagation();
-        const card = num.closest('.film-card');
-        if (card) await quickRateMovie(parseInt(card.dataset.id), parseInt(num.dataset.value), num);
-        return;
-      }
+    document.getElementById('movie-grid').addEventListener('click', (e) => {
       const card = e.target.closest('.movie-card, .film-card, .poster-card');
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
-    });
-
-    document.getElementById('movie-grid').addEventListener('mouseover', (e) => {
-      const num = e.target.closest('.fcs');
-      if (num) {
-        const row = num.closest('.film-card-nums');
-        if (!row) return;
-        const val = parseInt(num.dataset.value);
-        const color = UI.ratingColor(val);
-        row.querySelectorAll('.fcs').forEach(n => {
-          if (parseInt(n.dataset.value) <= val) {
-            n.style.background = color;
-            n.style.color = '#fff';
-          }
-        });
-      }
-    });
-
-    document.getElementById('movie-grid').addEventListener('mouseout', (e) => {
-      const num = e.target.closest('.fcs');
-      if (num) {
-        const row = num.closest('.film-card-nums');
-        if (!row) return;
-        const rating = parseInt(row.dataset.rating) || 0;
-        const origColor = rating ? UI.ratingColor(rating) : '';
-        row.querySelectorAll('.fcs').forEach(n => {
-          if (n.classList.contains('filled')) {
-            n.style.background = origColor;
-            n.style.color = '#fff';
-          } else {
-            n.style.background = '';
-            n.style.color = '';
-          }
-        });
-      }
     });
 
     document.getElementById('filter-toggle').addEventListener('click', () => {
