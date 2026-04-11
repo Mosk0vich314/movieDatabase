@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/logo.jpg" type="image/jpeg">
   <link rel="apple-touch-icon" href="icons/logo.jpg">
-  <link rel="stylesheet" href="css/styles.css?v=2026.04.11.2004">
+  <link rel="stylesheet" href="css/styles.css?v=2026.04.11.2013">
 </head>
 <body>
   <header class="app-header">
@@ -37,7 +37,7 @@
       <div class="catalogue-controls">
         <div class="catalogue-top-bar">
           <div class="input-wrap">
-            <input type="text" id="catalogue-search" class="search-input" placeholder="Search your movies...">
+            <input type="text" id="catalogue-search" class="search-input" placeholder="Find a film…">
             <button class="input-clear" type="button" id="catalogue-search-clear">&#215;</button>
           </div>
           <button id="filter-toggle" class="filter-toggle-btn">
@@ -82,7 +82,7 @@
       </div>
       <div id="movie-grid" class="movie-grid"></div>
       <div id="empty-catalogue" class="empty-state" style="display:none;">
-        <p>No movies yet! Start by <a href="#add">adding a movie</a>.</p>
+        <p>Your collection awaits. <a href="#add">Add your first film</a>.</p>
       </div>
     </section>
 
@@ -90,7 +90,7 @@
     <section id="view-watchlist" class="view" style="display:none;">
       <div id="watchlist-grid"></div>
       <div id="empty-watchlist" class="empty-state" style="display:none;">
-        <p>No movies on your watchlist. Search for a movie and hit <strong>+ Watchlist</strong> to add one.</p>
+        <p>Nothing queued yet. Find a film and hit <strong>+ Watchlist</strong>.</p>
       </div>
     </section>
 
@@ -102,7 +102,7 @@
       </div>
       <div class="add-movie-search">
         <div class="input-wrap">
-          <input type="text" id="tmdb-search" class="search-input" placeholder="Search or paste a themoviedb.org URL..." autocomplete="off">
+          <input type="text" id="tmdb-search" class="search-input" placeholder="Film title or TMDB URL…" autocomplete="off">
           <button class="input-clear" type="button" id="tmdb-search-clear">&#215;</button>
           <div id="search-autocomplete" class="search-autocomplete" style="display:none;"></div>
         </div>
@@ -138,7 +138,7 @@
         </div>
         <div class="form-group">
           <label for="form-notes">Notes</label>
-          <textarea id="form-notes" class="form-input" rows="3" placeholder="Your thoughts on this movie..."></textarea>
+          <textarea id="form-notes" class="form-input" rows="3" placeholder="Your thoughts…"></textarea>
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Save Movie</button>
@@ -227,11 +227,11 @@
   <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <script src="js/db.js?v=2026.04.11.2004"></script>
-  <script src="js/api.js?v=2026.04.11.2004"></script>
-  <script src="js/ui.js?v=2026.04.11.2004"></script>
-  <script src="js/stats.js?v=2026.04.11.2004"></script>
-  <script src="js/sync.js?v=2026.04.11.2004"></script>
-  <script src="js/app.js?v=2026.04.11.2004"></script>
+  <script src="js/db.js?v=2026.04.11.2013"></script>
+  <script src="js/api.js?v=2026.04.11.2013"></script>
+  <script src="js/ui.js?v=2026.04.11.2013"></script>
+  <script src="js/stats.js?v=2026.04.11.2013"></script>
+  <script src="js/sync.js?v=2026.04.11.2013"></script>
+  <script src="js/app.js?v=2026.04.11.2013"></script>
 </body>
 </html>

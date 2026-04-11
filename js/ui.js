@@ -123,12 +123,14 @@ const UI = (() => {
     const genres = (movie.genres || []).map(g => `<span class="genre-tag">${escapeHtml(g)}</span>`).join('');
 
     const pal = getGenrePalette(movie.genres);
+    const backBtn = `<button class="btn-back" id="detail-back">&#8592; Back</button>`;
     const backdropHtml = movie.backdrop
       ? `<div class="detail-backdrop-wrap" style="--genre-accent:${pal.accent}">
           <img src="${movie.backdrop}" class="detail-backdrop-img" alt="">
           <div class="detail-backdrop-overlay"></div>
+          ${backBtn}
         </div>`
-      : '';
+      : `<div class="detail-header-fallback">${backBtn}</div>`;
 
     const runtimeHtml = movie.runtime
       ? `<div class="detail-runtime">&#9201; ${movie.runtime >= 60 ? `${Math.floor(movie.runtime / 60)}h ${movie.runtime % 60}m` : `${movie.runtime}m`}</div>`
@@ -197,9 +199,6 @@ const UI = (() => {
 
     return `
       ${backdropHtml}
-      <div class="detail-header">
-        <button class="btn btn-secondary btn-back" id="detail-back">&larr; Back</button>
-      </div>
       <div class="detail-content">
         <div class="detail-poster-wrap">${poster}</div>
         <div class="detail-info">

@@ -184,7 +184,40 @@ a:hover { color: var(--accent-hover); }
 .btn-secondary:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); }
 .btn-danger { background: #c0392b; color: #fff; }
 .btn-danger:hover { background: #e74c3c; transform: translateY(-1px); }
-.btn-back { padding: 8px 14px; font-size: 0.85rem; }
+.btn-back {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: background 0.18s;
+}
+.btn-back:hover { background: rgba(0, 0, 0, 0.72); }
+.detail-header-fallback {
+  padding: 16px 0 4px;
+}
+.detail-header-fallback .btn-back {
+  position: static;
+  display: inline-flex;
+  background: var(--bg-card);
+  border-color: var(--border);
+  color: var(--text);
+  backdrop-filter: none;
+}
 
 /* === Inputs === */
 .form-input, .search-input, .filter-select {
@@ -662,7 +695,6 @@ a:hover { color: var(--accent-hover); }
 }
 
 /* === Movie Detail === */
-.detail-header { margin-bottom: 20px; }
 .detail-content { display: flex; gap: 28px; flex-wrap: wrap; }
 .detail-poster-wrap { flex-shrink: 0; }
 .detail-poster {

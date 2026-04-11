@@ -201,9 +201,11 @@ const App = (() => {
     const vw = window.innerWidth, vh = window.innerHeight;
     const wait = ms => new Promise(r => setTimeout(r, ms));
 
-    // Pre-render detail view invisibly to measure the actual poster position.
-    // We simulate the post-navigation layout (all views hidden, only detail visible)
-    // so getBoundingClientRect matches where the poster actually lands after routing.
+    // Measure at scrollY=0 so dest is always a fixed viewport-top-anchored position.
+    // All of this is synchronous — no paint happens until the first await.
+    const savedScrollY = window.scrollY;
+    if (savedScrollY > 0) window.scrollTo(0, 0);
+
     const detailSection = document.getElementById('view-detail');
     const detailContent = document.getElementById('movie-detail');
     detailContent.innerHTML = UI.renderMovieDetail(movie);
@@ -224,17 +226,19 @@ const App = (() => {
       dest = { left: (vw - fw) / 2, top: (vh - fh) / 2, width: fw, height: fh };
     }
 
-    // Restore all views to their original inline display values
     allViews.forEach((v, i) => { v.style.display = prevDisplays[i]; });
     detailSection.style.visibility = '';
     detailSection.style.pointerEvents = '';
+
+    // Restore scroll so the user sees the shelf where they were
+    if (savedScrollY > 0) window.scrollTo(0, savedScrollY);
 
     const tx = dest.left - rect.left;
     const ty = dest.top  - rect.top;
     const sx = dest.width  / rect.width;
     const sy = dest.height / rect.height;
 
-    // Spine clone floats over the watchlist
+    // Spine clone floats over the shelf
     const sc = caseEl.style.getPropertyValue('--sc') || '#0d1520';
     const ac = caseEl.style.getPropertyValue('--ac') || '#304468';
     const el = document.createElement('div');
@@ -250,13 +254,15 @@ const App = (() => {
     document.body.appendChild(el);
     caseEl.style.opacity = '0';
 
-    // Phase 1: Lift (150ms)
+    // Phase 1: Lift (150ms) — still at savedScrollY
     el.style.transition = 'transform 0.15s ease-out';
     el.style.transform = `translate(0,-44px) scale(1,1) rotateY(0deg)`;
     await wait(160);
 
-    // Phase 2: Glide to the real poster destination + expand (380ms)
-    // ty + 44 because we lifted 44px up first
+    // Scroll to top now — book is "in the air", page snaps to top so dest is valid
+    if (savedScrollY > 0) window.scrollTo(0, 0);
+
+    // Phase 2: Glide to dest (measured at scroll=0) + expand (380ms)
     el.style.transition = 'transform 0.38s cubic-bezier(0.4,0,0.2,1)';
     el.style.transform = `translate(${tx}px,${ty + 44}px) scale(${sx},${sy}) rotateY(0deg)`;
     await wait(390);
