@@ -185,15 +185,73 @@ const App = (() => {
 
   async function loadWatchlist() {
     const movies = (await MovieDB.getAllMovies()).filter(m => m.watchlist);
-    const grid = document.getElementById('watchlist-grid');
+    const container = document.getElementById('watchlist-grid');
     const empty = document.getElementById('empty-watchlist');
+
     if (movies.length === 0) {
-      grid.innerHTML = '';
+      container.innerHTML = '';
+      container.className = '';
       empty.style.display = 'block';
-    } else {
-      empty.style.display = 'none';
-      grid.innerHTML = movies.map(m => UI.renderWatchlistCard(m)).join('');
+      return;
     }
+
+    empty.style.display = 'none';
+    container.className = '';
+    container.innerHTML = UI.renderBlurayShelf(movies);
+
+    let selectedId = null;
+
+    function openCase(id) {
+      const movie = movies.find(m => m.id === id);
+      if (!movie) return;
+
+      container.querySelectorAll('.bluray-case').forEach(c => c.classList.remove('open'));
+      container.querySelector(`.bluray-case[data-id="${id}"]`).classList.add('open');
+
+      const detail = document.getElementById('bluray-detail');
+      const cover = document.getElementById('bd-cover');
+      cover.src = movie.poster || '';
+      cover.alt = movie.title;
+      document.getElementById('bd-title').textContent = movie.title;
+      const meta = [movie.year, (movie.directors || []).join(', ')].filter(Boolean).join(' · ');
+      document.getElementById('bd-meta').textContent = meta;
+      document.getElementById('bd-genres').innerHTML = (movie.genres || []).slice(0, 4)
+        .map(g => `<span class="bd-genre-tag">${UI.escapeHtml(g)}</span>`).join('');
+      document.getElementById('bd-watched-btn').dataset.id = id;
+      document.getElementById('bd-delete-btn').dataset.id = id;
+      detail.style.display = '';
+      selectedId = id;
+
+      // Scroll case into view
+      const caseEl = container.querySelector(`.bluray-case[data-id="${id}"]`);
+      caseEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+
+    function closeCase() {
+      container.querySelectorAll('.bluray-case').forEach(c => c.classList.remove('open'));
+      document.getElementById('bluray-detail').style.display = 'none';
+      selectedId = null;
+    }
+
+    container.querySelectorAll('.bluray-case').forEach(caseEl => {
+      caseEl.addEventListener('click', () => {
+        const id = parseInt(caseEl.dataset.id);
+        if (selectedId === id) closeCase(); else openCase(id);
+      });
+    });
+
+    document.getElementById('bd-watched-btn').addEventListener('click', (e) => {
+      markAsWatched(parseInt(e.currentTarget.dataset.id));
+    });
+
+    document.getElementById('bd-delete-btn').addEventListener('click', async (e) => {
+      const id = parseInt(e.currentTarget.dataset.id);
+      if (confirm('Remove from watchlist?')) {
+        await MovieDB.deleteMovie(id);
+        updateWatchlistBadge();
+        loadWatchlist();
+      }
+    });
   }
 
   async function addToWatchlist(tmdbId) {

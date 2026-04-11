@@ -313,6 +313,49 @@ const UI = (() => {
     })));
   }
 
+  function renderBlurayShelf(movies) {
+    const SPINE_COLORS = [
+      '#0d1f33','#1c0d33','#0d2e12','#2e0d0d','#1a1a08',
+      '#08181a','#2e1a08','#0d2a2e','#2e0d1a','#162e08',
+    ];
+    function spineColor(title) {
+      let h = 0;
+      for (let i = 0; i < title.length; i++) h = Math.imul(31, h) + title.charCodeAt(i) | 0;
+      return SPINE_COLORS[Math.abs(h) % SPINE_COLORS.length];
+    }
+
+    const cases = movies.map(m => `
+      <div class="bluray-case" data-id="${m.id}" style="--sc:${spineColor(m.title)}">
+        <div class="case-spine">
+          <span class="spine-bd">BD</span>
+          <span class="spine-title">${escapeHtml(m.title)}</span>
+          <span class="spine-year">${m.year || ''}</span>
+        </div>
+      </div>
+    `).join('');
+
+    return `
+      <div class="bluray-shelf-wrap">
+        <div class="shelf-ambient"></div>
+        <div class="shelf-row">${cases}</div>
+        <div class="shelf-plank"></div>
+        <div class="shelf-shadow"></div>
+      </div>
+      <div class="bluray-detail" id="bluray-detail" style="display:none">
+        <img class="bd-cover" id="bd-cover" src="" alt="">
+        <div class="bd-info">
+          <h2 class="bd-title" id="bd-title"></h2>
+          <p class="bd-meta" id="bd-meta"></p>
+          <div class="bd-genres" id="bd-genres"></div>
+          <div class="bd-actions">
+            <button class="btn btn-primary" id="bd-watched-btn">&#10003; Watched</button>
+            <button class="btn btn-danger" id="bd-delete-btn">Remove</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function renderPosterGrid(movies) {
     return `<div class="poster-grid">
       ${movies.map(m => {
@@ -453,5 +496,5 @@ const UI = (() => {
     });
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, initCustomSelects, escapeHtml };
+  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, initCustomSelects, escapeHtml };
 })();
