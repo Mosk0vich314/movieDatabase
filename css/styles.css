@@ -1729,3 +1729,194 @@ input[type="date"].form-input { color-scheme: dark; }
   .detail-backdrop-wrap { height: 160px; }
   .poster-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 4px; }
 }
+
+/* === Genre tint on detail backdrop === */
+.detail-backdrop-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--genre-accent, transparent) 0%, transparent 65%);
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+/* === Rank Banner (stats page) === */
+.rank-banner {
+  position: relative;
+  padding: 18px 22px;
+  margin-bottom: 22px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--rank-color, var(--accent));
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+.rank-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 25%, rgba(255,255,255,0.04) 50%, transparent 75%);
+  animation: dnaShimmer 3.5s ease-in-out infinite;
+}
+.rank-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.rank-label {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.rank-name {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--rank-color, var(--accent));
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.rank-count {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--rank-color, var(--accent));
+  opacity: 0.85;
+  line-height: 1;
+}
+.rank-count-unit {
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.6;
+}
+.rank-progress-wrap {
+  height: 4px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+.rank-progress-bar {
+  height: 100%;
+  background: var(--rank-color, var(--accent));
+  border-radius: 2px;
+  transition: width 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 2px;
+}
+.rank-next-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.rank-next-label--max {
+  color: var(--rank-color, var(--accent));
+  opacity: 0.8;
+}
+
+/* === Stat cards — extra sizes === */
+.stat-number--sm {
+  font-size: 1.8rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.streak-best {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  -webkit-text-fill-color: var(--text-muted);
+  background: none;
+}
+
+/* === Achievements section === */
+.achievement-group {
+  margin-bottom: 14px;
+}
+.achievement-group-label {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+.milestone-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.milestone-chip {
+  padding: 4px 11px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+.milestone-chip--unlocked {
+  background: rgba(233, 69, 96, 0.1);
+  color: var(--accent);
+  border-color: rgba(233, 69, 96, 0.3);
+}
+.achievement-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.achievement-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 20px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  background: rgba(124, 92, 252, 0.1);
+  border: 1px solid rgba(124, 92, 252, 0.25);
+  color: var(--accent2);
+  transition: all 0.2s;
+}
+.achievement-badge:hover {
+  background: rgba(124, 92, 252, 0.18);
+}
+.achievement-badge--director {
+  background: rgba(233, 69, 96, 0.1);
+  border-color: rgba(233, 69, 96, 0.25);
+  color: var(--accent);
+}
+.achievement-badge--director:hover {
+  background: rgba(233, 69, 96, 0.18);
+}
+.ab-count { opacity: 0.65; font-size: 0.7rem; }
+
+/* === Detail page context chips === */
+.detail-date-added {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: 2px 0 6px;
+  font-weight: 500;
+}
+.detail-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 12px;
+}
+.detail-chip {
+  font-size: 0.69rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}

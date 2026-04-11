@@ -83,7 +83,19 @@ const App = (() => {
 
   // --- Catalogue ---
 
+  function celebrateMilestone(count) {
+    UI.showToast(`\uD83C\uDFAC Milestone — ${count} films catalogued!`);
+    const title = document.querySelector('.app-title') || document.body;
+    [0, 130, 260, 390].forEach(delay => setTimeout(() => spawnStarBurst(title), delay));
+  }
+
   async function loadCatalogue() {
+    const pending = localStorage.getItem('pendingMilestone');
+    if (pending) {
+      localStorage.removeItem('pendingMilestone');
+      setTimeout(() => celebrateMilestone(parseInt(pending)), 500);
+    }
+
     const movies = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
     const grid = document.getElementById('movie-grid');
     const empty = document.getElementById('empty-catalogue');
@@ -641,7 +653,11 @@ const App = (() => {
         await MovieDB.updateMovie(movie);
         UI.showToast('Movie updated!');
       } else {
+        const before = (await MovieDB.getAllMovies()).filter(m => !m.watchlist).length;
         await MovieDB.addMovie(movie);
+        const after = before + 1;
+        const hit = Stats.MILESTONE_VALUES.find(m => before < m && after >= m);
+        if (hit) localStorage.setItem('pendingMilestone', hit);
         UI.showToast('Movie added!');
       }
       editingMovie = null;
@@ -655,7 +671,7 @@ const App = (() => {
   // --- Detail ---
 
   async function loadMovieDetail(id) {
-    const movie = await MovieDB.getMovie(id);
+    const [movie, allMovies] = await Promise.all([MovieDB.getMovie(id), MovieDB.getAllMovies()]);
     if (!movie) {
       UI.showToast('Movie not found');
       window.location.hash = '#catalogue';
@@ -684,7 +700,8 @@ const App = (() => {
       } catch (_) { /* best-effort */ }
     }
 
-    document.getElementById('movie-detail').innerHTML = UI.renderMovieDetail(movie);
+    const ctx = { allMovies: allMovies.filter(m => !m.watchlist) };
+    document.getElementById('movie-detail').innerHTML = UI.renderMovieDetail(movie, ctx);
 
     document.getElementById('detail-back').addEventListener('click', () => {
       window.location.hash = movie.watchlist ? '#watchlist' : '#catalogue';

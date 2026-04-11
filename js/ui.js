@@ -115,15 +115,16 @@ const UI = (() => {
     `;
   }
 
-  function renderMovieDetail(movie) {
+  function renderMovieDetail(movie, ctx = {}) {
     const poster = movie.poster
       ? `<img src="${movie.poster}" alt="${escapeHtml(movie.title)}" class="detail-poster">`
       : `<div class="no-poster-lg">${escapeHtml(movie.title)}</div>`;
 
     const genres = (movie.genres || []).map(g => `<span class="genre-tag">${escapeHtml(g)}</span>`).join('');
 
+    const pal = getGenrePalette(movie.genres);
     const backdropHtml = movie.backdrop
-      ? `<div class="detail-backdrop-wrap">
+      ? `<div class="detail-backdrop-wrap" style="--genre-accent:${pal.accent}">
           <img src="${movie.backdrop}" class="detail-backdrop-img" alt="">
           <div class="detail-backdrop-overlay"></div>
         </div>`
@@ -150,6 +151,50 @@ const UI = (() => {
         </div>`
       : '';
 
+    // Date added
+    const dateAddedHtml = movie.dateAdded
+      ? `<div class="detail-date-added">Added ${new Date(movie.dateAdded).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</div>`
+      : '';
+
+    // Context chips from collection
+    const chips = [];
+    if (ctx.allMovies && ctx.allMovies.length > 0) {
+      const ordinal = n => n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`;
+
+      // Director count
+      const dir = (movie.directors || [])[0];
+      if (dir) {
+        const others = ctx.allMovies.filter(m => m.id !== movie.id && (m.directors || []).includes(dir));
+        if (others.length >= 1) {
+          const total = others.length + (movie.watchlist ? 0 : 1);
+          chips.push(movie.watchlist
+            ? `${others.length} other ${dir} film${others.length > 1 ? 's' : ''} in collection`
+            : `Your ${ordinal(total)} ${dir} film`);
+        }
+      }
+
+      // Rating vs avg
+      const ratedOthers = ctx.allMovies.filter(m => m.id !== movie.id && m.rating > 0);
+      if (movie.rating > 0 && ratedOthers.length >= 3) {
+        const avg = ratedOthers.reduce((s, m) => s + m.rating, 0) / ratedOthers.length;
+        const diff = movie.rating - avg;
+        if (Math.abs(diff) >= 0.5) {
+          const sign = diff > 0 ? '+' : '';
+          chips.push(`${sign}${diff.toFixed(1)} vs your avg`);
+        }
+      }
+
+      // Year peers
+      if (movie.year) {
+        const sameYear = ctx.allMovies.filter(m => m.id !== movie.id && m.year === movie.year).length;
+        if (sameYear >= 2) chips.push(`${sameYear + (movie.watchlist ? 0 : 1)} films from ${movie.year}`);
+      }
+    }
+
+    const contextHtml = chips.length
+      ? `<div class="detail-context">${chips.map(c => `<span class="detail-chip">${c}</span>`).join('')}</div>`
+      : '';
+
     return `
       ${backdropHtml}
       <div class="detail-header">
@@ -160,8 +205,10 @@ const UI = (() => {
         <div class="detail-info">
           <h2>${escapeHtml(movie.title)} <span class="detail-year">(${movie.year || 'N/A'})</span></h2>
           ${runtimeHtml}
+          ${dateAddedHtml}
           <div class="detail-genres">${genres}</div>
           <div class="detail-directors">${renderDirectorBadge(movie.directors)}</div>
+          ${contextHtml}
           ${movie.overview ? `<p class="detail-overview">${escapeHtml(movie.overview)}</p>` : ''}
           <div class="detail-rating">
             <label>Your Rating:</label>
