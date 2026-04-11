@@ -184,19 +184,21 @@ const App = (() => {
   // --- Watchlist ---
 
   async function extractBluray(caseEl, movie) {
-    const rect = caseEl.getBoundingClientRect(); // capture BEFORE navigation
+    const rect = caseEl.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
     const wait = ms => new Promise(r => setTimeout(r, ms));
-    const raf2 = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-    // Scrim — instantly opaque so the view switch is never visible
-    const scrim = document.createElement('div');
-    scrim.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.92);pointer-events:all;';
-    document.body.appendChild(scrim);
+    const coverW = Math.min(150, Math.floor(vw * 0.4));
+    const coverH = Math.round(coverW * 1.48);
+    const cx = Math.round((vw - coverW) / 2);
+    const cy = Math.round((vh - coverH) / 2);
+    const tx = cx - rect.left;
+    const ty = cy - rect.top;
+    const sx = coverW / rect.width;
+    const sy = coverH / rect.height;
 
-    // Navigate immediately under the opaque scrim
-    window.location.hash = `#detail/${movie.id}`;
-
-    // Spine clone fixed at captured position
+    // Spine clone — floats over the watchlist (no view switch yet)
     const sc = caseEl.style.getPropertyValue('--sc') || '#0d1520';
     const ac = caseEl.style.getPropertyValue('--ac') || '#304468';
     const el = document.createElement('div');
@@ -210,66 +212,51 @@ const App = (() => {
     `;
     el.innerHTML = `<div style="position:absolute;top:0;left:0;right:0;height:3px;background:${ac};border-radius:2px 3px 0 0;"></div>`;
     document.body.appendChild(el);
+    caseEl.style.opacity = '0';
 
-    // Phase 1: Lift
-    el.style.transition = 'transform 0.14s ease-out';
+    // Phase 1: Lift (150ms)
+    el.style.transition = 'transform 0.15s ease-out';
     el.style.transform = 'translate(0,-44px) scale(1,1) rotateY(0deg)';
-
     await wait(160);
-    await raf2(); // let detail page finish painting
 
-    // Find where the poster lands on the rendered detail page
-    const detailImg = document.querySelector('img.detail-poster');
-    let dest;
-    if (detailImg) {
-      dest = detailImg.getBoundingClientRect();
-    } else {
-      const fallW = 130, fallH = 190;
-      dest = { left: (window.innerWidth - fallW) / 2, top: (window.innerHeight - fallH) / 2, width: fallW, height: fallH };
-    }
-
-    const tx = dest.left - rect.left;
-    const ty = dest.top  - rect.top  + 44; // +44 compensates for lift offset
-    const sx = dest.width  / rect.width;
-    const sy = dest.height / rect.height;
-
-    // Phase 2: Glide to exact poster position + expand (380ms)
+    // Phase 2: Glide to center + expand (380ms)
     el.style.transition = 'transform 0.38s cubic-bezier(0.4,0,0.2,1)';
     el.style.transform = `translate(${tx}px,${ty}px) scale(${sx},${sy}) rotateY(0deg)`;
     await wait(390);
 
-    // Phase 3: Flip spine out (110ms) and reveal poster cover at same position
+    // Phase 3: Flip spine out (110ms)
     el.style.transition = 'transform 0.11s ease-in, opacity 0.11s ease-in';
     el.style.transform = `translate(${tx}px,${ty}px) scale(${sx},${sy}) rotateY(-90deg)`;
     el.style.opacity = '0';
 
+    // Poster appears at center while spine flips away
     const cover = document.createElement('div');
     cover.style.cssText = `
-      position:fixed;left:${dest.left}px;top:${dest.top}px;
-      width:${dest.width}px;height:${dest.height}px;
+      position:fixed;left:${cx}px;top:${cy}px;
+      width:${coverW}px;height:${coverH}px;
       z-index:9002;pointer-events:none;
       border-radius:4px;overflow:hidden;
       opacity:0;transform:scale(0.96);
-      box-shadow:0 20px 60px rgba(0,0,0,0.85),0 0 0 1px rgba(255,255,255,0.06);
+      box-shadow:0 20px 60px rgba(0,0,0,0.8),0 0 0 1px rgba(255,255,255,0.07);
       transition:opacity 0.14s ease-out,transform 0.14s ease-out;
     `;
     if (movie.poster) cover.innerHTML = `<img src="${movie.poster}" style="width:100%;height:100%;object-fit:cover;display:block;" alt="">`;
     document.body.appendChild(cover);
-
-    await wait(60);
+    await wait(55);
     cover.style.opacity = '1';
     cover.style.transform = 'scale(1)';
-    await wait(120);
 
-    // Fade out scrim + cover together — detail page poster is in the same spot
-    scrim.style.background = 'transparent';
-    cover.style.transition = 'opacity 0.28s ease-in';
+    await wait(320); // brief poster hold
+
+    // Fade out cover, then navigate — watchlist was visible the whole time
+    cover.style.transition = 'opacity 0.18s ease-in';
     cover.style.opacity = '0';
-    await wait(300);
+    await wait(190);
 
     el.remove();
     cover.remove();
-    scrim.remove();
+    caseEl.style.opacity = '';
+    window.location.hash = `#detail/${movie.id}`;
   }
 
   async function loadWatchlist() {
