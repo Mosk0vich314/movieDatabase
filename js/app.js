@@ -188,11 +188,13 @@ const App = (() => {
     const wait = ms => new Promise(r => setTimeout(r, ms));
     const raf2 = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-    // Scrim (blocks view of the navigation happening underneath)
+    // Scrim — instantly opaque so the view switch is never visible
     const scrim = document.createElement('div');
-    scrim.style.cssText = 'position:fixed;inset:0;z-index:9000;background:transparent;pointer-events:all;transition:background 0.25s';
+    scrim.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.92);pointer-events:all;';
     document.body.appendChild(scrim);
-    requestAnimationFrame(() => scrim.style.background = 'rgba(0,0,0,0.88)');
+
+    // Navigate immediately under the opaque scrim
+    window.location.hash = `#detail/${movie.id}`;
 
     // Spine clone fixed at captured position
     const sc = caseEl.style.getPropertyValue('--sc') || '#0d1520';
@@ -208,12 +210,10 @@ const App = (() => {
     `;
     el.innerHTML = `<div style="position:absolute;top:0;left:0;right:0;height:3px;background:${ac};border-radius:2px 3px 0 0;"></div>`;
     document.body.appendChild(el);
-    caseEl.style.opacity = '0';
 
-    // Phase 1: Lift — and simultaneously navigate so detail page renders under scrim
+    // Phase 1: Lift
     el.style.transition = 'transform 0.14s ease-out';
     el.style.transform = 'translate(0,-44px) scale(1,1) rotateY(0deg)';
-    window.location.hash = `#detail/${movie.id}`;
 
     await wait(160);
     await raf2(); // let detail page finish painting
