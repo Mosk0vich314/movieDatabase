@@ -357,8 +357,9 @@ const UI = (() => {
       casesHtml += `<div class="shelf-genre-divider${i === 0 ? ' shelf-genre-divider--first' : ''}"><span>${escapeHtml(genre || '')}</span></div>`;
       group.forEach(m => {
         const pal = getGenrePalette(m.genres);
+        const posterVar = m.poster ? `;--poster:url('${m.poster}')` : '';
         casesHtml += `
-          <div class="bluray-case" data-id="${m.id}" style="--sc:${pal.bg};--ac:${pal.accent}">
+          <div class="bluray-case" data-id="${m.id}" style="--sc:${pal.bg};--ac:${pal.accent}${posterVar}">
             <div class="case-spine">
               <span class="spine-title">${escapeHtml(m.title)}</span>
               <span class="spine-year">${m.year || ''}</span>
