@@ -866,11 +866,11 @@ a:hover { color: var(--accent-hover); }
 .top-item::before {
   content: '';
   position: absolute;
-  right: 0; top: 0; bottom: 0;
-  width: 52%;
-  background: var(--ti-poster, none) right center / auto 100% no-repeat;
-  -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,0.28) 0%, transparent 100%);
-  mask-image: linear-gradient(to left, rgba(0,0,0,0.28) 0%, transparent 100%);
+  inset: 0;
+  background: var(--ti-bg, none) left center / cover no-repeat;
+  opacity: 0.32;
+  -webkit-mask-image: linear-gradient(to right, black 0%, black 45%, transparent 88%);
+  mask-image: linear-gradient(to right, black 0%, black 45%, transparent 88%);
   pointer-events: none;
 }
 .top-item > * { position: relative; z-index: 1; }
