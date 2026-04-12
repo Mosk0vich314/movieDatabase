@@ -1,6 +1,109 @@
 const Stats = (() => {
   const MILESTONE_VALUES = [10, 25, 50, 100, 250, 500, 1000];
 
+  function computeHeatmap(movies) {
+    const counts = {};
+    movies.forEach(m => {
+      if (m.dateAdded) { const d = m.dateAdded.substring(0, 10); counts[d] = (counts[d] || 0) + 1; }
+    });
+    const today = new Date();
+    const cells = [];
+    // Start from day 0 of the week 52 weeks ago so the grid aligns to full weeks
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 364 - startDate.getDay());
+    for (let i = 0; i < 371; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().substring(0, 10);
+      cells.push({ date: key, count: counts[key] || 0 });
+    }
+    return cells;
+  }
+
+  function computeDecadePassport(movies) {
+    const dec = {};
+    movies.forEach(m => {
+      const yr = parseInt(m.year);
+      if (!isNaN(yr)) { const d = Math.floor(yr / 10) * 10; dec[d] = (dec[d] || 0) + 1; }
+    });
+    return Object.entries(dec)
+      .sort(([a], [b]) => parseInt(a) - parseInt(b))
+      .map(([decade, count]) => ({ decade: parseInt(decade), count }));
+  }
+
+  function generateChallenges(movies) {
+    const msPerWeek = 7 * 24 * 3600000;
+    const weekNum = Math.floor(Date.now() / msPerWeek);
+    const now = new Date();
+    const dow = now.getDay();
+    const weekStartMs = now.getTime() - (dow === 0 ? 6 : dow - 1) * 86400000;
+    const weekStart = new Date(weekStartMs);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekStartStr = weekStart.toISOString().substring(0, 10);
+
+    const addedThisWeek = movies.filter(m => m.dateAdded && m.dateAdded >= weekStartStr).length;
+    const highRatedThisWeek = movies.filter(m => m.dateAdded && m.dateAdded >= weekStartStr && m.rating >= 8).length;
+
+    const decCounts = {};
+    movies.forEach(m => {
+      const yr = parseInt(m.year);
+      if (!isNaN(yr)) { const d = Math.floor(yr / 10) * 10; decCounts[d] = (decCounts[d] || 0) + 1; }
+    });
+    const genreCounts = {};
+    movies.forEach(m => (m.genres || []).forEach(g => { genreCounts[g] = (genreCounts[g] || 0) + 1; }));
+    const rareGenres = Object.entries(genreCounts).sort((a, b) => a[1] - b[1]).map(([g]) => g);
+
+    const challenges = [];
+
+    // Challenge 1: Weekly catalogue goal
+    const weekGoal = 3;
+    challenges.push({
+      id: 'weekly-add', icon: '🎬',
+      title: `Catalogue ${weekGoal} films this week`,
+      progress: Math.min(addedThisWeek, weekGoal), goal: weekGoal,
+      done: addedThisWeek >= weekGoal,
+    });
+
+    // Challenge 2: Decade explorer
+    const thinDecades = [1960, 1970, 1980, 1990, 2000, 2010, 2020].filter(d => (decCounts[d] || 0) < 5);
+    if (thinDecades.length > 0) {
+      const target = thinDecades[weekNum % thinDecades.length];
+      const thisWeekDecade = movies.filter(m =>
+        m.dateAdded && m.dateAdded >= weekStartStr &&
+        !isNaN(parseInt(m.year)) && Math.floor(parseInt(m.year) / 10) * 10 === target
+      ).length;
+      challenges.push({
+        id: 'decade', icon: '🗓',
+        title: `Add a film from the ${target}s`,
+        progress: Math.min(thisWeekDecade, 1), goal: 1,
+        done: thisWeekDecade >= 1,
+      });
+    }
+
+    // Challenge 3: Genre explorer or high rating
+    if (rareGenres.length > 0) {
+      const targetGenre = rareGenres[weekNum % Math.min(4, rareGenres.length)];
+      const thisWeekGenre = movies.filter(m =>
+        m.dateAdded && m.dateAdded >= weekStartStr && (m.genres || []).includes(targetGenre)
+      ).length;
+      challenges.push({
+        id: 'genre', icon: '🎭',
+        title: `Add a ${targetGenre} film`,
+        progress: Math.min(thisWeekGenre, 1), goal: 1,
+        done: thisWeekGenre >= 1,
+      });
+    } else {
+      challenges.push({
+        id: 'rate', icon: '⭐',
+        title: 'Rate a film 8 or higher',
+        progress: Math.min(highRatedThisWeek, 1), goal: 1,
+        done: highRatedThisWeek >= 1,
+      });
+    }
+
+    return challenges;
+  }
+
   function tasteDNA(movies) {
     if (movies.length < 3) return null;
 
@@ -114,6 +217,9 @@ const Stats = (() => {
       total, avgRating, genresSorted, directorsSorted, uniqueDirectors,
       ratingDist, topRated, dna: tasteDNA(movies),
       totalRuntime, streak, rank, milestones, genreBadges, auteurBadges,
+      heatmap: computeHeatmap(movies),
+      decadePassport: computeDecadePassport(movies),
+      challenges: generateChallenges(movies),
     };
   }
 
@@ -122,6 +228,84 @@ const Stats = (() => {
     const h = Math.floor(mins / 60);
     const m = mins % 60;
     return h > 0 ? `${h}h${m > 0 ? ` ${m}m` : ''}` : `${m}m`;
+  }
+
+  function renderChallenges(challenges) {
+    if (!challenges || challenges.length === 0) return '';
+    return `
+      <div class="stats-section">
+        <h3>Weekly Challenges</h3>
+        <div class="challenges-grid">
+          ${challenges.map(c => `
+            <div class="challenge-card${c.done ? ' challenge-done' : ''}">
+              <div class="challenge-icon">${c.icon}</div>
+              <div class="challenge-body">
+                <div class="challenge-title">${c.title}</div>
+                <div class="challenge-bar-wrap">
+                  <div class="challenge-bar" style="width:${c.goal > 0 ? Math.round((c.progress / c.goal) * 100) : 0}%"></div>
+                </div>
+                <div class="challenge-count">${c.progress} / ${c.goal}</div>
+              </div>
+              ${c.done ? '<div class="challenge-check">&#10003;</div>' : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+  }
+
+  function renderDecadePassport(passport) {
+    if (!passport || passport.length === 0) return '';
+    const maxCount = Math.max(...passport.map(p => p.count), 1);
+    return `
+      <div class="stats-section">
+        <h3>Decade Passport</h3>
+        <div class="decade-passport">
+          ${passport.map(({ decade, count }) => {
+            const level = count >= 20 ? 'gold' : count >= 10 ? 'silver' : count >= 5 ? 'bronze' : 'entry';
+            const pct = Math.round((count / maxCount) * 100);
+            return `
+              <div class="passport-stamp passport-stamp--${level}">
+                <div class="passport-decade">${decade}s</div>
+                <div class="passport-count">${count}</div>
+                <div class="passport-bar"><div class="passport-bar-fill" style="width:${pct}%"></div></div>
+                <div class="passport-films">film${count !== 1 ? 's' : ''}</div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }
+
+  function renderHeatmap(cells) {
+    if (!cells || cells.length === 0) return '';
+    // Group into weeks (7 days each)
+    const weeks = [];
+    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+
+    // Month labels: show month name at the first week of each month
+    let lastMonth = -1;
+    const monthLabels = weeks.map(week => {
+      const d = new Date(week[0].date + 'T12:00:00');
+      const m = d.getMonth();
+      if (m !== lastMonth) { lastMonth = m; return d.toLocaleDateString('en', { month: 'short' }); }
+      return '';
+    });
+
+    const cellHtml = cell => {
+      const lvl = cell.count === 0 ? 0 : cell.count === 1 ? 1 : cell.count <= 3 ? 2 : 3;
+      const label = `${cell.date}: ${cell.count} film${cell.count !== 1 ? 's' : ''}`;
+      return `<div class="hm-cell hm-level-${lvl}" title="${label}"></div>`;
+    };
+
+    return `
+      <div class="stats-section">
+        <h3>Activity</h3>
+        <div class="heatmap-wrap">
+          <div class="heatmap-months">${monthLabels.map(l => `<span>${l}</span>`).join('')}</div>
+          <div class="heatmap-grid">
+            ${weeks.map(week => `<div class="hm-week">${week.map(cellHtml).join('')}</div>`).join('')}
+          </div>
+        </div>
+      </div>`;
   }
 
   function render(stats) {
@@ -180,6 +364,9 @@ const Stats = (() => {
       </div>` : ''}
 
       ${stats.total === 0 ? '<p class="stats-empty">Add some movies to see your stats!</p>' : `
+        ${renderChallenges(stats.challenges)}
+
+        ${renderDecadePassport(stats.decadePassport)}
 
         ${hasAchievements ? `
         <div class="stats-section">
@@ -273,6 +460,8 @@ const Stats = (() => {
             }).join('')}
           </div>
         </div>
+
+        ${renderHeatmap(stats.heatmap)}
 
         ${stats.topRated.length > 0 ? `
           <div class="stats-section">

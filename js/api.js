@@ -153,6 +153,18 @@ const TMDB = (() => {
     return res.json();
   }
 
+  async function getMovieRecommendations(tmdbId) {
+    const key = getApiKey();
+    if (!key) return [];
+    try {
+      const url = `${BASE_URL}/movie/${tmdbId}/recommendations?api_key=${encodeURIComponent(key)}&page=1`;
+      const res = await fetch(url);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.results || [];
+    } catch (_) { return []; }
+  }
+
   function posterUrl(path, size = 'w342') {
     if (!path) return '';
     return `${IMG_BASE}/${size}${path}`;
@@ -163,5 +175,5 @@ const TMDB = (() => {
     return `${IMG_BASE}/${size}${path}`;
   }
 
-  return { getApiKey, setApiKey, searchMovies, getMovieDetails, searchPerson, getPersonMovieCredits, posterUrl, profileUrl };
+  return { getApiKey, setApiKey, searchMovies, getMovieDetails, searchPerson, getPersonMovieCredits, getMovieRecommendations, posterUrl, profileUrl };
 })();

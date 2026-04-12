@@ -214,11 +214,13 @@ const UI = (() => {
             ${renderRatingBadge(movie.rating)}
           </div>
           ${movie.notes ? `<div class="detail-notes"><label>Notes</label><p>${escapeHtml(movie.notes)}</p></div>` : ''}
+          ${movie.rewatches ? `<div class="detail-rewatches">&#8634; Rewatched ${movie.rewatches}×</div>` : ''}
           <div class="detail-actions">
             ${movie.watchlist
               ? `<button class="btn btn-primary" id="detail-mark-watched">&#10003; Mark as Watched</button>`
               : `<button class="btn btn-primary" id="detail-edit" data-id="${movie.id}">Edit</button>`
             }
+            ${!movie.watchlist ? `<button class="btn btn-secondary" id="detail-rewatch">&#8634; Rewatch</button>` : ''}
             <button class="btn btn-danger" id="detail-delete" data-id="${movie.id}">Delete</button>
           </div>
         </div>
@@ -252,10 +254,14 @@ const UI = (() => {
     const ratingBadge = movie.rating
       ? `<span class="film-card-rating" style="background:${ratingColor(movie.rating)}">${formatRating(movie.rating)}</span>`
       : '';
+    const rewatchBadge = movie.rewatches
+      ? `<span class="rewatch-badge">&#8634;${movie.rewatches}</span>`
+      : '';
 
     return `
       <div class="film-card ${sizeClass}${ratedClass}"${rcAttr} data-id="${movie.id}">
         ${poster}
+        ${rewatchBadge}
         <div class="film-card-overlay">
           ${ratingBadge}
           <span class="film-card-title">${escapeHtml(movie.title)}</span>
@@ -263,6 +269,53 @@ const UI = (() => {
         </div>
       </div>
     `;
+  }
+
+  function renderNowPlaying(movie) {
+    const backdrop = movie.backdrop || movie.poster || '';
+    const rating = movie.rating
+      ? `<span class="np-rating" style="color:${ratingColor(movie.rating)}">${formatRating(movie.rating)}</span>`
+      : '';
+    const dirLine = (movie.directors || []).length > 0
+      ? `<div class="np-director">${escapeHtml(movie.directors[0])}</div>` : '';
+    const rewatchLine = movie.rewatches
+      ? `<div class="np-rewatch">&#8634; ${movie.rewatches}× watched</div>` : '';
+    return `
+      <div class="now-playing" data-id="${movie.id}">
+        ${backdrop ? `<img src="${backdrop}" class="np-backdrop" alt="">` : ''}
+        <div class="np-overlay"></div>
+        <div class="np-content">
+          <div class="np-label">NOW PLAYING</div>
+          <div class="np-title">${escapeHtml(movie.title)}<span class="np-year"> ${movie.year || ''}</span></div>
+          ${dirLine}
+          <div class="np-meta">${rating}${rewatchLine}</div>
+        </div>
+      </div>`;
+  }
+
+  function renderSuggestionsPanel(movieTitle, results) {
+    return `
+      <div class="suggestions-panel">
+        <div class="suggestions-header">
+          <span class="suggestions-label">Because you added <em>${escapeHtml(movieTitle)}</em></span>
+          <button class="suggestions-dismiss" title="Dismiss">&#215;</button>
+        </div>
+        <div class="suggestions-scroll">
+          ${results.map(r => {
+            const year = r.release_date ? r.release_date.substring(0, 4) : '';
+            const img = r.poster_path
+              ? `<img src="${TMDB.posterUrl(r.poster_path, 'w154')}" alt="${escapeHtml(r.title)}" loading="lazy">`
+              : `<div class="suggestion-no-img"></div>`;
+            return `
+              <div class="suggestion-item" data-tmdb-id="${r.id}">
+                <div class="suggestion-poster">${img}</div>
+                <div class="suggestion-title">${escapeHtml(r.title)}</div>
+                <div class="suggestion-year">${year}</div>
+                <button class="suggestion-wl-btn" data-tmdb-id="${r.id}">+ Watchlist</button>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
   }
 
   function renderLanes(sections) {
@@ -593,5 +646,5 @@ const UI = (() => {
     });
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, initCustomSelects, escapeHtml };
+  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, initCustomSelects, escapeHtml };
 })();

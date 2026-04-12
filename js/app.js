@@ -11,6 +11,7 @@ const App = (() => {
   let watchlistViewMode = (['array', 'decades', 'library'].includes(_storedWLView) ? _storedWLView : null) || 'library';
   let searchMode = 'movie';
   let selectedDirectorName = '';
+  let pendingSuggestions = null;
 
   function migrateRatings() {
     if (localStorage.getItem('ratingMigrated10')) return Promise.resolve();
@@ -123,6 +124,45 @@ const App = (() => {
     document.getElementById('view-array-btn').classList.toggle('active', viewMode === 'array');
     document.getElementById('view-decades-btn').classList.toggle('active', viewMode === 'decades');
     document.getElementById('view-library-btn').classList.toggle('active', viewMode === 'library');
+
+    // Now Playing banner — most recently added film
+    const npWrap = document.getElementById('now-playing-wrap');
+    if (movies.length > 0) {
+      const newest = [...movies].sort((a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0))[0];
+      npWrap.innerHTML = UI.renderNowPlaying(newest);
+      npWrap.querySelector('.now-playing').addEventListener('click', () => {
+        window.location.hash = `#detail/${newest.id}`;
+      });
+    } else {
+      npWrap.innerHTML = '';
+    }
+
+    // Similar suggestions panel
+    const sugWrap = document.getElementById('suggestions-wrap');
+    if (pendingSuggestions) {
+      sugWrap.innerHTML = UI.renderSuggestionsPanel(pendingSuggestions.movieTitle, pendingSuggestions.results);
+      sugWrap.querySelector('.suggestions-dismiss').addEventListener('click', () => {
+        pendingSuggestions = null;
+        sugWrap.innerHTML = '';
+      });
+      sugWrap.querySelectorAll('.suggestion-wl-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          addToWatchlist(parseInt(btn.dataset.tmdbId));
+          btn.textContent = '✓';
+          btn.disabled = true;
+        });
+      });
+      sugWrap.querySelectorAll('.suggestion-item').forEach(item => {
+        item.addEventListener('click', e => {
+          if (e.target.classList.contains('suggestion-wl-btn')) return;
+          selectSearchResult(parseInt(item.dataset.tmdbId));
+          showView('add');
+        });
+      });
+    } else {
+      sugWrap.innerHTML = '';
+    }
 
     const filtered = applyFilters(movies);
     const sortVal = document.getElementById('sort-by').value;
@@ -705,6 +745,8 @@ const App = (() => {
         const hit = Stats.MILESTONE_VALUES.find(m => before < m && after >= m);
         if (hit) localStorage.setItem('pendingMilestone', hit);
         UI.showToast('Movie added!');
+        // Fetch similar suggestions in the background
+        if (movie.tmdbId) fetchSimilarSuggestions(movie.title, movie.tmdbId);
       }
       editingMovie = null;
       updateWatchlistBadge();
@@ -753,6 +795,29 @@ const App = (() => {
       window.location.hash = movie.watchlist ? '#watchlist' : '#catalogue';
     });
 
+    if (!movie.watchlist) {
+      const rewatchBtn = document.getElementById('detail-rewatch');
+      if (rewatchBtn) {
+        rewatchBtn.addEventListener('click', async () => {
+          movie.rewatches = (movie.rewatches || 0) + 1;
+          await MovieDB.updateMovie(movie);
+          UI.showToast(`&#8634; Rewatch #${movie.rewatches} logged!`);
+          const rewatchDisplay = document.querySelector('.detail-rewatches');
+          if (rewatchDisplay) {
+            rewatchDisplay.innerHTML = `&#8634; Rewatched ${movie.rewatches}&#215;`;
+          } else {
+            const actionsEl = document.querySelector('.detail-actions');
+            if (actionsEl) {
+              const div = document.createElement('div');
+              div.className = 'detail-rewatches';
+              div.innerHTML = `&#8634; Rewatched ${movie.rewatches}&#215;`;
+              actionsEl.before(div);
+            }
+          }
+        });
+      }
+    }
+
     if (movie.watchlist) {
       document.getElementById('detail-mark-watched').addEventListener('click', () => {
         markAsWatched(movie.id);
@@ -788,6 +853,69 @@ const App = (() => {
         window.location.hash = movie.watchlist ? '#watchlist' : '#catalogue';
       }
     });
+  }
+
+  async function fetchSimilarSuggestions(movieTitle, tmdbId) {
+    try {
+      const [recs, allMovies] = await Promise.all([
+        TMDB.getMovieRecommendations(tmdbId),
+        MovieDB.getAllMovies(),
+      ]);
+      const ownedIds = new Set(allMovies.map(m => String(m.tmdbId)));
+      const filtered = recs.filter(r => !ownedIds.has(String(r.id))).slice(0, 8);
+      if (filtered.length >= 3) pendingSuggestions = { movieTitle, results: filtered };
+    } catch (_) {}
+  }
+
+  async function randomPick() {
+    const allMovies = (await MovieDB.getAllMovies()).filter(m => m.watchlist);
+    if (allMovies.length === 0) { UI.showToast('Watchlist is empty!'); return; }
+    if (allMovies.length === 1) {
+      const only = allMovies[0];
+      window.location.hash = `#detail/${only.id}`;
+      return;
+    }
+
+    const winner = allMovies[Math.floor(Math.random() * allMovies.length)];
+
+    // If library mode, do slot-machine animation
+    if (watchlistViewMode === 'library') {
+      const cases = [...document.querySelectorAll('#watchlist-grid .bluray-case')];
+      const winnerCase = cases.find(c => parseInt(c.dataset.id) === winner.id);
+      if (winnerCase && cases.length > 1) {
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        const totalFlashes = 24 + (cases.length < 8 ? cases.length * 3 : cases.length);
+        let cur = Math.floor(Math.random() * cases.length);
+
+        for (let i = 0; i < totalFlashes; i++) {
+          cases.forEach(c => c.classList.remove('case-pick-highlight'));
+          // On last several flashes, navigate toward winner
+          if (i >= totalFlashes - cases.length) {
+            const winIdx = cases.indexOf(winnerCase);
+            const remaining = totalFlashes - i;
+            cur = (winIdx - remaining + cases.length * 100) % cases.length;
+          }
+          cases[cur % cases.length].classList.add('case-pick-highlight');
+          cur++;
+          const progress = i / totalFlashes;
+          const delay = 40 + Math.pow(progress, 1.8) * 380;
+          await wait(delay);
+        }
+
+        // Land on winner
+        cases.forEach(c => c.classList.remove('case-pick-highlight'));
+        winnerCase.classList.add('case-pick-highlight');
+        winnerCase.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await wait(600);
+        winnerCase.classList.remove('case-pick-highlight');
+        extractBluray(winnerCase, winner);
+        return;
+      }
+    }
+
+    // Non-library mode or fallback: just navigate
+    UI.showToast(`🎲 Picked: ${winner.title}`);
+    setTimeout(() => { window.location.hash = `#detail/${winner.id}`; }, 800);
   }
 
   // --- Stats ---
@@ -996,6 +1124,7 @@ const App = (() => {
     document.getElementById('wl-view-array-btn').addEventListener('click', () => setWatchlistViewMode('array'));
     document.getElementById('wl-view-decades-btn').addEventListener('click', () => setWatchlistViewMode('decades'));
     document.getElementById('wl-view-library-btn').addEventListener('click', () => setWatchlistViewMode('library'));
+    document.getElementById('wl-random-pick').addEventListener('click', randomPick);
     document.getElementById('watchlist-search').addEventListener('input', loadWatchlist);
     document.getElementById('watchlist-search-clear').addEventListener('click', () => {
       document.getElementById('watchlist-search').value = '';

@@ -1968,3 +1968,336 @@ input[type="date"].form-input { color-scheme: dark; }
   color: var(--text-muted);
   white-space: nowrap;
 }
+
+/* === Now Playing === */
+.now-playing {
+  position: relative;
+  height: 150px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin: 0 0 14px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+.now-playing:hover .np-overlay { opacity: 0.85; }
+.np-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+}
+.np-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, rgba(10,10,20,0.97) 0%, rgba(10,10,20,0.75) 55%, rgba(10,10,20,0.25) 100%);
+  transition: opacity 0.25s;
+}
+.np-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 16px 20px;
+}
+.np-label {
+  font-size: 0.52rem;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.np-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 3px;
+}
+.np-year { font-size: 0.85rem; opacity: 0.5; font-weight: 400; }
+.np-director { font-size: 0.73rem; color: var(--text-muted); margin-bottom: 5px; }
+.np-meta { display: flex; align-items: center; gap: 10px; }
+.np-rating { font-size: 0.95rem; font-weight: 700; }
+.np-rewatch { font-size: 0.68rem; color: var(--text-muted); }
+
+/* === Rewatch badge on cards === */
+.film-card { position: relative; }
+.rewatch-badge {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  background: rgba(10,10,20,0.82);
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  z-index: 3;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.03em;
+}
+.detail-rewatches {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 6px 0 10px;
+  font-weight: 500;
+}
+
+/* === Random Pick button === */
+.random-pick-btn {
+  background: rgba(233,69,96,0.12);
+  border: 1px solid rgba(233,69,96,0.3);
+  color: var(--accent);
+  border-radius: 10px;
+  padding: 7px 11px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.random-pick-btn:hover {
+  background: rgba(233,69,96,0.22);
+  transform: scale(1.08) rotate(-10deg);
+}
+.random-pick-btn:active { transform: scale(0.95); }
+
+/* === Slot machine highlight === */
+.bluray-case {
+  transition: transform 0.12s ease-out, box-shadow 0.12s ease-out;
+  will-change: transform;
+}
+.case-pick-highlight {
+  transform: translateY(-12px) scale(1.08) !important;
+  box-shadow: 0 12px 40px rgba(233,69,96,0.55), 0 0 0 2px rgba(233,69,96,0.9) !important;
+  z-index: 5 !important;
+  position: relative !important;
+}
+
+/* === Similar Suggestions panel === */
+.suggestions-panel {
+  background: var(--bg-card);
+  border: 1px solid rgba(124,92,252,0.25);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  backdrop-filter: blur(10px);
+}
+.suggestions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.suggestions-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.suggestions-label em {
+  color: var(--text);
+  font-style: normal;
+}
+.suggestions-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+.suggestions-dismiss:hover { color: var(--text); }
+.suggestions-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.suggestions-scroll::-webkit-scrollbar { display: none; }
+.suggestion-item {
+  flex-shrink: 0;
+  width: 90px;
+  cursor: pointer;
+}
+.suggestion-poster { width: 90px; height: 132px; border-radius: 6px; overflow: hidden; margin-bottom: 5px; background: var(--bg-input); }
+.suggestion-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.suggestion-no-img { width: 100%; height: 100%; background: var(--bg-input); }
+.suggestion-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.suggestion-year { font-size: 0.6rem; color: var(--text-muted); margin-bottom: 5px; }
+.suggestion-wl-btn {
+  width: 100%;
+  background: rgba(124,92,252,0.12);
+  border: 1px solid rgba(124,92,252,0.3);
+  color: var(--accent2);
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.suggestion-wl-btn:hover { background: rgba(124,92,252,0.22); }
+.suggestion-wl-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* === Weekly Challenges === */
+.challenges-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.challenge-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: border-color 0.2s;
+}
+.challenge-done {
+  border-color: rgba(33,208,122,0.4);
+  background: rgba(33,208,122,0.05);
+}
+.challenge-icon { font-size: 1.4rem; flex-shrink: 0; width: 32px; text-align: center; }
+.challenge-body { flex: 1; min-width: 0; }
+.challenge-title { font-size: 0.78rem; font-weight: 600; margin-bottom: 5px; }
+.challenge-bar-wrap {
+  height: 4px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+.challenge-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 2px;
+  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+  min-width: 2px;
+}
+.challenge-done .challenge-bar { background: #21d07a; }
+.challenge-count { font-size: 0.62rem; color: var(--text-muted); font-weight: 600; }
+.challenge-check {
+  font-size: 1rem;
+  color: #21d07a;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* === Decade Passport === */
+.decade-passport {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.passport-stamp {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  text-align: center;
+  min-width: 72px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s;
+}
+.passport-stamp:hover { transform: translateY(-2px); }
+.passport-stamp--entry { border-color: var(--border); }
+.passport-stamp--bronze { border-color: rgba(205,127,50,0.4); background: rgba(205,127,50,0.06); }
+.passport-stamp--silver { border-color: rgba(192,192,192,0.4); background: rgba(192,192,192,0.06); }
+.passport-stamp--gold { border-color: rgba(245,197,24,0.5); background: rgba(245,197,24,0.08); }
+.passport-decade {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 3px;
+}
+.passport-count {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.passport-stamp--bronze .passport-count { color: #cd7f32; }
+.passport-stamp--silver .passport-count { color: #c0c0c0; }
+.passport-stamp--gold .passport-count { color: var(--star); }
+.passport-bar {
+  height: 3px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.passport-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 1s cubic-bezier(0.4,0,0.2,1);
+}
+.passport-stamp--bronze .passport-bar-fill { background: #cd7f32; }
+.passport-stamp--silver .passport-bar-fill { background: #a0a0a0; }
+.passport-stamp--gold .passport-bar-fill { background: var(--star); }
+.passport-films { font-size: 0.58rem; color: var(--text-muted); font-weight: 600; }
+
+/* === Activity Heatmap === */
+.heatmap-wrap {
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
+}
+.heatmap-months {
+  display: flex;
+  gap: 0;
+  margin-bottom: 3px;
+  padding-left: 0;
+}
+.heatmap-months span {
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  flex: 0 0 calc(7 * 13px);
+  text-align: left;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.heatmap-grid {
+  display: flex;
+  gap: 2px;
+}
+.hm-week {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hm-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  cursor: default;
+  transition: opacity 0.15s;
+}
+.hm-cell:hover { opacity: 0.7; }
+.hm-level-0 { background: rgba(255,255,255,0.05); }
+.hm-level-1 { background: rgba(233,69,96,0.35); }
+.hm-level-2 { background: rgba(233,69,96,0.6); }
+.hm-level-3 { background: rgba(233,69,96,0.9); }
