@@ -85,6 +85,21 @@ const App = (() => {
 
   // --- Catalogue ---
 
+  function lazyLoadCasePosters(container) {
+    const cases = container.querySelectorAll('.bluray-case[data-poster]');
+    if (!cases.length) return;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const el = entry.target;
+          el.style.setProperty('--poster', `url('${el.dataset.poster}')`);
+          observer.unobserve(el);
+        }
+      });
+    }, { rootMargin: '200px' });
+    cases.forEach(el => observer.observe(el));
+  }
+
   function celebrateMilestone(count) {
     UI.showToast(`\uD83C\uDFAC Milestone — ${count} films catalogued!`);
     const title = document.querySelector('.app-title') || document.body;
@@ -126,6 +141,7 @@ const App = (() => {
       grid.innerHTML = UI.renderPosterGrid(sortForGrid(filtered, sortVal));
     } else if (viewMode === 'library') {
       grid.innerHTML = UI.renderBlurayShelf(filtered);
+      lazyLoadCasePosters(grid);
       grid.querySelectorAll('.bluray-case').forEach(caseEl => {
         caseEl.addEventListener('click', () => {
           const id = parseInt(caseEl.dataset.id);
@@ -342,6 +358,7 @@ const App = (() => {
       container.innerHTML = UI.renderDecadeLanes(movies, 'desc');
     } else {
       container.innerHTML = UI.renderBlurayShelf(movies);
+      lazyLoadCasePosters(container);
       container.querySelectorAll('.bluray-case').forEach(caseEl => {
         caseEl.addEventListener('click', () => {
           const id = parseInt(caseEl.dataset.id);
