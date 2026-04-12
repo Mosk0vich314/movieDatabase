@@ -433,8 +433,7 @@ const UI = (() => {
         } else {
           const m = item.movie;
           const pal = getGenrePalette(m.genres);
-          const posterVar = m.poster ? `;--poster:url('${m.poster}')` : '';
-          html += `<div class="bluray-case" data-id="${m.id}" style="--sc:${pal.bg};--ac:${pal.accent}${posterVar}">
+          html += `<div class="bluray-case" data-id="${m.id}" style="--sc:${pal.bg};--ac:${pal.accent}">
             <div class="case-spine">
               <span class="spine-title">${escapeHtml(m.title)}</span>
               <span class="spine-year">${m.year || ''}</span>
