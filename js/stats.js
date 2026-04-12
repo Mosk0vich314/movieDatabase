@@ -100,7 +100,7 @@ const Stats = (() => {
       if (m.rating >= 1 && m.rating <= 10) ratingDist[Math.min(Math.floor(m.rating), 10) - 1]++;
     });
 
-    const topRated = [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 5);
+    const topRated = [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 20);
 
     const totalRuntime = movies.reduce((s, m) => s + (m.runtime || 0), 0);
 
@@ -279,9 +279,9 @@ const Stats = (() => {
             <h3>Top Rated</h3>
             <div class="top-list">
               ${stats.topRated.map((m, i) => `
-                <div class="top-item">
+                <div class="top-item" ${m.poster ? `style="--ti-poster:url('${m.poster}')"` : ''}>
                   <span class="top-rank">${i + 1}</span>
-                  <span class="top-title">${m.title} (${m.year || 'N/A'})</span>
+                  <span class="top-title">${m.title} <span class="top-year">(${m.year || 'N/A'})</span></span>
                   <span class="top-rating" style="color:${UI.ratingColor(m.rating)}">${UI.formatRating(m.rating)}</span>
                 </div>
               `).join('')}

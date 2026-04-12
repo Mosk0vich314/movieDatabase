@@ -852,6 +852,8 @@ a:hover { color: var(--accent-hover); }
 /* Top rated list */
 .top-list { display: flex; flex-direction: column; gap: 6px; }
 .top-item {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -861,6 +863,17 @@ a:hover { color: var(--accent-hover); }
   border: 1px solid var(--border);
   transition: all var(--transition);
 }
+.top-item::before {
+  content: '';
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 52%;
+  background: var(--ti-poster, none) right center / auto 100% no-repeat;
+  -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,0.28) 0%, transparent 100%);
+  mask-image: linear-gradient(to left, rgba(0,0,0,0.28) 0%, transparent 100%);
+  pointer-events: none;
+}
+.top-item > * { position: relative; z-index: 1; }
 .top-item:hover {
   border-color: var(--border-accent);
   transform: translateX(4px);
@@ -874,9 +887,11 @@ a:hover { color: var(--accent-hover); }
   background-clip: text;
   width: 24px;
   text-align: center;
+  flex-shrink: 0;
 }
-.top-title { flex: 1; font-size: 0.9rem; }
-.top-rating { font-size: 0.85rem; font-weight: 800; }
+.top-title { flex: 1; font-size: 0.88rem; font-weight: 600; }
+.top-year { font-weight: 400; opacity: 0.55; font-size: 0.82rem; }
+.top-rating { font-size: 0.85rem; font-weight: 800; flex-shrink: 0; }
 
 /* === Stats Management (backup/restore/danger in stats tab) === */
 /* === Blu-ray Shelf (Watchlist) === */

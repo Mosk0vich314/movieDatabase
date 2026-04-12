@@ -7,6 +7,8 @@ const App = (() => {
   let acFocusIdx = -1;
   const _storedView = localStorage.getItem('viewMode');
   let viewMode = (['array', 'decades', 'library'].includes(_storedView) ? _storedView : null) || 'decades';
+  const _storedWLView = localStorage.getItem('watchlistViewMode');
+  let watchlistViewMode = (['array', 'decades', 'library'].includes(_storedWLView) ? _storedWLView : null) || 'library';
   let searchMode = 'movie';
   let selectedDirectorName = '';
 
@@ -304,29 +306,50 @@ const App = (() => {
     caseEl.style.opacity = '';
   }
 
+  function setWatchlistViewMode(mode) {
+    watchlistViewMode = mode;
+    localStorage.setItem('watchlistViewMode', mode);
+    loadWatchlist();
+  }
+
   async function loadWatchlist() {
-    const movies = (await MovieDB.getAllMovies()).filter(m => m.watchlist);
+    const allMovies = (await MovieDB.getAllMovies()).filter(m => m.watchlist);
     const container = document.getElementById('watchlist-grid');
     const empty = document.getElementById('empty-watchlist');
 
-    if (movies.length === 0) {
+    document.getElementById('wl-view-array-btn').classList.toggle('active', watchlistViewMode === 'array');
+    document.getElementById('wl-view-decades-btn').classList.toggle('active', watchlistViewMode === 'decades');
+    document.getElementById('wl-view-library-btn').classList.toggle('active', watchlistViewMode === 'library');
+
+    if (allMovies.length === 0) {
       container.innerHTML = '';
-      container.className = '';
       empty.style.display = 'block';
       return;
     }
-
     empty.style.display = 'none';
-    container.className = '';
-    container.innerHTML = UI.renderBlurayShelf(movies);
 
-    container.querySelectorAll('.bluray-case').forEach(caseEl => {
-      caseEl.addEventListener('click', () => {
-        const id = parseInt(caseEl.dataset.id);
-        const movie = movies.find(m => m.id === id);
-        if (movie) extractBluray(caseEl, movie);
+    const q = (document.getElementById('watchlist-search').value || '').toLowerCase().trim();
+    const movies = q ? allMovies.filter(m => m.title.toLowerCase().includes(q)) : allMovies;
+
+    if (movies.length === 0) {
+      container.innerHTML = '<p class="stats-empty">No matches.</p>';
+      return;
+    }
+
+    if (watchlistViewMode === 'array') {
+      container.innerHTML = UI.renderPosterGrid(movies);
+    } else if (watchlistViewMode === 'decades') {
+      container.innerHTML = UI.renderDecadeLanes(movies, 'desc');
+    } else {
+      container.innerHTML = UI.renderBlurayShelf(movies);
+      container.querySelectorAll('.bluray-case').forEach(caseEl => {
+        caseEl.addEventListener('click', () => {
+          const id = parseInt(caseEl.dataset.id);
+          const movie = allMovies.find(m => m.id === id);
+          if (movie) extractBluray(caseEl, movie);
+        });
       });
-    });
+    }
   }
 
   async function addToWatchlist(tmdbId) {
@@ -952,6 +975,19 @@ const App = (() => {
     document.getElementById('view-decades-btn').addEventListener('click', () => setViewMode('decades'));
     document.getElementById('view-library-btn').addEventListener('click', () => setViewMode('library'));
     document.getElementById('catalogue-search').addEventListener('input', loadCatalogue);
+
+    document.getElementById('wl-view-array-btn').addEventListener('click', () => setWatchlistViewMode('array'));
+    document.getElementById('wl-view-decades-btn').addEventListener('click', () => setWatchlistViewMode('decades'));
+    document.getElementById('wl-view-library-btn').addEventListener('click', () => setWatchlistViewMode('library'));
+    document.getElementById('watchlist-search').addEventListener('input', loadWatchlist);
+    document.getElementById('watchlist-search-clear').addEventListener('click', () => {
+      document.getElementById('watchlist-search').value = '';
+      loadWatchlist();
+    });
+    document.getElementById('watchlist-grid').addEventListener('click', (e) => {
+      const card = e.target.closest('.film-card, .poster-card');
+      if (card) window.location.hash = `#detail/${card.dataset.id}`;
+    });
     document.getElementById('catalogue-search-clear').addEventListener('click', () => {
       const input = document.getElementById('catalogue-search');
       input.value = '';

@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/logo.jpg" type="image/jpeg">
   <link rel="apple-touch-icon" href="icons/logo.jpg">
-  <link rel="stylesheet" href="css/styles.css?v=2026.04.11.2013">
+  <link rel="stylesheet" href="css/styles.css?v=2026.04.12.2004">
 </head>
 <body>
   <header class="app-header">
@@ -88,6 +88,19 @@
 
     <!-- Watchlist View -->
     <section id="view-watchlist" class="view" style="display:none;">
+      <div class="catalogue-controls">
+        <div class="catalogue-top-bar">
+          <div class="input-wrap">
+            <input type="text" id="watchlist-search" class="search-input" placeholder="Find in watchlist…">
+            <button class="input-clear" type="button" id="watchlist-search-clear">&#215;</button>
+          </div>
+          <div class="view-toggle">
+            <button id="wl-view-array-btn" class="view-toggle-btn" title="Array view">&#9638;</button>
+            <button id="wl-view-decades-btn" class="view-toggle-btn" title="Decades view">&#9776;</button>
+            <button id="wl-view-library-btn" class="view-toggle-btn active" title="Library view">&#10624;</button>
+          </div>
+        </div>
+      </div>
       <div id="watchlist-grid"></div>
       <div id="empty-watchlist" class="empty-state" style="display:none;">
         <p>Nothing queued yet. Find a film and hit <strong>+ Watchlist</strong>.</p>
@@ -227,11 +240,11 @@
   <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <script src="js/db.js?v=2026.04.11.2013"></script>
-  <script src="js/api.js?v=2026.04.11.2013"></script>
-  <script src="js/ui.js?v=2026.04.11.2013"></script>
-  <script src="js/stats.js?v=2026.04.11.2013"></script>
-  <script src="js/sync.js?v=2026.04.11.2013"></script>
-  <script src="js/app.js?v=2026.04.11.2013"></script>
+  <script src="js/db.js?v=2026.04.12.2004"></script>
+  <script src="js/api.js?v=2026.04.12.2004"></script>
+  <script src="js/ui.js?v=2026.04.12.2004"></script>
+  <script src="js/stats.js?v=2026.04.12.2004"></script>
+  <script src="js/sync.js?v=2026.04.12.2004"></script>
+  <script src="js/app.js?v=2026.04.12.2004"></script>
 </body>
 </html>
