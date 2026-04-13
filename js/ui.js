@@ -208,9 +208,20 @@ const UI = (() => {
       </a>`);
     }
     if (movie.imdbId) {
+      const imdbScore = movie.imdbRating ? `<span class="ext-badge-score">${movie.imdbRating.toFixed(1)}</span>` : '';
+      const imdbVotes = movie.imdbVotes ? `<span class="ext-badge-votes">${movie.imdbVotes}</span>` : '';
       extBadges.push(`<a href="https://www.imdb.com/title/${movie.imdbId}/" target="_blank" rel="noopener" class="ext-badge ext-badge--imdb" title="IMDb">
         <span class="ext-badge-logo">IMDb</span>
-        <span class="ext-badge-arrow">&#8599;</span>
+        ${imdbScore}${imdbVotes}
+        ${!movie.imdbRating ? `<span class="ext-badge-arrow">&#8599;</span>` : ''}
+      </a>`);
+    }
+    if (movie.rtScore) {
+      const rtVal = parseInt(movie.rtScore);
+      const rtClass = rtVal >= 60 ? 'ext-badge--rt-fresh' : 'ext-badge--rt-rotten';
+      extBadges.push(`<a href="https://www.rottentomatoes.com/search?search=${encodeURIComponent(movie.title)}" target="_blank" rel="noopener" class="ext-badge ${rtClass}" title="Rotten Tomatoes">
+        <span class="ext-badge-logo">${rtVal >= 60 ? '&#127813;' : '&#128169;'} RT</span>
+        <span class="ext-badge-score">${movie.rtScore}</span>
       </a>`);
     }
     if (movie.tmdbId) {

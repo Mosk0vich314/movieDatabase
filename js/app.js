@@ -672,6 +672,7 @@ const App = (() => {
         character: c.character,
         profileUrl: c.profile_path ? TMDB.posterUrl(c.profile_path, 'w185') : '',
       }));
+      const omdb = await TMDB.fetchOmdbData(details.imdb_id);
       populateForm({
         tmdbId: details.id,
         title: details.title,
@@ -686,6 +687,9 @@ const App = (() => {
         voteAverage: details.vote_average || 0,
         voteCount: details.vote_count || 0,
         imdbId: details.imdb_id || '',
+        imdbRating: omdb?.imdbRating || 0,
+        imdbVotes: omdb?.imdbVotes || '',
+        rtScore: omdb?.rtScore || '',
       });
     } catch (err) {
       UI.showToast(err.message);
@@ -729,6 +733,9 @@ const App = (() => {
     form.dataset.voteAverage = data.voteAverage || 0;
     form.dataset.voteCount = data.voteCount || 0;
     form.dataset.imdbId = data.imdbId || '';
+    form.dataset.imdbRating = data.imdbRating || 0;
+    form.dataset.imdbVotes = data.imdbVotes || '';
+    form.dataset.rtScore = data.rtScore || '';
 
     document.getElementById('form-watchlist-btn').style.display = editingMovie ? 'none' : '';
 
@@ -788,6 +795,9 @@ const App = (() => {
       voteAverage: parseFloat(form.dataset.voteAverage) || 0,
       voteCount: parseInt(form.dataset.voteCount) || 0,
       imdbId: form.dataset.imdbId || '',
+      imdbRating: parseFloat(form.dataset.imdbRating) || 0,
+      imdbVotes: form.dataset.imdbVotes || '',
+      rtScore: form.dataset.rtScore || '',
       rating: selectedRating,
       notes: document.getElementById('form-notes').value.trim(),
     };
@@ -849,6 +859,19 @@ const App = (() => {
         if (!movie.voteCount && details.vote_count) { movie.voteCount = details.vote_count; updated = true; }
         if (!movie.imdbId && details.imdb_id) { movie.imdbId = details.imdb_id; updated = true; }
         if (updated) await MovieDB.updateMovie(movie);
+      } catch (_) { /* best-effort */ }
+    }
+    // Backfill IMDb/RT ratings from OMDB
+    if (movie.imdbId && !movie.imdbRating) {
+      try {
+        const omdb = await TMDB.fetchOmdbData(movie.imdbId);
+        if (omdb) {
+          let updated = false;
+          if (!movie.imdbRating && omdb.imdbRating) { movie.imdbRating = omdb.imdbRating; updated = true; }
+          if (!movie.imdbVotes && omdb.imdbVotes) { movie.imdbVotes = omdb.imdbVotes; updated = true; }
+          if (!movie.rtScore && omdb.rtScore) { movie.rtScore = omdb.rtScore; updated = true; }
+          if (updated) await MovieDB.updateMovie(movie);
+        }
       } catch (_) { /* best-effort */ }
     }
 
