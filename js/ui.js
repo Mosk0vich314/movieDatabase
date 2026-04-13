@@ -226,7 +226,7 @@ const UI = (() => {
     }
     if (movie.tmdbId) {
       extBadges.push(`<a href="https://letterboxd.com/tmdb/${movie.tmdbId}/" target="_blank" rel="noopener" class="ext-badge ext-badge--lb" title="Letterboxd">
-        <span class="ext-badge-logo">Letterboxd</span>
+        <span class="ext-badge-logo">LBxd</span>
         <span class="ext-badge-arrow">&#8599;</span>
       </a>`);
     }

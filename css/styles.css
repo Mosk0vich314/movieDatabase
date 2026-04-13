@@ -750,25 +750,21 @@ a:hover { color: var(--accent-hover); }
 .ext-badges-row {
   display: flex;
   gap: 8px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding-bottom: 4px;
+  flex-wrap: wrap;
 }
-.ext-badges-row::-webkit-scrollbar { display: none; }
 .ext-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 11px;
+  gap: 4px;
+  padding: 5px 9px;
   border-radius: 6px;
   text-decoration: none;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   transition: transform 0.15s, opacity 0.15s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .ext-badge:hover { transform: translateY(-1px); opacity: 0.88; }
 .ext-badge--tmdb { background: #0d253f; color: #01b4e4; border: 1px solid #01b4e4; }
