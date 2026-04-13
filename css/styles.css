@@ -953,6 +953,7 @@ a:hover { color: var(--accent-hover); }
   pointer-events: none;
 }
 .top-item > * { position: relative; z-index: 1; }
+.top-item[data-id] { cursor: pointer; }
 .top-item:hover {
   border-color: var(--border-accent);
   transform: translateX(4px);

@@ -1198,7 +1198,7 @@ const App = (() => {
     });
 
     document.getElementById('chart-list').addEventListener('click', (e) => {
-      const item = e.target.closest('.chart-item[data-id]');
+      const item = e.target.closest('.top-item[data-id]');
       if (item) window.location.hash = `#detail/${item.dataset.id}`;
     });
 

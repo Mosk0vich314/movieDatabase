@@ -616,31 +616,19 @@ const UI = (() => {
     if (movies.length === 0) {
       return '<p class="no-results" style="margin-top:48px;">Rate some films to build your chart.</p>';
     }
-    const items = movies.map((m, i) => {
-      const poster = m.poster
-        ? `<img src="${m.poster}" alt="${escapeHtml(m.title)}" loading="lazy" class="chart-poster">`
-        : `<div class="chart-no-poster"></div>`;
-      const director = (m.directors || [])[0] ? escapeHtml(m.directors[0]) : '';
-      const meta = [director, m.year].filter(Boolean).join(' · ');
-      const rankClass = i === 0 ? ' chart-rank--gold' : i === 1 ? ' chart-rank--silver' : i === 2 ? ' chart-rank--bronze' : '';
-      return `
-        <div class="chart-item" data-id="${m.id}">
-          <span class="chart-rank${rankClass}">${i + 1}</span>
-          <div class="chart-thumb">${poster}</div>
-          <div class="chart-info">
-            <span class="chart-title">${escapeHtml(m.title)}</span>
-            ${meta ? `<span class="chart-meta">${meta}</span>` : ''}
-          </div>
-          <span class="chart-rating" style="color:${ratingColor(m.rating)}">${formatRating(m.rating)}</span>
-        </div>`;
-    }).join('');
+    const items = movies.map((m, i) => `
+      <div class="top-item" data-id="${m.id}" ${m.backdrop ? `style="--ti-bg:url('${m.backdrop}')"` : ''}>
+        <span class="top-rank">${i + 1}</span>
+        <span class="top-title">${escapeHtml(m.title)} <span class="top-year">(${m.year || 'N/A'})</span></span>
+        <span class="top-rating" style="color:${ratingColor(m.rating)}">${formatRating(m.rating)}</span>
+      </div>`).join('');
 
     return `
       <div class="chart-header">
         <div class="chart-header-title">My Top ${movies.length}</div>
         <div class="chart-header-sub">Ranked by your rating</div>
       </div>
-      <div class="chart-list-inner">${items}</div>`;
+      <div class="top-list">${items}</div>`;
   }
 
   function escapeHtml(text) {
