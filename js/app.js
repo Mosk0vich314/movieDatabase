@@ -473,6 +473,8 @@ const App = (() => {
     document.getElementById('tmdb-search').value = '';
     document.getElementById('search-results').innerHTML = '';
     document.getElementById('movie-form').style.display = 'none';
+    const _fn = document.getElementById('filmography-nav');
+    _fn.style.display = 'none'; _fn.innerHTML = '';
     editingMovie = null;
     selectedRating = 0;
     closeAutocomplete();
@@ -576,6 +578,23 @@ const App = (() => {
     }
   }
 
+  function _showFilmographyNav(personName, count) {
+    const nav = document.getElementById('filmography-nav');
+    nav.style.display = '';
+    nav.innerHTML = `<div class="filmography-header">
+      <button class="search-back-btn" id="filmography-back"><span class="search-back-arrow">&#8249;</span> ${UI.escapeHtml(personName)}</button>
+      <span class="filmography-count">${count} film${count !== 1 ? 's' : ''}</span>
+    </div>`;
+    document.getElementById('filmography-back').addEventListener('click', () => {
+      selectedDirectorName = '';
+      nav.style.display = 'none';
+      nav.innerHTML = '';
+      document.getElementById('search-results').innerHTML = '';
+      document.getElementById('tmdb-search').value = '';
+      document.getElementById('tmdb-search').focus();
+    });
+  }
+
   async function loadFilmography(personId, personName) {
     selectedDirectorName = personName;
     const container = document.getElementById('search-results');
@@ -595,17 +614,8 @@ const App = (() => {
         container.innerHTML = '<p class="no-results">No directed films found.</p>';
         return;
       }
-      const header = `<div class="filmography-header">
-        <button class="search-back-btn" id="filmography-back"><span class="search-back-arrow">&#8249;</span> ${UI.escapeHtml(personName)}</button>
-        <span class="filmography-count">${directed.length} film${directed.length !== 1 ? 's' : ''}</span>
-      </div>`;
-      container.innerHTML = header + directed.map(f => UI.renderFilmographyResult(f, addedSet)).join('');
-      document.getElementById('filmography-back').addEventListener('click', () => {
-        selectedDirectorName = '';
-        container.innerHTML = '';
-        document.getElementById('tmdb-search').value = '';
-        document.getElementById('tmdb-search').focus();
-      });
+      _showFilmographyNav(personName, directed.length);
+      container.innerHTML = directed.map(f => UI.renderFilmographyResult(f, addedSet)).join('');
     } catch (err) {
       UI.showToast(err.message);
     }
@@ -647,17 +657,8 @@ const App = (() => {
         container.innerHTML = '<p class="no-results">No acting credits found.</p>';
         return;
       }
-      const header = `<div class="filmography-header">
-        <button class="btn btn-secondary btn-back" id="filmography-back">&larr; ${UI.escapeHtml(personName)}</button>
-        <span class="filmography-count">${acted.length} film${acted.length !== 1 ? 's' : ''}</span>
-      </div>`;
-      container.innerHTML = header + acted.map(f => UI.renderFilmographyResult(f, addedSet, f.character ? `as ${f.character}` : null)).join('');
-      document.getElementById('filmography-back').addEventListener('click', () => {
-        selectedDirectorName = '';
-        container.innerHTML = '';
-        document.getElementById('tmdb-search').value = '';
-        document.getElementById('tmdb-search').focus();
-      });
+      _showFilmographyNav(personName, acted.length);
+      container.innerHTML = acted.map(f => UI.renderFilmographyResult(f, addedSet, f.character ? `as ${f.character}` : null)).join('');
     } catch (err) {
       UI.showToast(err.message);
     }
@@ -1121,6 +1122,8 @@ const App = (() => {
       document.getElementById('tmdb-search').value = '';
       document.getElementById('search-results').innerHTML = '';
       document.getElementById('movie-form').style.display = 'none';
+      const fn = document.getElementById('filmography-nav');
+      fn.style.display = 'none'; fn.innerHTML = '';
       editingMovie = null;
       selectedDirectorName = '';
       closeAutocomplete();
