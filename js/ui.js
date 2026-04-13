@@ -123,7 +123,7 @@ const UI = (() => {
     const genres = (movie.genres || []).map(g => `<span class="genre-tag">${escapeHtml(g)}</span>`).join('');
 
     const pal = getGenrePalette(movie.genres);
-    const backBtn = `<button class="btn-back" id="detail-back">&#8592; Back</button>`;
+    const backBtn = `<button class="btn-back" id="detail-back"><span class="btn-back-arrow">&#8249;</span> Back</button>`;
     const backdropHtml = movie.backdrop
       ? `<div class="detail-backdrop-wrap" style="--genre-accent:${pal.accent}">
           <img src="${movie.backdrop}" class="detail-backdrop-img" alt="">
@@ -612,6 +612,37 @@ const UI = (() => {
     `;
   }
 
+  function renderChart(movies) {
+    if (movies.length === 0) {
+      return '<p class="no-results" style="margin-top:48px;">Rate some films to build your chart.</p>';
+    }
+    const items = movies.map((m, i) => {
+      const poster = m.poster
+        ? `<img src="${m.poster}" alt="${escapeHtml(m.title)}" loading="lazy" class="chart-poster">`
+        : `<div class="chart-no-poster"></div>`;
+      const director = (m.directors || [])[0] ? escapeHtml(m.directors[0]) : '';
+      const meta = [director, m.year].filter(Boolean).join(' · ');
+      const rankClass = i === 0 ? ' chart-rank--gold' : i === 1 ? ' chart-rank--silver' : i === 2 ? ' chart-rank--bronze' : '';
+      return `
+        <div class="chart-item" data-id="${m.id}">
+          <span class="chart-rank${rankClass}">${i + 1}</span>
+          <div class="chart-thumb">${poster}</div>
+          <div class="chart-info">
+            <span class="chart-title">${escapeHtml(m.title)}</span>
+            ${meta ? `<span class="chart-meta">${meta}</span>` : ''}
+          </div>
+          <span class="chart-rating" style="color:${ratingColor(m.rating)}">${formatRating(m.rating)}</span>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="chart-header">
+        <div class="chart-header-title">My Top ${movies.length}</div>
+        <div class="chart-header-sub">Ranked by your rating</div>
+      </div>
+      <div class="chart-list-inner">${items}</div>`;
+  }
+
   function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text || '';
@@ -687,5 +718,5 @@ const UI = (() => {
     });
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, initCustomSelects, escapeHtml };
+  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, initCustomSelects, escapeHtml };
 })();

@@ -54,6 +54,7 @@ const App = (() => {
       '#catalogue': 'catalogue',
       '#add': 'add',
       '#watchlist': 'watchlist',
+      '#chart': 'chart',
       '#stats': 'stats',
     };
 
@@ -69,6 +70,7 @@ const App = (() => {
 
     if (view === 'catalogue') loadCatalogue();
     if (view === 'watchlist') loadWatchlist();
+    if (view === 'chart') loadChart();
     if (view === 'stats') loadStats();
     if (view === 'add') resetAddView();
   }
@@ -594,7 +596,7 @@ const App = (() => {
         return;
       }
       const header = `<div class="filmography-header">
-        <button class="btn btn-secondary btn-back" id="filmography-back">&larr; ${UI.escapeHtml(personName)}</button>
+        <button class="search-back-btn" id="filmography-back"><span class="search-back-arrow">&#8249;</span> ${UI.escapeHtml(personName)}</button>
         <span class="filmography-count">${directed.length} film${directed.length !== 1 ? 's' : ''}</span>
       </div>`;
       container.innerHTML = header + directed.map(f => UI.renderFilmographyResult(f, addedSet)).join('');
@@ -825,6 +827,14 @@ const App = (() => {
     } catch (err) {
       UI.showToast('Error saving movie: ' + err.message);
     }
+  }
+
+  // --- Chart ---
+
+  async function loadChart() {
+    const movies = (await MovieDB.getAllMovies()).filter(m => !m.watchlist && m.rating > 0);
+    const top30 = [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 30);
+    document.getElementById('chart-list').innerHTML = UI.renderChart(top30);
   }
 
   // --- Detail ---
@@ -1185,6 +1195,11 @@ const App = (() => {
     document.getElementById('movie-grid').addEventListener('click', (e) => {
       const card = e.target.closest('.movie-card, .film-card, .poster-card');
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
+    });
+
+    document.getElementById('chart-list').addEventListener('click', (e) => {
+      const item = e.target.closest('.chart-item[data-id]');
+      if (item) window.location.hash = `#detail/${item.dataset.id}`;
     });
 
     document.getElementById('filter-toggle').addEventListener('click', () => {

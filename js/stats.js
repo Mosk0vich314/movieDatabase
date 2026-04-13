@@ -1,24 +1,6 @@
 const Stats = (() => {
   const MILESTONE_VALUES = [10, 25, 50, 100, 250, 500, 1000];
 
-  function computeHeatmap(movies) {
-    const counts = {};
-    movies.forEach(m => {
-      if (m.dateAdded) { const d = m.dateAdded.substring(0, 10); counts[d] = (counts[d] || 0) + 1; }
-    });
-    const today = new Date();
-    const cells = [];
-    // Start from day 0 of the week 52 weeks ago so the grid aligns to full weeks
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - 364 - startDate.getDay());
-    for (let i = 0; i < 371; i++) {
-      const d = new Date(startDate);
-      d.setDate(d.getDate() + i);
-      const key = d.toISOString().substring(0, 10);
-      cells.push({ date: key, count: counts[key] || 0 });
-    }
-    return cells;
-  }
 
   function computeDecadePassport(movies) {
     const dec = {};
@@ -203,7 +185,7 @@ const Stats = (() => {
       if (m.rating >= 1 && m.rating <= 10) ratingDist[Math.min(Math.floor(m.rating), 10) - 1]++;
     });
 
-    const topRated = [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 20);
+    const topRated = [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 30);
 
     const totalRuntime = movies.reduce((s, m) => s + (m.runtime || 0), 0);
 
@@ -217,7 +199,6 @@ const Stats = (() => {
       total, avgRating, genresSorted, directorsSorted, uniqueDirectors,
       ratingDist, topRated, dna: tasteDNA(movies),
       totalRuntime, streak, rank, milestones, genreBadges, auteurBadges,
-      heatmap: computeHeatmap(movies),
       decadePassport: computeDecadePassport(movies),
       challenges: generateChallenges(movies),
     };
@@ -275,38 +256,6 @@ const Stats = (() => {
       </div>`;
   }
 
-  function renderHeatmap(cells) {
-    if (!cells || cells.length === 0) return '';
-    // Group into weeks (7 days each)
-    const weeks = [];
-    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
-
-    // Month labels: show month name at the first week of each month
-    let lastMonth = -1;
-    const monthLabels = weeks.map(week => {
-      const d = new Date(week[0].date + 'T12:00:00');
-      const m = d.getMonth();
-      if (m !== lastMonth) { lastMonth = m; return d.toLocaleDateString('en', { month: 'short' }); }
-      return '';
-    });
-
-    const cellHtml = cell => {
-      const lvl = cell.count === 0 ? 0 : cell.count === 1 ? 1 : cell.count <= 3 ? 2 : 3;
-      const label = `${cell.date}: ${cell.count} film${cell.count !== 1 ? 's' : ''}`;
-      return `<div class="hm-cell hm-level-${lvl}" title="${label}"></div>`;
-    };
-
-    return `
-      <div class="stats-section">
-        <h3>Activity</h3>
-        <div class="heatmap-wrap">
-          <div class="heatmap-months">${monthLabels.map(l => `<span>${l}</span>`).join('')}</div>
-          <div class="heatmap-grid">
-            ${weeks.map(week => `<div class="hm-week">${week.map(cellHtml).join('')}</div>`).join('')}
-          </div>
-        </div>
-      </div>`;
-  }
 
   function render(stats) {
     const maxGenre = stats.genresSorted.length > 0 ? stats.genresSorted[0][1] : 1;
@@ -460,8 +409,6 @@ const Stats = (() => {
             }).join('')}
           </div>
         </div>
-
-        ${renderHeatmap(stats.heatmap)}
 
         ${stats.topRated.length > 0 ? `
           <div class="stats-section">

@@ -191,32 +191,62 @@ a:hover { color: var(--accent-hover); }
   z-index: 2;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 7px 14px;
-  background: rgba(0, 0, 0, 0.52);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  gap: 3px;
+  padding: 6px 14px 6px 10px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(233, 69, 96, 0.28);
   border-radius: 20px;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.88);
   font-size: 0.78rem;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  letter-spacing: 0.02em;
-  transition: background 0.18s;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: background 0.18s, border-color 0.18s;
 }
-.btn-back:hover { background: rgba(0, 0, 0, 0.72); }
+.btn-back:hover { background: rgba(0,0,0,0.75); border-color: rgba(233,69,96,0.55); }
+.btn-back-arrow {
+  color: var(--accent);
+  font-size: 1.4em;
+  font-weight: 300;
+  line-height: 1;
+  margin-top: -1px;
+}
 .detail-header-fallback {
-  padding: 16px 0 4px;
+  padding: 16px 0 8px;
 }
 .detail-header-fallback .btn-back {
   position: static;
-  display: inline-flex;
   background: var(--bg-card);
-  border-color: var(--border);
-  color: var(--text);
+  border-color: rgba(233, 69, 96, 0.25);
   backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+/* Filmography / actor search back button */
+.search-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: color 0.15s;
+}
+.search-back-btn:hover { color: var(--text); }
+.search-back-arrow {
+  color: var(--accent);
+  font-size: 1.4em;
+  font-weight: 300;
+  line-height: 1;
 }
 
 /* === Inputs === */
@@ -1566,12 +1596,98 @@ a:hover { color: var(--accent-hover); }
   padding: 7px 11px;
 }
 
+/* === Chart View === */
+.chart-header {
+  padding: 22px 0 14px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+.chart-header-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.2rem;
+  letter-spacing: 0.1em;
+  background: linear-gradient(120deg, #fff 30%, var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+.chart-header-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.chart-list-inner { display: flex; flex-direction: column; }
+.chart-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.14s;
+}
+.chart-item:hover { background: rgba(255,255,255,0.05); }
+.chart-rank {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.15rem;
+  width: 26px;
+  text-align: right;
+  flex-shrink: 0;
+  color: rgba(255,255,255,0.25);
+  line-height: 1;
+}
+.chart-rank--gold   { color: #f5c518; text-shadow: 0 0 10px rgba(245,197,24,0.45); }
+.chart-rank--silver { color: #b0b0b0; }
+.chart-rank--bronze { color: #cd7f32; }
+.chart-thumb {
+  width: 34px;
+  height: 50px;
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-input);
+}
+.chart-poster { width: 100%; height: 100%; object-fit: cover; display: block; }
+.chart-no-poster { width: 100%; height: 100%; }
+.chart-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.chart-title {
+  font-size: 0.87rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chart-meta {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chart-rating {
+  font-size: 0.95rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  min-width: 28px;
+  text-align: right;
+}
+
 /* === Responsive === */
 @media (max-width: 600px) {
   .movie-grid, .director-group-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
   .detail-content { flex-direction: column; }
   .detail-poster { width: 100%; max-width: 250px; }
-  .nav-link { padding: 8px 12px; font-size: 0.8rem; }
+  .nav-link { padding: 8px 9px; font-size: 0.76rem; }
   .bar-label { width: 70px; }
   .app-title { font-size: 1.4rem; }
   .director-group-name { font-size: 1rem; }
@@ -2307,7 +2423,7 @@ input[type="date"].form-input { color-scheme: dark; }
 .passport-stamp--gold .passport-bar-fill { background: var(--star); }
 .passport-films { font-size: 0.58rem; color: var(--text-muted); font-weight: 600; }
 
-/* === Activity Heatmap === */
+/* === (heatmap removed) ===
 .heatmap-wrap {
   overflow-x: auto;
   padding-bottom: 4px;
@@ -2350,3 +2466,4 @@ input[type="date"].form-input { color-scheme: dark; }
 .hm-level-1 { background: rgba(233,69,96,0.35); }
 .hm-level-2 { background: rgba(233,69,96,0.6); }
 .hm-level-3 { background: rgba(233,69,96,0.9); }
+*/
