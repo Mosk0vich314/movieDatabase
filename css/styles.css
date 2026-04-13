@@ -737,6 +737,49 @@ a:hover { color: var(--accent-hover); }
 .genre-tag:hover { background: rgba(255,255,255,0.08); color: var(--text); }
 .detail-rating { margin-bottom: 14px; }
 .detail-rating label { font-size: 0.82rem; color: var(--text-muted); margin-right: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; }
+/* === External Ratings === */
+.detail-ext-ratings { margin-bottom: 18px; }
+.detail-ext-ratings-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.ext-badges-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ext-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  transition: transform 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+.ext-badge:hover { transform: translateY(-1px); opacity: 0.88; }
+.ext-badge--tmdb { background: #0d253f; color: #01b4e4; border: 1px solid #01b4e4; }
+.ext-badge--tmdb .ext-badge-score {
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+.ext-badge--tmdb .ext-badge-votes {
+  color: rgba(255,255,255,0.45);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+.ext-badge--imdb { background: #f5c518; color: #000; border: 1px solid #c8a400; }
+.ext-badge--lb { background: #1b2028; color: #40bc79; border: 1px solid #40bc79; }
+.ext-badge-arrow { font-size: 0.75rem; opacity: 0.7; }
 .detail-date {
   font-size: 0.85rem;
   color: var(--text-muted);

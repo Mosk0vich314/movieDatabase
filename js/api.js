@@ -144,6 +144,16 @@ const TMDB = (() => {
     return (data.results || []).filter(r => r.known_for_department === 'Directing');
   }
 
+  async function searchActor(query) {
+    const key = getApiKey();
+    if (!key) throw new Error('No TMDB API key set.');
+    const url = `${BASE_URL}/search/person?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(query)}&include_adult=false`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`TMDB person search failed: ${res.status}`);
+    const data = await res.json();
+    return (data.results || []).filter(r => r.known_for_department === 'Acting');
+  }
+
   async function getPersonMovieCredits(personId) {
     const key = getApiKey();
     if (!key) throw new Error('No TMDB API key set.');
@@ -175,5 +185,5 @@ const TMDB = (() => {
     return `${IMG_BASE}/${size}${path}`;
   }
 
-  return { getApiKey, setApiKey, searchMovies, getMovieDetails, searchPerson, getPersonMovieCredits, getMovieRecommendations, posterUrl, profileUrl };
+  return { getApiKey, setApiKey, searchMovies, getMovieDetails, searchPerson, searchActor, getPersonMovieCredits, getMovieRecommendations, posterUrl, profileUrl };
 })();

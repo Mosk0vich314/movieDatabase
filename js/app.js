@@ -609,6 +609,58 @@ const App = (() => {
     }
   }
 
+  async function searchActor() {
+    const query = document.getElementById('tmdb-search').value.trim();
+    closeAutocomplete();
+    if (!query) return;
+    try {
+      const results = await TMDB.searchActor(query);
+      const container = document.getElementById('search-results');
+      if (results.length === 0) {
+        container.innerHTML = '<p class="no-results">No actors found.</p>';
+      } else {
+        container.innerHTML = results.slice(0, 8).map(r => UI.renderPersonResult(r, 'Actor')).join('');
+      }
+    } catch (err) {
+      UI.showToast(err.message);
+    }
+  }
+
+  async function loadActorFilmography(personId, personName) {
+    selectedDirectorName = personName;
+    const container = document.getElementById('search-results');
+    container.innerHTML = '<p class="no-results">Loading filmography...</p>';
+    try {
+      const [credits, allMovies] = await Promise.all([
+        TMDB.getPersonMovieCredits(personId),
+        MovieDB.getAllMovies(),
+      ]);
+      const addedSet = new Set(allMovies.map(m => String(m.tmdbId)));
+      const seen = new Set();
+      const acted = (credits.cast || [])
+        .filter(c => c.release_date && !seen.has(c.id) && seen.add(c.id))
+        .sort((a, b) => b.release_date.localeCompare(a.release_date));
+
+      if (acted.length === 0) {
+        container.innerHTML = '<p class="no-results">No acting credits found.</p>';
+        return;
+      }
+      const header = `<div class="filmography-header">
+        <button class="btn btn-secondary btn-back" id="filmography-back">&larr; ${UI.escapeHtml(personName)}</button>
+        <span class="filmography-count">${acted.length} film${acted.length !== 1 ? 's' : ''}</span>
+      </div>`;
+      container.innerHTML = header + acted.map(f => UI.renderFilmographyResult(f, addedSet, f.character ? `as ${f.character}` : null)).join('');
+      document.getElementById('filmography-back').addEventListener('click', () => {
+        selectedDirectorName = '';
+        container.innerHTML = '';
+        document.getElementById('tmdb-search').value = '';
+        document.getElementById('tmdb-search').focus();
+      });
+    } catch (err) {
+      UI.showToast(err.message);
+    }
+  }
+
   async function selectSearchResult(tmdbId) {
     try {
       const details = await TMDB.getMovieDetails(tmdbId);
@@ -631,6 +683,9 @@ const App = (() => {
         overview: details.overview || '',
         cast,
         runtime: details.runtime || 0,
+        voteAverage: details.vote_average || 0,
+        voteCount: details.vote_count || 0,
+        imdbId: details.imdb_id || '',
       });
     } catch (err) {
       UI.showToast(err.message);
@@ -671,6 +726,9 @@ const App = (() => {
     form.dataset.backdrop = data.backdrop || '';
     form.dataset.cast = JSON.stringify(data.cast || []);
     form.dataset.runtime = data.runtime || 0;
+    form.dataset.voteAverage = data.voteAverage || 0;
+    form.dataset.voteCount = data.voteCount || 0;
+    form.dataset.imdbId = data.imdbId || '';
 
     document.getElementById('form-watchlist-btn').style.display = editingMovie ? 'none' : '';
 
@@ -727,6 +785,9 @@ const App = (() => {
       overview: form.dataset.overview || '',
       cast: JSON.parse(form.dataset.cast || '[]'),
       runtime: parseInt(form.dataset.runtime) || 0,
+      voteAverage: parseFloat(form.dataset.voteAverage) || 0,
+      voteCount: parseInt(form.dataset.voteCount) || 0,
+      imdbId: form.dataset.imdbId || '',
       rating: selectedRating,
       notes: document.getElementById('form-notes').value.trim(),
     };
@@ -767,7 +828,7 @@ const App = (() => {
     }
 
     // Backfill fields for movies saved before these fields existed
-    if ((!movie.overview || !movie.cast || !movie.backdrop) && movie.tmdbId) {
+    if ((!movie.overview || !movie.cast || !movie.backdrop || !movie.voteAverage) && movie.tmdbId) {
       try {
         const details = await TMDB.getMovieDetails(movie.tmdbId);
         let updated = false;
@@ -784,6 +845,9 @@ const App = (() => {
           updated = true;
         }
         if (!movie.runtime && details.runtime) { movie.runtime = details.runtime; updated = true; }
+        if (!movie.voteAverage && details.vote_average) { movie.voteAverage = details.vote_average; updated = true; }
+        if (!movie.voteCount && details.vote_count) { movie.voteCount = details.vote_count; updated = true; }
+        if (!movie.imdbId && details.imdb_id) { movie.imdbId = details.imdb_id; updated = true; }
         if (updated) await MovieDB.updateMovie(movie);
       } catch (_) { /* best-effort */ }
     }
@@ -974,7 +1038,9 @@ const App = (() => {
 
   function setupEventListeners() {
     document.getElementById('tmdb-search-btn').addEventListener('click', () => {
-      if (searchMode === 'director') searchDirector(); else searchTMDB();
+      if (searchMode === 'director') searchDirector();
+      else if (searchMode === 'actor') searchActor();
+      else searchTMDB();
     });
     document.getElementById('tmdb-search').addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown') { e.preventDefault(); acMoveFocus(1); return; }
@@ -988,13 +1054,15 @@ const App = (() => {
           selectSearchResult(r.id);
         } else if (searchMode === 'director') {
           searchDirector();
+        } else if (searchMode === 'actor') {
+          searchActor();
         } else {
           searchTMDB();
         }
       }
     });
     document.getElementById('tmdb-search').addEventListener('input', () => {
-      if (searchMode === 'director') { closeAutocomplete(); return; }
+      if (searchMode === 'director' || searchMode === 'actor') { closeAutocomplete(); return; }
       clearTimeout(acDebounce);
       const q = document.getElementById('tmdb-search').value.trim();
       if (q.length < 2) { closeAutocomplete(); return; }
@@ -1024,7 +1092,9 @@ const App = (() => {
       selectedDirectorName = '';
       closeAutocomplete();
       document.getElementById('tmdb-search').placeholder =
-        searchMode === 'director' ? 'Search for a director...' : 'Search or paste a themoviedb.org URL...';
+        searchMode === 'director' ? 'Search for a director...' :
+        searchMode === 'actor' ? 'Search for an actor...' :
+        'Search or paste a themoviedb.org URL...';
       document.getElementById('tmdb-search').focus();
     });
 
@@ -1038,7 +1108,11 @@ const App = (() => {
       const personResult = e.target.closest('.search-result[data-person-id]');
       if (personResult) {
         const name = personResult.querySelector('h4').textContent;
-        loadFilmography(parseInt(personResult.dataset.personId), name);
+        if (searchMode === 'actor') {
+          loadActorFilmography(parseInt(personResult.dataset.personId), name);
+        } else {
+          loadFilmography(parseInt(personResult.dataset.personId), name);
+        }
         return;
       }
       const result = e.target.closest('.search-result[data-tmdb-id]');
