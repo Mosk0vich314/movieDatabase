@@ -64,25 +64,24 @@ const Stats = (() => {
       done: addedThisWeek >= weekGoal,
     });
 
-    // Challenge 2: Decade explorer
-    const thinDecades = [1960, 1970, 1980, 1990, 2000, 2010, 2020].filter(d => (decCounts[d] || 0) < 5);
-    if (thinDecades.length > 0) {
-      const target = thinDecades[weekNum % thinDecades.length];
-      const thisWeekDecade = movies.filter(m =>
-        m.dateAdded && m.dateAdded >= weekStartStr &&
-        !isNaN(parseInt(m.year)) && Math.floor(parseInt(m.year) / 10) * 10 === target
-      ).length;
-      challenges.push({
-        id: 'decade', icon: '🗓',
-        title: `Add a film from the ${target}s`,
-        progress: Math.min(thisWeekDecade, 1), goal: 1,
-        done: thisWeekDecade >= 1,
-      });
-    }
+    // Challenge 2: Decade explorer — target is stable for the week (weekNum only, not collection state)
+    const decadePool = [1920, 1930, 1940, 1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020];
+    const targetDecade = decadePool[weekNum % decadePool.length];
+    const thisWeekDecade = movies.filter(m =>
+      m.dateAdded && m.dateAdded >= weekStartStr &&
+      !isNaN(parseInt(m.year)) && Math.floor(parseInt(m.year) / 10) * 10 === targetDecade
+    ).length;
+    challenges.push({
+      id: 'decade', icon: '🗓',
+      title: `Add a film from the ${targetDecade}s`,
+      progress: Math.min(thisWeekDecade, 1), goal: 1,
+      done: thisWeekDecade >= 1,
+    });
 
-    // Challenge 3: Genre explorer or high rating
-    if (rareGenres.length > 0) {
-      const targetGenre = rareGenres[weekNum % Math.min(4, rareGenres.length)];
+    // Challenge 3: Genre explorer — rotate through sorted genre keys (alphabetical = stable)
+    const genrePool = Object.keys(genreCounts).sort();
+    if (genrePool.length > 0) {
+      const targetGenre = genrePool[weekNum % genrePool.length];
       const thisWeekGenre = movies.filter(m =>
         m.dateAdded && m.dateAdded >= weekStartStr && (m.genres || []).includes(targetGenre)
       ).length;
@@ -462,21 +461,6 @@ const Stats = (() => {
         </div>
 
         ${renderHeatmap(stats.heatmap)}
-
-        ${stats.topRated.length > 0 ? `
-          <div class="stats-section">
-            <h3>Top Rated</h3>
-            <div class="top-list">
-              ${stats.topRated.map((m, i) => `
-                <div class="top-item" ${m.backdrop ? `style="--ti-bg:url('${m.backdrop}')"` : ''}>
-                  <span class="top-rank">${i + 1}</span>
-                  <span class="top-title">${m.title} <span class="top-year">(${m.year || 'N/A'})</span></span>
-                  <span class="top-rating" style="color:${UI.ratingColor(m.rating)}">${UI.formatRating(m.rating)}</span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        ` : ''}
       `}
     `;
   }

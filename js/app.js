@@ -125,10 +125,10 @@ const App = (() => {
     document.getElementById('view-decades-btn').classList.toggle('active', viewMode === 'decades');
     document.getElementById('view-library-btn').classList.toggle('active', viewMode === 'library');
 
-    // Now Playing banner — most recently added film
+    // Now Playing banner — most recently added film (sort by id: auto-incremented = always correct)
     const npWrap = document.getElementById('now-playing-wrap');
     if (movies.length > 0) {
-      const newest = [...movies].sort((a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0))[0];
+      const newest = [...movies].sort((a, b) => (b.id || 0) - (a.id || 0))[0];
       npWrap.innerHTML = UI.renderNowPlaying(newest);
       npWrap.querySelector('.now-playing').addEventListener('click', () => {
         window.location.hash = `#detail/${newest.id}`;
