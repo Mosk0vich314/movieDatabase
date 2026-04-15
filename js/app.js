@@ -54,6 +54,7 @@ const App = (() => {
       '#catalogue': 'catalogue',
       '#add': 'add',
       '#watchlist': 'watchlist',
+      '#chart': 'chart',
       '#stats': 'stats',
     };
 
@@ -69,6 +70,7 @@ const App = (() => {
 
     if (view === 'catalogue') loadCatalogue();
     if (view === 'watchlist') loadWatchlist();
+    if (view === 'chart') loadChart();
     if (view === 'stats') loadStats();
     if (view === 'add') resetAddView();
   }
@@ -471,6 +473,8 @@ const App = (() => {
     document.getElementById('tmdb-search').value = '';
     document.getElementById('search-results').innerHTML = '';
     document.getElementById('movie-form').style.display = 'none';
+    const _fn = document.getElementById('filmography-nav');
+    _fn.style.display = 'none'; _fn.innerHTML = '';
     editingMovie = null;
     selectedRating = 0;
     closeAutocomplete();
@@ -574,6 +578,23 @@ const App = (() => {
     }
   }
 
+  function _showFilmographyNav(personName, count) {
+    const nav = document.getElementById('filmography-nav');
+    nav.style.display = '';
+    nav.innerHTML = `<div class="filmography-header">
+      <button class="search-back-btn" id="filmography-back"><span class="search-back-arrow">&#8249;</span> ${UI.escapeHtml(personName)}</button>
+      <span class="filmography-count">${count} film${count !== 1 ? 's' : ''}</span>
+    </div>`;
+    document.getElementById('filmography-back').addEventListener('click', () => {
+      selectedDirectorName = '';
+      nav.style.display = 'none';
+      nav.innerHTML = '';
+      document.getElementById('search-results').innerHTML = '';
+      document.getElementById('tmdb-search').value = '';
+      document.getElementById('tmdb-search').focus();
+    });
+  }
+
   async function loadFilmography(personId, personName) {
     selectedDirectorName = personName;
     const container = document.getElementById('search-results');
@@ -593,17 +614,51 @@ const App = (() => {
         container.innerHTML = '<p class="no-results">No directed films found.</p>';
         return;
       }
-      const header = `<div class="filmography-header">
-        <button class="btn btn-secondary btn-back" id="filmography-back">&larr; ${UI.escapeHtml(personName)}</button>
-        <span class="filmography-count">${directed.length} film${directed.length !== 1 ? 's' : ''}</span>
-      </div>`;
-      container.innerHTML = header + directed.map(f => UI.renderFilmographyResult(f, addedSet)).join('');
-      document.getElementById('filmography-back').addEventListener('click', () => {
-        selectedDirectorName = '';
-        container.innerHTML = '';
-        document.getElementById('tmdb-search').value = '';
-        document.getElementById('tmdb-search').focus();
-      });
+      _showFilmographyNav(personName, directed.length);
+      container.innerHTML = directed.map(f => UI.renderFilmographyResult(f, addedSet)).join('');
+    } catch (err) {
+      UI.showToast(err.message);
+    }
+  }
+
+  async function searchActor() {
+    const query = document.getElementById('tmdb-search').value.trim();
+    closeAutocomplete();
+    if (!query) return;
+    try {
+      const results = await TMDB.searchActor(query);
+      const container = document.getElementById('search-results');
+      if (results.length === 0) {
+        container.innerHTML = '<p class="no-results">No actors found.</p>';
+      } else {
+        container.innerHTML = results.slice(0, 8).map(r => UI.renderPersonResult(r, 'Actor')).join('');
+      }
+    } catch (err) {
+      UI.showToast(err.message);
+    }
+  }
+
+  async function loadActorFilmography(personId, personName) {
+    selectedDirectorName = personName;
+    const container = document.getElementById('search-results');
+    container.innerHTML = '<p class="no-results">Loading filmography...</p>';
+    try {
+      const [credits, allMovies] = await Promise.all([
+        TMDB.getPersonMovieCredits(personId),
+        MovieDB.getAllMovies(),
+      ]);
+      const addedSet = new Set(allMovies.map(m => String(m.tmdbId)));
+      const seen = new Set();
+      const acted = (credits.cast || [])
+        .filter(c => c.release_date && !seen.has(c.id) && seen.add(c.id))
+        .sort((a, b) => b.release_date.localeCompare(a.release_date));
+
+      if (acted.length === 0) {
+        container.innerHTML = '<p class="no-results">No acting credits found.</p>';
+        return;
+      }
+      _showFilmographyNav(personName, acted.length);
+      container.innerHTML = acted.map(f => UI.renderFilmographyResult(f, addedSet, f.character ? `as ${f.character}` : null)).join('');
     } catch (err) {
       UI.showToast(err.message);
     }
@@ -620,6 +675,7 @@ const App = (() => {
         character: c.character,
         profileUrl: c.profile_path ? TMDB.posterUrl(c.profile_path, 'w185') : '',
       }));
+      const omdb = await TMDB.fetchOmdbData(details.imdb_id);
       populateForm({
         tmdbId: details.id,
         title: details.title,
@@ -631,6 +687,12 @@ const App = (() => {
         overview: details.overview || '',
         cast,
         runtime: details.runtime || 0,
+        voteAverage: details.vote_average || 0,
+        voteCount: details.vote_count || 0,
+        imdbId: details.imdb_id || '',
+        imdbRating: omdb?.imdbRating || 0,
+        imdbVotes: omdb?.imdbVotes || '',
+        rtScore: omdb?.rtScore || '',
       });
     } catch (err) {
       UI.showToast(err.message);
@@ -671,6 +733,12 @@ const App = (() => {
     form.dataset.backdrop = data.backdrop || '';
     form.dataset.cast = JSON.stringify(data.cast || []);
     form.dataset.runtime = data.runtime || 0;
+    form.dataset.voteAverage = data.voteAverage || 0;
+    form.dataset.voteCount = data.voteCount || 0;
+    form.dataset.imdbId = data.imdbId || '';
+    form.dataset.imdbRating = data.imdbRating || 0;
+    form.dataset.imdbVotes = data.imdbVotes || '';
+    form.dataset.rtScore = data.rtScore || '';
 
     document.getElementById('form-watchlist-btn').style.display = editingMovie ? 'none' : '';
 
@@ -727,6 +795,12 @@ const App = (() => {
       overview: form.dataset.overview || '',
       cast: JSON.parse(form.dataset.cast || '[]'),
       runtime: parseInt(form.dataset.runtime) || 0,
+      voteAverage: parseFloat(form.dataset.voteAverage) || 0,
+      voteCount: parseInt(form.dataset.voteCount) || 0,
+      imdbId: form.dataset.imdbId || '',
+      imdbRating: parseFloat(form.dataset.imdbRating) || 0,
+      imdbVotes: form.dataset.imdbVotes || '',
+      rtScore: form.dataset.rtScore || '',
       rating: selectedRating,
       notes: document.getElementById('form-notes').value.trim(),
     };
@@ -756,6 +830,14 @@ const App = (() => {
     }
   }
 
+  // --- Chart ---
+
+  async function loadChart() {
+    const movies = (await MovieDB.getAllMovies()).filter(m => !m.watchlist && m.rating > 0);
+    const top30 = [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 30);
+    document.getElementById('chart-list').innerHTML = UI.renderChart(top30);
+  }
+
   // --- Detail ---
 
   async function loadMovieDetail(id) {
@@ -767,7 +849,7 @@ const App = (() => {
     }
 
     // Backfill fields for movies saved before these fields existed
-    if ((!movie.overview || !movie.cast || !movie.backdrop) && movie.tmdbId) {
+    if ((!movie.overview || !movie.cast || !movie.backdrop || !movie.voteAverage) && movie.tmdbId) {
       try {
         const details = await TMDB.getMovieDetails(movie.tmdbId);
         let updated = false;
@@ -784,7 +866,23 @@ const App = (() => {
           updated = true;
         }
         if (!movie.runtime && details.runtime) { movie.runtime = details.runtime; updated = true; }
+        if (!movie.voteAverage && details.vote_average) { movie.voteAverage = details.vote_average; updated = true; }
+        if (!movie.voteCount && details.vote_count) { movie.voteCount = details.vote_count; updated = true; }
+        if (!movie.imdbId && details.imdb_id) { movie.imdbId = details.imdb_id; updated = true; }
         if (updated) await MovieDB.updateMovie(movie);
+      } catch (_) { /* best-effort */ }
+    }
+    // Backfill IMDb/RT ratings from OMDB
+    if (movie.imdbId && !movie.imdbRating) {
+      try {
+        const omdb = await TMDB.fetchOmdbData(movie.imdbId);
+        if (omdb) {
+          let updated = false;
+          if (!movie.imdbRating && omdb.imdbRating) { movie.imdbRating = omdb.imdbRating; updated = true; }
+          if (!movie.imdbVotes && omdb.imdbVotes) { movie.imdbVotes = omdb.imdbVotes; updated = true; }
+          if (!movie.rtScore && omdb.rtScore) { movie.rtScore = omdb.rtScore; updated = true; }
+          if (updated) await MovieDB.updateMovie(movie);
+        }
       } catch (_) { /* best-effort */ }
     }
 
@@ -974,7 +1072,9 @@ const App = (() => {
 
   function setupEventListeners() {
     document.getElementById('tmdb-search-btn').addEventListener('click', () => {
-      if (searchMode === 'director') searchDirector(); else searchTMDB();
+      if (searchMode === 'director') searchDirector();
+      else if (searchMode === 'actor') searchActor();
+      else searchTMDB();
     });
     document.getElementById('tmdb-search').addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown') { e.preventDefault(); acMoveFocus(1); return; }
@@ -988,13 +1088,15 @@ const App = (() => {
           selectSearchResult(r.id);
         } else if (searchMode === 'director') {
           searchDirector();
+        } else if (searchMode === 'actor') {
+          searchActor();
         } else {
           searchTMDB();
         }
       }
     });
     document.getElementById('tmdb-search').addEventListener('input', () => {
-      if (searchMode === 'director') { closeAutocomplete(); return; }
+      if (searchMode === 'director' || searchMode === 'actor') { closeAutocomplete(); return; }
       clearTimeout(acDebounce);
       const q = document.getElementById('tmdb-search').value.trim();
       if (q.length < 2) { closeAutocomplete(); return; }
@@ -1020,11 +1122,15 @@ const App = (() => {
       document.getElementById('tmdb-search').value = '';
       document.getElementById('search-results').innerHTML = '';
       document.getElementById('movie-form').style.display = 'none';
+      const fn = document.getElementById('filmography-nav');
+      fn.style.display = 'none'; fn.innerHTML = '';
       editingMovie = null;
       selectedDirectorName = '';
       closeAutocomplete();
       document.getElementById('tmdb-search').placeholder =
-        searchMode === 'director' ? 'Search for a director...' : 'Search or paste a themoviedb.org URL...';
+        searchMode === 'director' ? 'Search for a director...' :
+        searchMode === 'actor' ? 'Search for an actor...' :
+        'Search or paste a themoviedb.org URL...';
       document.getElementById('tmdb-search').focus();
     });
 
@@ -1038,7 +1144,11 @@ const App = (() => {
       const personResult = e.target.closest('.search-result[data-person-id]');
       if (personResult) {
         const name = personResult.querySelector('h4').textContent;
-        loadFilmography(parseInt(personResult.dataset.personId), name);
+        if (searchMode === 'actor') {
+          loadActorFilmography(parseInt(personResult.dataset.personId), name);
+        } else {
+          loadFilmography(parseInt(personResult.dataset.personId), name);
+        }
         return;
       }
       const result = e.target.closest('.search-result[data-tmdb-id]');
@@ -1088,6 +1198,11 @@ const App = (() => {
     document.getElementById('movie-grid').addEventListener('click', (e) => {
       const card = e.target.closest('.movie-card, .film-card, .poster-card');
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
+    });
+
+    document.getElementById('chart-list').addEventListener('click', (e) => {
+      const item = e.target.closest('.top-item[data-id]');
+      if (item) window.location.hash = `#detail/${item.dataset.id}`;
     });
 
     document.getElementById('filter-toggle').addEventListener('click', () => {

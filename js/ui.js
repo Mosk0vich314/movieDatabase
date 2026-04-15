@@ -123,7 +123,7 @@ const UI = (() => {
     const genres = (movie.genres || []).map(g => `<span class="genre-tag">${escapeHtml(g)}</span>`).join('');
 
     const pal = getGenrePalette(movie.genres);
-    const backBtn = `<button class="btn-back" id="detail-back">&#8592; Back</button>`;
+    const backBtn = `<button class="btn-back" id="detail-back"><span class="btn-back-arrow">&#8249;</span> Back</button>`;
     const backdropHtml = movie.backdrop
       ? `<div class="detail-backdrop-wrap" style="--genre-accent:${pal.accent}">
           <img src="${movie.backdrop}" class="detail-backdrop-img" alt="">
@@ -197,6 +197,43 @@ const UI = (() => {
       ? `<div class="detail-context">${chips.map(c => `<span class="detail-chip">${c}</span>`).join('')}</div>`
       : '';
 
+    // External ratings
+    const extBadges = [];
+    if (movie.voteAverage) {
+      const voteCount = movie.voteCount ? (movie.voteCount >= 1000 ? `${(movie.voteCount / 1000).toFixed(1)}k` : String(movie.voteCount)) : '';
+      extBadges.push(`<a href="https://www.themoviedb.org/movie/${movie.tmdbId}" target="_blank" rel="noopener" class="ext-badge ext-badge--tmdb" title="TMDb">
+        <span class="ext-badge-logo">TMDb</span>
+        <span class="ext-badge-score">${formatRating(movie.voteAverage)}</span>
+        ${voteCount ? `<span class="ext-badge-votes">${voteCount}</span>` : ''}
+      </a>`);
+    }
+    if (movie.imdbId) {
+      const imdbScore = movie.imdbRating ? `<span class="ext-badge-score">${movie.imdbRating.toFixed(1)}</span>` : '';
+      const imdbVotes = movie.imdbVotes ? `<span class="ext-badge-votes">${movie.imdbVotes}</span>` : '';
+      extBadges.push(`<a href="https://www.imdb.com/title/${movie.imdbId}/" target="_blank" rel="noopener" class="ext-badge ext-badge--imdb" title="IMDb">
+        <span class="ext-badge-logo">IMDb</span>
+        ${imdbScore}${imdbVotes}
+        ${!movie.imdbRating ? `<span class="ext-badge-arrow">&#8599;</span>` : ''}
+      </a>`);
+    }
+    if (movie.rtScore) {
+      const rtVal = parseInt(movie.rtScore);
+      const rtClass = rtVal >= 60 ? 'ext-badge--rt-fresh' : 'ext-badge--rt-rotten';
+      extBadges.push(`<a href="https://www.rottentomatoes.com/search?search=${encodeURIComponent(movie.title)}" target="_blank" rel="noopener" class="ext-badge ${rtClass}" title="Rotten Tomatoes">
+        <span class="ext-badge-logo">${rtVal >= 60 ? '&#127813;' : '&#128169;'} RT</span>
+        <span class="ext-badge-score">${movie.rtScore}</span>
+      </a>`);
+    }
+    if (movie.tmdbId) {
+      extBadges.push(`<a href="https://letterboxd.com/tmdb/${movie.tmdbId}/" target="_blank" rel="noopener" class="ext-badge ext-badge--lb" title="Letterboxd">
+        <span class="ext-badge-logo">LBxd</span>
+        <span class="ext-badge-arrow">&#8599;</span>
+      </a>`);
+    }
+    const extRatingsHtml = extBadges.length
+      ? `<div class="detail-ext-ratings"><div class="detail-ext-ratings-label">Also on</div><div class="ext-badges-row">${extBadges.join('')}</div></div>`
+      : '';
+
     return `
       ${backdropHtml}
       <div class="detail-content">
@@ -213,6 +250,7 @@ const UI = (() => {
             <label>Your Rating:</label>
             ${renderRatingBadge(movie.rating)}
           </div>
+          ${extRatingsHtml}
           ${movie.notes ? `<div class="detail-notes"><label>Notes</label><p>${escapeHtml(movie.notes)}</p></div>` : ''}
           ${movie.rewatches ? `<div class="detail-rewatches">&#8634; Rewatched ${movie.rewatches}×</div>` : ''}
           <div class="detail-actions">
@@ -527,7 +565,7 @@ const UI = (() => {
     </div>`;
   }
 
-  function renderPersonResult(person) {
+  function renderPersonResult(person, role = 'Director') {
     const photo = person.profile_path
       ? `<img src="${TMDB.profileUrl(person.profile_path)}" alt="${escapeHtml(person.name)}">`
       : `<div class="no-poster-sm">?</div>`;
@@ -541,14 +579,14 @@ const UI = (() => {
         <div class="search-result-poster">${photo}</div>
         <div class="search-result-info">
           <h4>${escapeHtml(person.name)}</h4>
-          <p>Director</p>
+          <p>${escapeHtml(role)}</p>
           ${knownFor ? `<p class="search-result-overview">Known for: ${knownFor}</p>` : ''}
         </div>
       </div>
     `;
   }
 
-  function renderFilmographyResult(film, addedSet) {
+  function renderFilmographyResult(film, addedSet, subtext = null) {
     const year = film.release_date ? film.release_date.substring(0, 4) : 'N/A';
     const poster = film.poster_path
       ? `<img src="${TMDB.posterUrl(film.poster_path, 'w92')}" alt="${escapeHtml(film.title)}">`
@@ -558,17 +596,39 @@ const UI = (() => {
     const action = isAdded
       ? `<span class="search-result-added-label">Added</span>`
       : `<button class="search-result-watchlist-btn" data-tmdb-id="${film.id}" title="Add to Watchlist">+ Watchlist</button>`;
+    const overviewText = subtext !== null
+      ? (subtext ? escapeHtml(subtext) : '')
+      : `${escapeHtml((film.overview || '').substring(0, 120))}${film.overview && film.overview.length > 120 ? '...' : ''}`;
     return `
       <div class="search-result${addedClass}" data-tmdb-id="${film.id}">
         <div class="search-result-poster">${poster}</div>
         <div class="search-result-info">
           <h4>${escapeHtml(film.title)}</h4>
           <p>${year}</p>
-          <p class="search-result-overview">${escapeHtml((film.overview || '').substring(0, 120))}${film.overview && film.overview.length > 120 ? '...' : ''}</p>
+          ${overviewText ? `<p class="search-result-overview">${overviewText}</p>` : ''}
         </div>
         ${action}
       </div>
     `;
+  }
+
+  function renderChart(movies) {
+    if (movies.length === 0) {
+      return '<p class="no-results" style="margin-top:48px;">Rate some films to build your chart.</p>';
+    }
+    const items = movies.map((m, i) => `
+      <div class="top-item" data-id="${m.id}" ${m.backdrop ? `style="--ti-bg:url('${m.backdrop}')"` : ''}>
+        <span class="top-rank">${i + 1}</span>
+        <span class="top-title">${escapeHtml(m.title)} <span class="top-year">(${m.year || 'N/A'})</span></span>
+        <span class="top-rating" style="color:${ratingColor(m.rating)}">${formatRating(m.rating)}</span>
+      </div>`).join('');
+
+    return `
+      <div class="chart-header">
+        <div class="chart-header-title">My Top ${movies.length}</div>
+        <div class="chart-header-sub">Ranked by your rating</div>
+      </div>
+      <div class="top-list">${items}</div>`;
   }
 
   function escapeHtml(text) {
@@ -646,5 +706,5 @@ const UI = (() => {
     });
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, initCustomSelects, escapeHtml };
+  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, initCustomSelects, escapeHtml };
 })();

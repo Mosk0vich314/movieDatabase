@@ -26,6 +26,9 @@
     <a href="#watchlist" class="nav-link" data-view="watchlist">
       <span class="nav-icon">&#9734;</span> Watchlist<span id="watchlist-nav-badge" class="nav-badge" style="display:none;"></span>
     </a>
+    <a href="#chart" class="nav-link" data-view="chart">
+      <span class="nav-icon">&#9650;</span> Chart
+    </a>
     <a href="#stats" class="nav-link" data-view="stats">
       <span class="nav-icon">&#9776;</span> Stats
     </a>
@@ -115,6 +118,7 @@
       <div class="search-mode-toggle" id="search-mode-toggle">
         <button class="smt-btn active" data-mode="movie">Movie</button>
         <button class="smt-btn" data-mode="director">Director</button>
+        <button class="smt-btn" data-mode="actor">Actor</button>
       </div>
       <div class="add-movie-search">
         <div class="input-wrap">
@@ -124,6 +128,7 @@
         </div>
         <button id="tmdb-search-btn" class="btn btn-primary">Search</button>
       </div>
+      <div id="filmography-nav" style="display:none;"></div>
       <div id="search-results" class="search-results"></div>
 
       <!-- Add/Edit Form (shown after selecting a movie) -->
@@ -237,6 +242,11 @@
           <p class="form-hint">Powered by <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a></p>
         </div>
       </div>
+    </section>
+
+    <!-- Chart View -->
+    <section id="view-chart" class="view" style="display:none;">
+      <div id="chart-list"></div>
     </section>
   </main>
 
