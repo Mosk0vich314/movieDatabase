@@ -2,6 +2,24 @@ const Stats = (() => {
   const MILESTONE_VALUES = [10, 25, 50, 100, 250, 500, 1000];
 
 
+  function computeHeatmap(movies) {
+    const counts = {};
+    movies.forEach(m => {
+      if (m.dateAdded) { const d = m.dateAdded.substring(0, 10); counts[d] = (counts[d] || 0) + 1; }
+    });
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 364 - startDate.getDay());
+    const cells = [];
+    for (let i = 0; i < 371; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().substring(0, 10);
+      cells.push({ date: key, count: counts[key] || 0 });
+    }
+    return cells;
+  }
+
   function computeDecadePassport(movies) {
     const dec = {};
     movies.forEach(m => {
@@ -198,6 +216,7 @@ const Stats = (() => {
       total, avgRating, genresSorted, directorsSorted, uniqueDirectors,
       ratingDist, topRated, dna: tasteDNA(movies),
       totalRuntime, streak, rank, milestones, genreBadges, auteurBadges,
+      heatmap: computeHeatmap(movies),
       decadePassport: computeDecadePassport(movies),
       challenges: generateChallenges(movies),
     };
@@ -208,6 +227,33 @@ const Stats = (() => {
     const h = Math.floor(mins / 60);
     const m = mins % 60;
     return h > 0 ? `${h}h${m > 0 ? ` ${m}m` : ''}` : `${m}m`;
+  }
+
+  function renderHeatmap(cells) {
+    if (!cells || cells.length === 0) return '';
+    const weeks = [];
+    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+    let lastMonth = -1;
+    const monthLabels = weeks.map(week => {
+      const d = new Date(week[0].date + 'T12:00:00');
+      const m = d.getMonth();
+      if (m !== lastMonth) { lastMonth = m; return d.toLocaleDateString('en', { month: 'short' }); }
+      return '';
+    });
+    const cellHtml = cell => {
+      const lvl = cell.count === 0 ? 0 : cell.count === 1 ? 1 : cell.count <= 3 ? 2 : 3;
+      return `<div class="hm-cell hm-level-${lvl}" title="${cell.date}: ${cell.count} film${cell.count !== 1 ? 's' : ''}"></div>`;
+    };
+    return `
+      <div class="stats-section">
+        <h3>Activity</h3>
+        <div class="heatmap-wrap">
+          <div class="heatmap-months">${monthLabels.map(l => `<span>${l}</span>`).join('')}</div>
+          <div class="heatmap-grid">
+            ${weeks.map(week => `<div class="hm-week">${week.map(cellHtml).join('')}</div>`).join('')}
+          </div>
+        </div>
+      </div>`;
   }
 
   function renderChallenges(challenges) {
