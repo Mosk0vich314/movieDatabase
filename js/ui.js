@@ -264,7 +264,45 @@ const UI = (() => {
         </div>
       </div>
       ${castHtml}
+      ${renderMoreLikeThis(movie, ctx)}
     `;
+  }
+
+  function renderMoreLikeThis(movie, ctx) {
+    if (!ctx.allMovies || ctx.allMovies.length < 2) return '';
+    const movieGenres = new Set(movie.genres || []);
+    const movieDirs = new Set(movie.directors || []);
+
+    const scored = ctx.allMovies
+      .filter(m => m.id !== movie.id)
+      .map(m => {
+        let score = 0;
+        (m.genres || []).forEach(g => { if (movieGenres.has(g)) score += 2; });
+        (m.directors || []).forEach(d => { if (movieDirs.has(d)) score += 5; });
+        if (m.year && movie.year && Math.abs(parseInt(m.year) - parseInt(movie.year)) <= 5) score += 1;
+        return { movie: m, score };
+      })
+      .filter(s => s.score > 0)
+      .sort((a, b) => b.score - a.score || (b.movie.rating || 0) - (a.movie.rating || 0))
+      .slice(0, 10);
+
+    if (scored.length === 0) return '';
+
+    const items = scored.map(s => {
+      const m = s.movie;
+      const posterImg = m.poster ? `<img src="${m.poster}" alt="" loading="lazy">` : '<div class="mlt-no-poster"></div>';
+      const rBadge = m.rating ? `<span class="mlt-rating" style="color:${ratingColor(m.rating)}">${formatRating(m.rating)}</span>` : '';
+      return `<div class="mlt-item" data-id="${m.id}">
+        <div class="mlt-poster">${posterImg}</div>
+        <div class="mlt-title">${escapeHtml(m.title)}</div>
+        ${rBadge}
+      </div>`;
+    }).join('');
+
+    return `<div class="detail-mlt">
+      <div class="cast-label">More Like This</div>
+      <div class="mlt-scroll">${items}</div>
+    </div>`;
   }
 
   function renderDirectorGroup(directorName, movies) {

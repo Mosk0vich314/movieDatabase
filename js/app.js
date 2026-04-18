@@ -1041,6 +1041,12 @@ const App = (() => {
       window.location.hash = movie.watchlist ? '#watchlist' : '#catalogue';
     });
 
+    document.querySelectorAll('.mlt-item[data-id]').forEach(item => {
+      item.addEventListener('click', () => {
+        window.location.hash = `#detail/${item.dataset.id}`;
+      });
+    });
+
     if (!movie.watchlist) {
       const rewatchBtn = document.getElementById('detail-rewatch');
       if (rewatchBtn) {
