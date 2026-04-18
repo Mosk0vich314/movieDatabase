@@ -923,6 +923,7 @@ const App = (() => {
         const rankings = [winners[0], ...tournament.eliminated.reverse()];
         container.innerHTML = UI.renderTournamentResults(rankings);
         tournament = null;
+        setTimeout(spawnConfetti, 300);
         return;
       }
 
@@ -1210,6 +1211,29 @@ const App = (() => {
       const dist = 28 + Math.random() * 26;
       const size = 4 + Math.random() * 5;
       p.style.cssText = `left:${cx}px;top:${cy}px;width:${size}px;height:${size}px;background:${colors[i % colors.length]};--dx:${(Math.cos(angle) * dist).toFixed(1)}px;--dy:${(Math.sin(angle) * dist).toFixed(1)}px;animation-duration:${(0.45 + Math.random() * 0.2).toFixed(2)}s;`;
+      document.body.appendChild(p);
+      p.addEventListener('animationend', () => p.remove(), { once: true });
+    }
+  }
+
+  function spawnConfetti() {
+    const colors = ['#f5c518', '#e94560', '#7c5cfc', '#21d07a', '#fff', '#ff6b35', '#00d4ff'];
+    const shapes = ['square', 'rect', 'circle'];
+    const vw = window.innerWidth;
+    for (let i = 0; i < 60; i++) {
+      const p = document.createElement('span');
+      p.className = 'confetti-particle';
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const shape = shapes[Math.floor(Math.random() * shapes.length)];
+      const x = Math.random() * vw;
+      const drift = (Math.random() - 0.5) * 160;
+      const size = shape === 'rect' ? `width:${4 + Math.random() * 4}px;height:${8 + Math.random() * 8}px;` :
+                   shape === 'circle' ? `width:${5 + Math.random() * 5}px;height:${5 + Math.random() * 5}px;border-radius:50%;` :
+                   `width:${5 + Math.random() * 5}px;height:${5 + Math.random() * 5}px;`;
+      const dur = 1.2 + Math.random() * 1.8;
+      const delay = Math.random() * 0.6;
+      const spin = (Math.random() - 0.5) * 720;
+      p.style.cssText = `left:${x}px;top:-12px;${size}background:${color};--drift:${drift}px;--spin:${spin}deg;animation-duration:${dur}s;animation-delay:${delay}s;`;
       document.body.appendChild(p);
       p.addEventListener('animationend', () => p.remove(), { once: true });
     }

@@ -2713,6 +2713,46 @@ input[type="date"].form-input { color-scheme: dark; }
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
+/* Confetti */
+.confetti-particle {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  animation: confettiFall linear forwards;
+  opacity: 0;
+}
+@keyframes confettiFall {
+  0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(105vh) translateX(var(--drift, 0px)) rotate(var(--spin, 360deg)); opacity: 0; }
+}
+
+/* Results entrance */
+.tournament-winner {
+  animation: resultsReveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.tr-row {
+  animation: trRowSlide 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.tr-row:nth-child(1)  { animation-delay: 0.15s; }
+.tr-row:nth-child(2)  { animation-delay: 0.25s; }
+.tr-row:nth-child(3)  { animation-delay: 0.35s; }
+.tr-row:nth-child(4)  { animation-delay: 0.42s; }
+.tr-row:nth-child(5)  { animation-delay: 0.48s; }
+.tr-row:nth-child(6)  { animation-delay: 0.53s; }
+.tr-row:nth-child(7)  { animation-delay: 0.57s; }
+.tr-row:nth-child(8)  { animation-delay: 0.60s; }
+.tr-row:nth-child(9)  { animation-delay: 0.63s; }
+.tr-row:nth-child(10) { animation-delay: 0.65s; }
+.tr-row:nth-child(n+11) { animation-delay: 0.7s; }
+@keyframes resultsReveal {
+  from { opacity: 0; transform: scale(0.85) translateY(20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes trRowSlide {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
 /* === (heatmap removed) ===
 .heatmap-wrap {
   overflow-x: auto;
