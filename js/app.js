@@ -1122,17 +1122,68 @@ const App = (() => {
   async function randomPick() {
     const allMovies = (await MovieDB.getAllMovies()).filter(m => m.watchlist);
     if (allMovies.length === 0) { UI.showToast('Watchlist is empty!'); return; }
-    if (allMovies.length === 1) {
-      const only = allMovies[0];
-      window.location.hash = `#detail/${only.id}`;
+
+    const genreCounts = new Map();
+    allMovies.forEach(m => (m.genres || []).forEach(g => {
+      genreCounts.set(g, (genreCounts.get(g) || 0) + 1);
+    }));
+    const genres = [...genreCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+    if (genres.length <= 1) {
+      rollWatchlistPick(allMovies);
       return;
     }
 
-    const winner = allMovies[Math.floor(Math.random() * allMovies.length)];
+    const chipsHtml = genres.map(([g, c]) =>
+      `<button class="rp-chip" data-genre="${UI.escapeHtml(g)}">${UI.escapeHtml(g)}<span class="rp-chip-count">${c}</span></button>`
+    ).join('');
 
-    // If library mode, do slot-machine animation
+    const overlay = document.createElement('div');
+    overlay.className = 'random-pick-overlay';
+    overlay.innerHTML = `
+      <div class="random-pick-sheet">
+        <button class="rp-close" aria-label="Close">&times;</button>
+        <h3 class="rp-title">&#127922; Pick a genre</h3>
+        <p class="rp-subtitle">Or roll from the whole watchlist</p>
+        <div class="rp-chips">
+          <button class="rp-chip rp-chip--any" data-genre="">Any genre<span class="rp-chip-count">${allMovies.length}</span></button>
+          ${chipsHtml}
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('open'));
+
+    const close = () => {
+      overlay.classList.remove('open');
+      setTimeout(() => overlay.remove(), 260);
+    };
+    overlay.querySelector('.rp-close').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    overlay.querySelectorAll('.rp-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const genre = btn.dataset.genre;
+        const pool = genre ? allMovies.filter(m => (m.genres || []).includes(genre)) : allMovies;
+        close();
+        setTimeout(() => rollWatchlistPick(pool, genre), 300);
+      });
+    });
+  }
+
+  async function rollWatchlistPick(pool, genreLabel) {
+    if (pool.length === 0) { UI.showToast('No films match that genre'); return; }
+    if (pool.length === 1) {
+      window.location.hash = `#detail/${pool[0].id}`;
+      return;
+    }
+
+    const winner = pool[Math.floor(Math.random() * pool.length)];
+    const poolIds = new Set(pool.map(m => m.id));
+
+    // If library mode, do slot-machine animation through matching cases
     if (watchlistViewMode === 'library') {
-      const cases = [...document.querySelectorAll('#watchlist-grid .bluray-case')];
+      const allCases = [...document.querySelectorAll('#watchlist-grid .bluray-case')];
+      const cases = allCases.filter(c => poolIds.has(parseInt(c.dataset.id)));
       const winnerCase = cases.find(c => parseInt(c.dataset.id) === winner.id);
       if (winnerCase && cases.length > 1) {
         const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -1141,7 +1192,6 @@ const App = (() => {
 
         for (let i = 0; i < totalFlashes; i++) {
           cases.forEach(c => c.classList.remove('case-pick-highlight'));
-          // On last several flashes, navigate toward winner
           if (i >= totalFlashes - cases.length) {
             const winIdx = cases.indexOf(winnerCase);
             const remaining = totalFlashes - i;
@@ -1154,7 +1204,6 @@ const App = (() => {
           await wait(delay);
         }
 
-        // Land on winner
         cases.forEach(c => c.classList.remove('case-pick-highlight'));
         winnerCase.classList.add('case-pick-highlight');
         winnerCase.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1165,8 +1214,8 @@ const App = (() => {
       }
     }
 
-    // Non-library mode or fallback: just navigate
-    UI.showToast(`🎲 Picked: ${winner.title}`);
+    const toastPrefix = genreLabel ? `\u{1F3B2} ${genreLabel}: ` : '\u{1F3B2} Picked: ';
+    UI.showToast(`${toastPrefix}${winner.title}`);
     setTimeout(() => { window.location.hash = `#detail/${winner.id}`; }, 800);
   }
 
@@ -1245,99 +1294,9 @@ const App = (() => {
     }
   }
 
-  // --- Movie Oracle ---
-
-  const oracleProphecies = [
-    'The reels of fate have spoken\u2026',
-    'A vision from the silver screen\u2026',
-    'The projector of destiny reveals\u2026',
-    'Written in the stars tonight\u2026',
-    'The celluloid spirits whisper\u2026',
-    'From the vault of cosmic cinema\u2026',
-    'The universe has chosen\u2026',
-    'Foretold by the flickering light\u2026',
-  ];
-
-  async function showOracle() {
-    const allMovies = await MovieDB.getAllMovies();
-    const watchlist = allMovies.filter(m => m.watchlist);
-    const catalogue = allMovies.filter(m => !m.watchlist);
-    const pool = watchlist.length > 0 ? watchlist : catalogue;
-    if (pool.length === 0) { UI.showToast('Add some films first!'); return; }
-
-    const chosen = pool[Math.floor(Math.random() * pool.length)];
-    const prophecy = oracleProphecies[Math.floor(Math.random() * oracleProphecies.length)];
-    const isWatchlist = watchlist.length > 0;
-
-    // Build orbs (floating particles inside the crystal ball)
-    let orbsHtml = '';
-    for (let i = 0; i < 12; i++) {
-      const size = 3 + Math.random() * 5;
-      const x = 20 + Math.random() * 60;
-      const y = 20 + Math.random() * 60;
-      const dur = 3 + Math.random() * 4;
-      const delay = Math.random() * -5;
-      orbsHtml += `<span class="oracle-orb" style="width:${size}px;height:${size}px;left:${x}%;top:${y}%;animation-duration:${dur}s;animation-delay:${delay}s;"></span>`;
-    }
-
-    const overlay = document.createElement('div');
-    overlay.className = 'oracle-overlay';
-    overlay.innerHTML = `
-      <button class="oracle-close">&times;</button>
-      <div class="oracle-stage">
-        <div class="oracle-ball">
-          <div class="oracle-glass"></div>
-          <div class="oracle-mist"></div>
-          <div class="oracle-mist oracle-mist--2"></div>
-          ${orbsHtml}
-          <div class="oracle-reveal">
-            ${chosen.poster ? `<img src="${chosen.poster}" alt="">` : ''}
-          </div>
-        </div>
-        <div class="oracle-base"></div>
-        <div class="oracle-text">
-          <div class="oracle-prophecy">${prophecy}</div>
-          <div class="oracle-movie-title">${UI.escapeHtml(chosen.title)}</div>
-          <div class="oracle-movie-year">${chosen.year || ''}</div>
-          <div class="oracle-subtitle">${isWatchlist ? 'From your watchlist' : 'A rewatch awaits'}</div>
-        </div>
-        <div class="oracle-actions">
-          <button class="btn btn-primary oracle-view-btn">View Film</button>
-          <button class="btn btn-secondary oracle-reroll-btn">Consult Again</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-    requestAnimationFrame(() => overlay.classList.add('oracle-active'));
-
-    // Phase reveals
-    setTimeout(() => overlay.classList.add('oracle-phase-reveal'), 1800);
-    setTimeout(() => overlay.classList.add('oracle-phase-text'), 2600);
-    setTimeout(() => overlay.classList.add('oracle-phase-actions'), 3200);
-
-    overlay.querySelector('.oracle-close').addEventListener('click', () => closeOracle(overlay));
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOracle(overlay); });
-
-    overlay.querySelector('.oracle-view-btn').addEventListener('click', () => {
-      closeOracle(overlay);
-      setTimeout(() => { window.location.hash = `#detail/${chosen.id}`; }, 300);
-    });
-
-    overlay.querySelector('.oracle-reroll-btn').addEventListener('click', () => {
-      closeOracle(overlay);
-      setTimeout(showOracle, 350);
-    });
-  }
-
-  function closeOracle(overlay) {
-    overlay.classList.remove('oracle-active');
-    setTimeout(() => overlay.remove(), 400);
-  }
-
   // --- Event Listeners ---
 
   function setupEventListeners() {
-    document.getElementById('oracle-btn').addEventListener('click', showOracle);
     document.getElementById('tmdb-search-btn').addEventListener('click', () => {
       if (searchMode === 'director') searchDirector();
       else if (searchMode === 'actor') searchActor();
