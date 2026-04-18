@@ -706,5 +706,77 @@ const UI = (() => {
     });
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, initCustomSelects, escapeHtml };
+  function renderTournamentStart(movieCount) {
+    // Calculate bracket size (next power of 2)
+    let bracketSize = 2;
+    while (bracketSize < movieCount) bracketSize *= 2;
+    const totalRounds = Math.log2(bracketSize);
+    return `
+      <div class="tournament-start">
+        <div class="tournament-trophy">&#127942;</div>
+        <h2 class="tournament-start-title">Movie Tournament</h2>
+        <p class="tournament-start-desc">All <strong>${movieCount}</strong> films from your catalogue enter a head-to-head bracket. Pick your favourite in each matchup until one film is crowned champion.</p>
+        <div class="tournament-start-info">
+          <div class="tournament-info-item"><span class="tournament-info-val">${movieCount}</span><span class="tournament-info-label">Films</span></div>
+          <div class="tournament-info-item"><span class="tournament-info-val">${totalRounds}</span><span class="tournament-info-label">Rounds</span></div>
+        </div>
+        <button class="btn btn-primary tournament-go-btn" id="tournament-start-btn">Start Tournament</button>
+      </div>`;
+  }
+
+  function renderTournamentMatch(movieA, movieB, matchNum, totalMatches, roundName) {
+    const posterA = movieA.poster ? `<img src="${movieA.poster}" alt="" class="tournament-poster">` : '<div class="tournament-no-poster"></div>';
+    const posterB = movieB.poster ? `<img src="${movieB.poster}" alt="" class="tournament-poster">` : '<div class="tournament-no-poster"></div>';
+    return `
+      <div class="tournament-match">
+        <div class="tournament-round-header">
+          <span class="tournament-round-name">${escapeHtml(roundName)}</span>
+          <span class="tournament-match-count">Match ${matchNum} / ${totalMatches}</span>
+        </div>
+        <div class="tournament-vs">
+          <div class="tournament-card" data-id="${movieA.id}">
+            <div class="tournament-poster-wrap">${posterA}</div>
+            <div class="tournament-card-title">${escapeHtml(movieA.title)}</div>
+            <div class="tournament-card-year">${movieA.year || ''}</div>
+          </div>
+          <div class="tournament-vs-badge">VS</div>
+          <div class="tournament-card" data-id="${movieB.id}">
+            <div class="tournament-poster-wrap">${posterB}</div>
+            <div class="tournament-card-title">${escapeHtml(movieB.title)}</div>
+            <div class="tournament-card-year">${movieB.year || ''}</div>
+          </div>
+        </div>
+        <div class="tournament-progress">
+          <div class="tournament-progress-bar" style="width:${((matchNum - 1) / totalMatches) * 100}%"></div>
+        </div>
+      </div>`;
+  }
+
+  function renderTournamentResults(rankings) {
+    const medals = ['&#129351;', '&#129352;', '&#129353;'];
+    const rows = rankings.map((m, i) => {
+      const medal = i < 3 ? medals[i] : `<span class="tr-rank-num">${i + 1}</span>`;
+      const poster = m.poster ? `<img src="${m.poster}" alt="" class="tr-poster">` : '<div class="tr-no-poster"></div>';
+      const placeClass = i === 0 ? 'tr-gold' : i === 1 ? 'tr-silver' : i === 2 ? 'tr-bronze' : '';
+      return `<div class="tr-row ${placeClass}" data-id="${m.id}">
+        <span class="tr-rank">${medal}</span>
+        <div class="tr-thumb">${poster}</div>
+        <span class="tr-title">${escapeHtml(m.title)} <span class="tr-year">(${m.year || ''})</span></span>
+      </div>`;
+    }).join('');
+    return `
+      <div class="tournament-results">
+        <div class="tournament-trophy">&#127942;</div>
+        <h2 class="tournament-results-title">Tournament Results</h2>
+        <div class="tournament-winner">
+          <div class="tournament-winner-poster">${rankings[0].poster ? `<img src="${rankings[0].poster}" alt="">` : ''}</div>
+          <div class="tournament-winner-name">${escapeHtml(rankings[0].title)}</div>
+          <div class="tournament-winner-label">Champion</div>
+        </div>
+        <div class="tr-list">${rows}</div>
+        <button class="btn btn-secondary tournament-go-btn" id="tournament-restart-btn">Play Again</button>
+      </div>`;
+  }
+
+  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTournamentStart, renderTournamentMatch, renderTournamentResults, initCustomSelects, escapeHtml };
 })();

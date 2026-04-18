@@ -71,6 +71,7 @@ const App = (() => {
     if (view === 'catalogue') loadCatalogue();
     if (view === 'watchlist') loadWatchlist();
     if (view === 'chart') loadChart();
+    if (view !== 'chart') tournament = null;
     if (view === 'stats') loadStats();
     if (view === 'add') resetAddView();
   }
@@ -832,10 +833,138 @@ const App = (() => {
 
   // --- Chart ---
 
+  let tournament = null;
+
   async function loadChart() {
     const movies = (await MovieDB.getAllMovies()).filter(m => !m.watchlist && m.rating > 0);
     const top30 = [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 30);
-    document.getElementById('chart-list').innerHTML = UI.renderChart(top30);
+    const allCatalogue = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
+    const chartHtml = UI.renderChart(top30);
+    const tournamentBtn = allCatalogue.length >= 2
+      ? `<button class="btn btn-primary tournament-launch-btn" id="launch-tournament">&#127942; Movie Tournament</button>`
+      : '';
+    document.getElementById('chart-list').innerHTML = chartHtml + tournamentBtn;
+  }
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function getRoundName(remainingInRound, totalMovies) {
+    if (remainingInRound === 2) return 'Final';
+    if (remainingInRound === 4) return 'Semi-Finals';
+    if (remainingInRound === 8) return 'Quarter-Finals';
+    if (remainingInRound === 16) return 'Round of 16';
+    if (remainingInRound === 32) return 'Round of 32';
+    return `Round of ${remainingInRound}`;
+  }
+
+  async function startTournament() {
+    const allCatalogue = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
+    if (allCatalogue.length < 2) { UI.showToast('Need at least 2 films!'); return; }
+
+    const shuffled = shuffle(allCatalogue);
+
+    // Build bracket with byes: pad to next power of 2
+    let bracketSize = 2;
+    while (bracketSize < shuffled.length) bracketSize *= 2;
+
+    // Seed the bracket — top seeds get byes
+    const bracket = [];
+    for (let i = 0; i < bracketSize; i++) {
+      bracket.push(i < shuffled.length ? shuffled[i] : null);
+    }
+
+    // Apply byes in the first round
+    const firstRoundWinners = [];
+    for (let i = 0; i < bracket.length; i += 2) {
+      const a = bracket[i];
+      const b = bracket[i + 1];
+      if (a && b) {
+        firstRoundWinners.push({ a, b, winner: null });
+      } else {
+        // Bye — whoever exists advances
+        firstRoundWinners.push({ a: a || b, b: null, winner: a || b });
+      }
+    }
+
+    tournament = {
+      rounds: [firstRoundWinners],
+      currentRound: 0,
+      currentMatchIdx: 0,
+      eliminated: [],         // tracks losers in elimination order (last eliminated = best rank)
+      allMovieCount: allCatalogue.length,
+    };
+
+    showNextMatch();
+  }
+
+  function showNextMatch() {
+    const container = document.getElementById('chart-list');
+    const round = tournament.rounds[tournament.currentRound];
+
+    // Find next unresolved match
+    while (tournament.currentMatchIdx < round.length && round[tournament.currentMatchIdx].winner) {
+      tournament.currentMatchIdx++;
+    }
+
+    if (tournament.currentMatchIdx >= round.length) {
+      // Round complete — advance
+      const winners = round.map(m => m.winner);
+      if (winners.length === 1) {
+        // Tournament over
+        const rankings = [winners[0], ...tournament.eliminated.reverse()];
+        container.innerHTML = UI.renderTournamentResults(rankings);
+        tournament = null;
+        return;
+      }
+
+      // Build next round
+      const nextRound = [];
+      for (let i = 0; i < winners.length; i += 2) {
+        if (i + 1 < winners.length) {
+          nextRound.push({ a: winners[i], b: winners[i + 1], winner: null });
+        } else {
+          nextRound.push({ a: winners[i], b: null, winner: winners[i] });
+        }
+      }
+      tournament.rounds.push(nextRound);
+      tournament.currentRound++;
+      tournament.currentMatchIdx = 0;
+      showNextMatch();
+      return;
+    }
+
+    const match = round[tournament.currentMatchIdx];
+    const roundMovieCount = round.length * 2;
+    const roundName = getRoundName(roundMovieCount, tournament.allMovieCount);
+
+    // Count real (non-bye) matches in this round
+    const realMatchesInRound = round.filter(m => m.b !== null);
+    const matchNum = realMatchesInRound.indexOf(match) + 1;
+    const totalMatches = realMatchesInRound.length;
+
+    container.innerHTML = UI.renderTournamentMatch(match.a, match.b, matchNum, totalMatches, roundName);
+  }
+
+  function pickTournamentWinner(movieId) {
+    if (!tournament) return;
+    const round = tournament.rounds[tournament.currentRound];
+    const match = round[tournament.currentMatchIdx];
+    if (!match) return;
+
+    const winner = match.a.id === movieId ? match.a : match.b;
+    const loser = match.a.id === movieId ? match.b : match.a;
+    match.winner = winner;
+    tournament.eliminated.push(loser);
+    tournament.currentMatchIdx++;
+
+    showNextMatch();
   }
 
   // --- Detail ---
@@ -1201,6 +1330,28 @@ const App = (() => {
     });
 
     document.getElementById('chart-list').addEventListener('click', (e) => {
+      // Tournament launch
+      if (e.target.closest('#launch-tournament')) {
+        startTournament();
+        return;
+      }
+      // Tournament match pick
+      const card = e.target.closest('.tournament-card[data-id]');
+      if (card && tournament) {
+        pickTournamentWinner(parseInt(card.dataset.id));
+        return;
+      }
+      // Tournament restart
+      if (e.target.closest('#tournament-restart-btn')) {
+        startTournament();
+        return;
+      }
+      // Tournament result row → detail
+      const trRow = e.target.closest('.tr-row[data-id]');
+      if (trRow) {
+        window.location.hash = `#detail/${trRow.dataset.id}`;
+        return;
+      }
       const item = e.target.closest('.top-item[data-id]');
       if (item) window.location.hash = `#detail/${item.dataset.id}`;
     });
