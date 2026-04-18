@@ -870,35 +870,37 @@ const App = (() => {
 
     const shuffled = shuffle(allCatalogue);
 
-    // Build bracket with byes: pad to next power of 2
-    let bracketSize = 2;
-    while (bracketSize < shuffled.length) bracketSize *= 2;
-
-    // Seed the bracket — top seeds get byes
-    const bracket = [];
-    for (let i = 0; i < bracketSize; i++) {
-      bracket.push(i < shuffled.length ? shuffled[i] : null);
-    }
-
-    // Apply byes in the first round
-    const firstRoundWinners = [];
-    for (let i = 0; i < bracket.length; i += 2) {
-      const a = bracket[i];
-      const b = bracket[i + 1];
-      if (a && b) {
-        firstRoundWinners.push({ a, b, winner: null });
+    // Simple pairing — no power-of-2 padding needed
+    const firstRound = [];
+    for (let i = 0; i < shuffled.length; i += 2) {
+      if (i + 1 < shuffled.length) {
+        firstRound.push({ a: shuffled[i], b: shuffled[i + 1], winner: null });
       } else {
-        // Bye — whoever exists advances
-        firstRoundWinners.push({ a: a || b, b: null, winner: a || b });
+        // Odd movie gets a bye
+        firstRound.push({ a: shuffled[i], b: null, winner: shuffled[i] });
       }
     }
 
+    // Count total real matches across all rounds for progress tracking
+    let totalMatches = 0;
+    let n = firstRound.filter(m => m.b !== null).length;
+    let survivors = firstRound.length;   // winners after this round
+    totalMatches += n;
+    while (survivors > 1) {
+      const pairs = Math.floor(survivors / 2);
+      totalMatches += pairs;
+      survivors = pairs + (survivors % 2);
+    }
+
     tournament = {
-      rounds: [firstRoundWinners],
+      rounds: [firstRound],
       currentRound: 0,
       currentMatchIdx: 0,
-      eliminated: [],         // tracks losers in elimination order (last eliminated = best rank)
+      eliminated: [],
       allMovieCount: allCatalogue.length,
+      totalMatches,
+      matchesDone: 0,
+      picking: false,
     };
 
     showNextMatch();
@@ -908,15 +910,15 @@ const App = (() => {
     const container = document.getElementById('chart-list');
     const round = tournament.rounds[tournament.currentRound];
 
-    // Find next unresolved match
+    // Skip byes
     while (tournament.currentMatchIdx < round.length && round[tournament.currentMatchIdx].winner) {
       tournament.currentMatchIdx++;
     }
 
     if (tournament.currentMatchIdx >= round.length) {
-      // Round complete — advance
+      // Round complete — collect winners and build next round
       const winners = round.map(m => m.winner);
-      if (winners.length === 1) {
+      if (winners.length <= 1) {
         // Tournament over
         const rankings = [winners[0], ...tournament.eliminated.reverse()];
         container.innerHTML = UI.renderTournamentResults(rankings);
@@ -924,7 +926,6 @@ const App = (() => {
         return;
       }
 
-      // Build next round
       const nextRound = [];
       for (let i = 0; i < winners.length; i += 2) {
         if (i + 1 < winners.length) {
@@ -941,30 +942,47 @@ const App = (() => {
     }
 
     const match = round[tournament.currentMatchIdx];
-    const roundMovieCount = round.length * 2;
-    const roundName = getRoundName(roundMovieCount, tournament.allMovieCount);
-
-    // Count real (non-bye) matches in this round
     const realMatchesInRound = round.filter(m => m.b !== null);
+    const roundSize = realMatchesInRound.length * 2;
+    // Add byes to get the "logical" round size for naming
+    const logicalSize = round.length * 2;
+    const roundName = getRoundName(logicalSize, tournament.allMovieCount);
     const matchNum = realMatchesInRound.indexOf(match) + 1;
-    const totalMatches = realMatchesInRound.length;
 
-    container.innerHTML = UI.renderTournamentMatch(match.a, match.b, matchNum, totalMatches, roundName);
+    container.innerHTML = UI.renderTournamentMatch(
+      match.a, match.b, matchNum, realMatchesInRound.length, roundName,
+      tournament.matchesDone, tournament.totalMatches
+    );
+    tournament.picking = false;
   }
 
   function pickTournamentWinner(movieId) {
-    if (!tournament) return;
+    if (!tournament || tournament.picking) return;
+    tournament.picking = true;
+
     const round = tournament.rounds[tournament.currentRound];
     const match = round[tournament.currentMatchIdx];
     if (!match) return;
 
-    const winner = match.a.id === movieId ? match.a : match.b;
-    const loser = match.a.id === movieId ? match.b : match.a;
-    match.winner = winner;
-    tournament.eliminated.push(loser);
-    tournament.currentMatchIdx++;
+    const winnerCard = document.querySelector(`.tournament-card[data-id="${movieId}"]`);
+    const loserId = match.a.id === movieId ? match.b.id : match.a.id;
+    const loserCard = document.querySelector(`.tournament-card[data-id="${loserId}"]`);
+    const vsBadge = document.querySelector('.tournament-vs-badge');
 
-    showNextMatch();
+    // Animate: winner zooms forward, loser fades out
+    if (winnerCard) winnerCard.classList.add('tournament-pick-winner');
+    if (loserCard) loserCard.classList.add('tournament-pick-loser');
+    if (vsBadge) vsBadge.classList.add('tournament-vs-hide');
+
+    setTimeout(() => {
+      const winner = match.a.id === movieId ? match.a : match.b;
+      const loser = match.a.id === movieId ? match.b : match.a;
+      match.winner = winner;
+      tournament.eliminated.push(loser);
+      tournament.currentMatchIdx++;
+      tournament.matchesDone++;
+      showNextMatch();
+    }, 650);
   }
 
   // --- Detail ---

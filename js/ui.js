@@ -724,9 +724,10 @@ const UI = (() => {
       </div>`;
   }
 
-  function renderTournamentMatch(movieA, movieB, matchNum, totalMatches, roundName) {
+  function renderTournamentMatch(movieA, movieB, matchNum, totalMatches, roundName, matchesDone, totalAllMatches) {
     const posterA = movieA.poster ? `<img src="${movieA.poster}" alt="" class="tournament-poster">` : '<div class="tournament-no-poster"></div>';
     const posterB = movieB.poster ? `<img src="${movieB.poster}" alt="" class="tournament-poster">` : '<div class="tournament-no-poster"></div>';
+    const progressPct = totalAllMatches > 0 ? (matchesDone / totalAllMatches) * 100 : 0;
     return `
       <div class="tournament-match">
         <div class="tournament-round-header">
@@ -747,7 +748,7 @@ const UI = (() => {
           </div>
         </div>
         <div class="tournament-progress">
-          <div class="tournament-progress-bar" style="width:${((matchNum - 1) / totalMatches) * 100}%"></div>
+          <div class="tournament-progress-bar" style="width:${progressPct}%"></div>
         </div>
       </div>`;
   }

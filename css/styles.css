@@ -2686,6 +2686,33 @@ input[type="date"].form-input { color-scheme: dark; }
 }
 .tr-year { font-size: 0.75rem; color: var(--text-muted); font-weight: 400; }
 
+/* Pick animation */
+.tournament-card {
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.4s ease,
+              filter 0.4s ease,
+              border-color 0.3s ease,
+              box-shadow 0.3s ease;
+}
+.tournament-pick-winner {
+  transform: scale(1.1) translateY(-6px) !important;
+  border-color: #f5c518 !important;
+  box-shadow: 0 16px 48px rgba(245, 197, 24, 0.35), 0 0 0 1px rgba(245, 197, 24, 0.5) !important;
+  z-index: 10;
+  position: relative;
+}
+.tournament-pick-loser {
+  transform: scale(0.92) !important;
+  opacity: 0.25 !important;
+  filter: grayscale(1) brightness(0.5) !important;
+  pointer-events: none;
+}
+.tournament-vs-hide {
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
 /* === (heatmap removed) ===
 .heatmap-wrap {
   overflow-x: auto;
