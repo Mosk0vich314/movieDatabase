@@ -1245,9 +1245,99 @@ const App = (() => {
     }
   }
 
+  // --- Movie Oracle ---
+
+  const oracleProphecies = [
+    'The reels of fate have spoken\u2026',
+    'A vision from the silver screen\u2026',
+    'The projector of destiny reveals\u2026',
+    'Written in the stars tonight\u2026',
+    'The celluloid spirits whisper\u2026',
+    'From the vault of cosmic cinema\u2026',
+    'The universe has chosen\u2026',
+    'Foretold by the flickering light\u2026',
+  ];
+
+  async function showOracle() {
+    const allMovies = await MovieDB.getAllMovies();
+    const watchlist = allMovies.filter(m => m.watchlist);
+    const catalogue = allMovies.filter(m => !m.watchlist);
+    const pool = watchlist.length > 0 ? watchlist : catalogue;
+    if (pool.length === 0) { UI.showToast('Add some films first!'); return; }
+
+    const chosen = pool[Math.floor(Math.random() * pool.length)];
+    const prophecy = oracleProphecies[Math.floor(Math.random() * oracleProphecies.length)];
+    const isWatchlist = watchlist.length > 0;
+
+    // Build orbs (floating particles inside the crystal ball)
+    let orbsHtml = '';
+    for (let i = 0; i < 12; i++) {
+      const size = 3 + Math.random() * 5;
+      const x = 20 + Math.random() * 60;
+      const y = 20 + Math.random() * 60;
+      const dur = 3 + Math.random() * 4;
+      const delay = Math.random() * -5;
+      orbsHtml += `<span class="oracle-orb" style="width:${size}px;height:${size}px;left:${x}%;top:${y}%;animation-duration:${dur}s;animation-delay:${delay}s;"></span>`;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'oracle-overlay';
+    overlay.innerHTML = `
+      <button class="oracle-close">&times;</button>
+      <div class="oracle-stage">
+        <div class="oracle-ball">
+          <div class="oracle-glass"></div>
+          <div class="oracle-mist"></div>
+          <div class="oracle-mist oracle-mist--2"></div>
+          ${orbsHtml}
+          <div class="oracle-reveal">
+            ${chosen.poster ? `<img src="${chosen.poster}" alt="">` : ''}
+          </div>
+        </div>
+        <div class="oracle-base"></div>
+        <div class="oracle-text">
+          <div class="oracle-prophecy">${prophecy}</div>
+          <div class="oracle-movie-title">${UI.escapeHtml(chosen.title)}</div>
+          <div class="oracle-movie-year">${chosen.year || ''}</div>
+          <div class="oracle-subtitle">${isWatchlist ? 'From your watchlist' : 'A rewatch awaits'}</div>
+        </div>
+        <div class="oracle-actions">
+          <button class="btn btn-primary oracle-view-btn">View Film</button>
+          <button class="btn btn-secondary oracle-reroll-btn">Consult Again</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('oracle-active'));
+
+    // Phase reveals
+    setTimeout(() => overlay.classList.add('oracle-phase-reveal'), 1800);
+    setTimeout(() => overlay.classList.add('oracle-phase-text'), 2600);
+    setTimeout(() => overlay.classList.add('oracle-phase-actions'), 3200);
+
+    overlay.querySelector('.oracle-close').addEventListener('click', () => closeOracle(overlay));
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOracle(overlay); });
+
+    overlay.querySelector('.oracle-view-btn').addEventListener('click', () => {
+      closeOracle(overlay);
+      setTimeout(() => { window.location.hash = `#detail/${chosen.id}`; }, 300);
+    });
+
+    overlay.querySelector('.oracle-reroll-btn').addEventListener('click', () => {
+      closeOracle(overlay);
+      setTimeout(showOracle, 350);
+    });
+  }
+
+  function closeOracle(overlay) {
+    overlay.classList.remove('oracle-active');
+    setTimeout(() => overlay.remove(), 400);
+  }
+
   // --- Event Listeners ---
 
   function setupEventListeners() {
+    document.getElementById('oracle-btn').addEventListener('click', showOracle);
     document.getElementById('tmdb-search-btn').addEventListener('click', () => {
       if (searchMode === 'director') searchDirector();
       else if (searchMode === 'actor') searchActor();
