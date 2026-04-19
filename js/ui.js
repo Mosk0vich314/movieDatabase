@@ -120,14 +120,26 @@ const UI = (() => {
       ? `<img src="${movie.poster}" alt="${escapeHtml(movie.title)}" class="detail-poster">`
       : `<div class="no-poster-lg">${escapeHtml(movie.title)}</div>`;
 
-    const genres = (movie.genres || []).map(g => `<span class="genre-tag">${escapeHtml(g)}</span>`).join('');
+    const genres = (movie.genres || []).map(g => {
+      const gp = GENRE_PALETTE[g];
+      const style = gp ? ` style="--g:${gp.accent}"` : '';
+      return `<span class="genre-tag"${style}>${escapeHtml(g)}</span>`;
+    }).join('');
 
     const pal = getGenrePalette(movie.genres);
     const backBtn = `<button class="btn-back" id="detail-back"><span class="btn-back-arrow">&#8249;</span> Back</button>`;
-    const backdropHtml = movie.backdrop
+    const hasHero = !!movie.backdrop;
+    const heroTitleHtml = hasHero
+      ? `<div class="detail-hero-meta">
+          <h1 class="detail-hero-title">${escapeHtml(movie.title)}</h1>
+          ${movie.year ? `<div class="detail-hero-year">${movie.year}</div>` : ''}
+        </div>`
+      : '';
+    const backdropHtml = hasHero
       ? `<div class="detail-backdrop-wrap" style="--genre-accent:${pal.accent}">
           <img src="${movie.backdrop}" class="detail-backdrop-img" alt="">
           <div class="detail-backdrop-overlay"></div>
+          ${heroTitleHtml}
           ${backBtn}
         </div>`
       : `<div class="detail-header-fallback">${backBtn}</div>`;
@@ -239,7 +251,7 @@ const UI = (() => {
       <div class="detail-content">
         <div class="detail-poster-wrap">${poster}</div>
         <div class="detail-info">
-          <h2>${escapeHtml(movie.title)} <span class="detail-year">(${movie.year || 'N/A'})</span></h2>
+          ${hasHero ? '' : `<h2>${escapeHtml(movie.title)} <span class="detail-year">(${movie.year || 'N/A'})</span></h2>`}
           ${runtimeHtml}
           ${dateAddedHtml}
           <div class="detail-genres">${genres}</div>

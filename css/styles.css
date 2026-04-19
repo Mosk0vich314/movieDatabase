@@ -752,19 +752,24 @@ a:hover { color: var(--accent-hover); }
 .detail-overview { margin: 0 0 16px 0; }
 .movie-card-overview { margin: 6px 0 8px 0; font-size: 0.78rem; padding: 6px 10px; }
 .genre-tag {
+  --g: rgba(255, 255, 255, 0.3);
   display: inline-block;
   padding: 6px 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--g) 10%, rgba(255,255,255,0.03));
+  border: 1px solid color-mix(in srgb, var(--g) 32%, transparent);
   border-radius: 20px;
   font-size: 0.7rem;
-  color: var(--text-muted);
-  font-weight: 500;
+  color: color-mix(in srgb, var(--g) 60%, var(--text) 40%);
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   transition: all var(--transition);
 }
-.genre-tag:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+.genre-tag:hover {
+  background: color-mix(in srgb, var(--g) 20%, rgba(255,255,255,0.05));
+  border-color: color-mix(in srgb, var(--g) 55%, transparent);
+  color: var(--text);
+}
 .detail-rating { margin-bottom: 14px; }
 .detail-rating label { font-size: 0.82rem; color: var(--text-muted); margin-right: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; }
 /* === External Ratings === */
@@ -1706,7 +1711,7 @@ a:hover { color: var(--accent-hover); }
 .detail-backdrop-wrap {
   margin: 0 -16px 20px;
   position: relative;
-  height: 260px;
+  height: 340px;
   overflow: hidden;
 }
 .detail-backdrop-img {
@@ -1715,16 +1720,58 @@ a:hover { color: var(--accent-hover); }
   object-fit: cover;
   object-position: center 25%;
   display: block;
+  transform: scale(1.08);
+  animation: heroKenBurns 22s ease-out forwards;
+}
+@keyframes heroKenBurns {
+  from { transform: scale(1.08); }
+  to   { transform: scale(1.00); }
 }
 .detail-backdrop-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(10, 10, 20, 0) 0%,
-    rgba(10, 10, 20, 0.5) 50%,
-    var(--bg) 100%
-  );
+  background:
+    linear-gradient(
+      180deg,
+      rgba(10, 10, 20, 0.15) 0%,
+      rgba(10, 10, 20, 0.30) 45%,
+      rgba(10, 10, 20, 0.80) 82%,
+      var(--bg) 100%
+    ),
+    radial-gradient(ellipse 90% 60% at 50% 100%, rgba(10,10,20,0.35), transparent 70%);
+}
+.detail-hero-meta {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 16px;
+  z-index: 2;
+  animation: heroMetaRise 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.15s backwards;
+}
+.detail-hero-title {
+  font-family: 'Bebas Neue', 'Montserrat', sans-serif;
+  font-size: clamp(2.4rem, 8vw, 3.8rem);
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  color: #fff;
+  margin: 0;
+  font-weight: 400;
+  text-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.55),
+    0 0 36px color-mix(in srgb, var(--genre-accent, #e94560) 40%, transparent);
+}
+.detail-hero-year {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: 8px;
+}
+@keyframes heroMetaRise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* === Runtime & watched date on detail === */
@@ -1945,7 +1992,7 @@ input[type="date"].form-input { color-scheme: dark; }
 .view-toggle-btn.active { background: var(--accent); color: #fff; opacity: 1; }
 
 @media (max-width: 600px) {
-  .detail-backdrop-wrap { height: 160px; }
+  .detail-backdrop-wrap { height: 280px; }
   .poster-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 4px; }
 }
 
@@ -2950,3 +2997,70 @@ input[type="date"].form-input { color-scheme: dark; }
 .hm-level-2 { background: rgba(233,69,96,0.6); }
 .hm-level-3 { background: rgba(233,69,96,0.9); }
 */
+
+/* === Poster shimmer (loading skeleton) === */
+@keyframes posterShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.movie-card-poster,
+.film-card,
+.poster-card,
+.search-result-poster,
+.mlt-poster,
+.detail-poster-wrap,
+.detail-backdrop-wrap {
+  background-color: #14142a;
+  background-image: linear-gradient(
+    110deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 38%,
+    rgba(255, 255, 255, 0.07) 50%,
+    rgba(255, 255, 255, 0) 62%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: posterShimmer 1.8s linear infinite;
+}
+/* Stop the shimmer once content is rendered (img complete or no-poster shown) */
+.movie-card-poster:has(img.loaded),
+.movie-card-poster:has(.no-poster),
+.film-card:has(img.loaded),
+.film-card:has(.no-poster-lane),
+.poster-card:has(img.loaded),
+.poster-card:has(.poster-card-no-img),
+.search-result-poster:has(img.loaded),
+.search-result-poster:has(.no-poster-sm),
+.mlt-poster:has(img.loaded),
+.mlt-poster:has(.mlt-no-poster),
+.detail-poster-wrap:has(img.loaded),
+.detail-poster-wrap:has(.no-poster-lg),
+.detail-backdrop-wrap:has(img.loaded) {
+  animation: none;
+  background-image: none;
+}
+/* Detail poster wrap gets its own rounded shape for the skeleton */
+.detail-poster-wrap {
+  border-radius: var(--radius-lg);
+}
+/* Smooth fade-in once an image finishes decoding */
+.movie-card-poster img,
+.film-card > img,
+.poster-card img,
+.search-result-poster img,
+.mlt-poster img,
+.detail-poster,
+.detail-backdrop-img {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.movie-card-poster img.loaded,
+.film-card > img.loaded,
+.poster-card img.loaded,
+.search-result-poster img.loaded,
+.mlt-poster img.loaded,
+.detail-poster.loaded,
+.detail-backdrop-img.loaded {
+  opacity: 1;
+}

@@ -29,11 +29,37 @@ const App = (() => {
     MovieDB.open().then(() => migrateRatings()).then(() => {
       setupRouting();
       setupEventListeners();
+      setupImageLoader();
       UI.initCustomSelects();
       navigate(window.location.hash || '#catalogue');
       updateWatchlistBadge();
       registerServiceWorker();
     });
+  }
+
+  // Marks <img> elements with .loaded once decoded so CSS can fade them in
+  // over the skeleton shimmer on their parent.
+  function setupImageLoader() {
+    const attach = (img) => {
+      if (img.classList.contains('loaded')) return;
+      if (img.complete && img.naturalHeight > 0) {
+        img.classList.add('loaded');
+        return;
+      }
+      img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
+      img.addEventListener('error', () => img.classList.add('loaded'), { once: true });
+    };
+    document.querySelectorAll('img').forEach(attach);
+    const obs = new MutationObserver((muts) => {
+      for (const m of muts) {
+        for (const n of m.addedNodes) {
+          if (n.nodeType !== 1) continue;
+          if (n.tagName === 'IMG') attach(n);
+          else if (n.querySelectorAll) n.querySelectorAll('img').forEach(attach);
+        }
+      }
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
   }
 
   function registerServiceWorker() {
