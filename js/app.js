@@ -11,6 +11,7 @@ const App = (() => {
   let watchlistViewMode = (['array', 'decades', 'library'].includes(_storedWLView) ? _storedWLView : null) || 'library';
   let searchMode = 'movie';
   let selectedDirectorName = '';
+  let currentFilmography = null;
   let pendingSuggestions = null;
 
   function migrateRatings() {
@@ -481,6 +482,7 @@ const App = (() => {
     closeAutocomplete();
     searchMode = 'movie';
     selectedDirectorName = '';
+    currentFilmography = null;
     document.querySelectorAll('.smt-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.mode === 'movie')
     );
@@ -587,7 +589,19 @@ const App = (() => {
       <span class="filmography-count">${count} film${count !== 1 ? 's' : ''}</span>
     </div>`;
     document.getElementById('filmography-back').addEventListener('click', () => {
+      const form = document.getElementById('movie-form');
+      // If the film form is open, back returns to the filmography list
+      if (form.style.display !== 'none' && currentFilmography) {
+        form.style.display = 'none';
+        editingMovie = null;
+        const { personId, personName, mode } = currentFilmography;
+        if (mode === 'actor') loadActorFilmography(personId, personName);
+        else loadFilmography(personId, personName);
+        return;
+      }
+      // Otherwise, exit the filmography and return to the person search
       selectedDirectorName = '';
+      currentFilmography = null;
       nav.style.display = 'none';
       nav.innerHTML = '';
       document.getElementById('search-results').innerHTML = '';
@@ -598,6 +612,7 @@ const App = (() => {
 
   async function loadFilmography(personId, personName) {
     selectedDirectorName = personName;
+    currentFilmography = { personId, personName, mode: 'director' };
     const container = document.getElementById('search-results');
     container.innerHTML = '<p class="no-results">Loading filmography...</p>';
     try {
@@ -641,6 +656,7 @@ const App = (() => {
 
   async function loadActorFilmography(personId, personName) {
     selectedDirectorName = personName;
+    currentFilmography = { personId, personName, mode: 'actor' };
     const container = document.getElementById('search-results');
     container.innerHTML = '<p class="no-results">Loading filmography...</p>';
     try {
@@ -1352,6 +1368,7 @@ const App = (() => {
       fn.style.display = 'none'; fn.innerHTML = '';
       editingMovie = null;
       selectedDirectorName = '';
+      currentFilmography = null;
       closeAutocomplete();
       document.getElementById('tmdb-search').placeholder =
         searchMode === 'director' ? 'Search for a director...' :
@@ -1414,11 +1431,21 @@ const App = (() => {
         addToWatchlist(tmdbId);
         document.getElementById('movie-form').style.display = 'none';
         editingMovie = null;
+        if (currentFilmography) {
+          const { personId, personName, mode } = currentFilmography;
+          if (mode === 'actor') loadActorFilmography(personId, personName);
+          else loadFilmography(personId, personName);
+        }
       }
     });
     document.getElementById('form-cancel').addEventListener('click', () => {
       document.getElementById('movie-form').style.display = 'none';
       editingMovie = null;
+      if (currentFilmography) {
+        const { personId, personName, mode } = currentFilmography;
+        if (mode === 'actor') loadActorFilmography(personId, personName);
+        else loadFilmography(personId, personName);
+      }
     });
 
     document.getElementById('movie-grid').addEventListener('click', (e) => {
