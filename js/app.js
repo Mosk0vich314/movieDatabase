@@ -1164,6 +1164,10 @@ const App = (() => {
   async function randomPick() {
     const allMovies = (await MovieDB.getAllMovies()).filter(m => m.watchlist);
     if (allMovies.length === 0) { UI.showToast('Watchlist is empty!'); return; }
+    if (allMovies.length === 1) {
+      window.location.hash = `#detail/${allMovies[0].id}`;
+      return;
+    }
 
     const genreCounts = new Map();
     allMovies.forEach(m => (m.genres || []).forEach(g => {
@@ -1171,13 +1175,27 @@ const App = (() => {
     }));
     const genres = [...genreCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 
-    if (genres.length <= 1) {
-      rollWatchlistPick(allMovies);
-      return;
-    }
+    // Duration presets — "Any" plus three caps. Exclude presets that leave no films.
+    const knownRuntimes = allMovies.filter(m => m.runtime).map(m => m.runtime);
+    const maxKnown = knownRuntimes.length ? Math.max(...knownRuntimes) : 0;
+    const durationOptions = [
+      { value: 0,   label: 'Any length' },
+      { value: 90,  label: 'Under 90m' },
+      { value: 120, label: 'Under 2h' },
+      { value: 150, label: 'Under 2.5h' },
+    ].filter(d => d.value === 0 || maxKnown >= d.value - 30);
 
-    const chipsHtml = genres.map(([g, c]) =>
-      `<button class="rp-chip" data-genre="${UI.escapeHtml(g)}">${UI.escapeHtml(g)}<span class="rp-chip-count">${c}</span></button>`
+    const state = { selectedGenres: new Set(), maxDuration: 0 };
+
+    const escape = UI.escapeHtml;
+    const genreChipsHtml = genres.map(([g, c]) => {
+      const accent = UI.getGenreAccent(g);
+      const style = accent ? ` style="--g:${accent}"` : '';
+      return `<button class="rp-chip rp-genre-chip" data-genre="${escape(g)}"${style}>${escape(g)}<span class="rp-chip-count">${c}</span></button>`;
+    }).join('');
+
+    const durationChipsHtml = durationOptions.map(d =>
+      `<button class="rp-chip rp-duration-chip${d.value === 0 ? ' rp-chip--active' : ''}" data-duration="${d.value}">${escape(d.label)}</button>`
     ).join('');
 
     const overlay = document.createElement('div');
@@ -1185,11 +1203,24 @@ const App = (() => {
     overlay.innerHTML = `
       <div class="random-pick-sheet">
         <button class="rp-close" aria-label="Close">&times;</button>
-        <h3 class="rp-title">&#127922; Pick a genre</h3>
-        <p class="rp-subtitle">Or roll from the whole watchlist</p>
-        <div class="rp-chips">
-          <button class="rp-chip rp-chip--any" data-genre="">Any genre<span class="rp-chip-count">${allMovies.length}</span></button>
-          ${chipsHtml}
+        <h3 class="rp-title">&#127922; Roll from watchlist</h3>
+        <div class="rp-section">
+          <div class="rp-section-head">
+            <span class="rp-section-label">Genres</span>
+            <button class="rp-clear-btn" id="rp-clear-genres" type="button">Clear</button>
+          </div>
+          <div class="rp-chips">${genreChipsHtml}</div>
+        </div>
+        ${durationOptions.length > 1 ? `
+        <div class="rp-section">
+          <div class="rp-section-head">
+            <span class="rp-section-label">Max length</span>
+          </div>
+          <div class="rp-chips">${durationChipsHtml}</div>
+        </div>` : ''}
+        <div class="rp-footer">
+          <div class="rp-count" id="rp-count">${allMovies.length} films match</div>
+          <button class="btn btn-primary rp-roll-btn" id="rp-roll-btn">Roll &#127922;</button>
         </div>
       </div>
     `;
@@ -1200,16 +1231,78 @@ const App = (() => {
       overlay.classList.remove('open');
       setTimeout(() => overlay.remove(), 260);
     };
+
+    const computePool = () => allMovies.filter(m => {
+      if (state.selectedGenres.size > 0) {
+        const mg = m.genres || [];
+        if (!mg.some(g => state.selectedGenres.has(g))) return false;
+      }
+      if (state.maxDuration > 0) {
+        if (!m.runtime || m.runtime > state.maxDuration) return false;
+      }
+      return true;
+    });
+
+    const countEl = overlay.querySelector('#rp-count');
+    const rollBtn = overlay.querySelector('#rp-roll-btn');
+    const updateCount = () => {
+      const pool = computePool();
+      countEl.textContent = `${pool.length} film${pool.length === 1 ? '' : 's'} match`;
+      rollBtn.disabled = pool.length === 0;
+      rollBtn.classList.toggle('rp-roll-btn--disabled', pool.length === 0);
+    };
+
     overlay.querySelector('.rp-close').addEventListener('click', close);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-    overlay.querySelectorAll('.rp-chip').forEach(btn => {
+
+    overlay.querySelectorAll('.rp-genre-chip').forEach(btn => {
       btn.addEventListener('click', () => {
-        const genre = btn.dataset.genre;
-        const pool = genre ? allMovies.filter(m => (m.genres || []).includes(genre)) : allMovies;
-        close();
-        setTimeout(() => rollWatchlistPick(pool, genre), 300);
+        const g = btn.dataset.genre;
+        if (state.selectedGenres.has(g)) {
+          state.selectedGenres.delete(g);
+          btn.classList.remove('rp-chip--active');
+        } else {
+          state.selectedGenres.add(g);
+          btn.classList.add('rp-chip--active');
+        }
+        updateCount();
       });
     });
+
+    overlay.querySelector('#rp-clear-genres').addEventListener('click', () => {
+      state.selectedGenres.clear();
+      overlay.querySelectorAll('.rp-genre-chip').forEach(b => b.classList.remove('rp-chip--active'));
+      updateCount();
+    });
+
+    overlay.querySelectorAll('.rp-duration-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        overlay.querySelectorAll('.rp-duration-chip').forEach(b => b.classList.remove('rp-chip--active'));
+        btn.classList.add('rp-chip--active');
+        state.maxDuration = parseInt(btn.dataset.duration, 10) || 0;
+        updateCount();
+      });
+    });
+
+    overlay.querySelector('#rp-roll-btn').addEventListener('click', () => {
+      const pool = computePool();
+      if (pool.length === 0) return;
+      const label = buildRollLabel(state);
+      close();
+      setTimeout(() => rollWatchlistPick(pool, label), 300);
+    });
+  }
+
+  function buildRollLabel(state) {
+    const parts = [];
+    if (state.selectedGenres.size > 0) {
+      const gs = [...state.selectedGenres];
+      parts.push(gs.length <= 2 ? gs.join(' / ') : `${gs.length} genres`);
+    }
+    if (state.maxDuration > 0) {
+      parts.push(`under ${state.maxDuration}m`);
+    }
+    return parts.join(' · ');
   }
 
   async function rollWatchlistPick(pool, genreLabel) {

@@ -23,7 +23,9 @@
       "Bash(python tools/deploy.py \"Support pasting themoviedb.org URLs to add films directly by ID\")",
       "Bash(wc:*)",
       "Bash(grep:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(node -c js/app.js)",
+      "Bash(node -c js/ui.js)"
     ]
   }
 }

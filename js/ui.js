@@ -526,6 +526,10 @@ const UI = (() => {
     return GENRE_PALETTE[g] || { bg: '#0d1520', accent: '#304468' };
   }
 
+  function getGenreAccent(genre) {
+    return GENRE_PALETTE[genre]?.accent || null;
+  }
+
   function renderBlurayShelf(movies) {
     // Group by primary genre, sort groups by count desc
     const groups = {};
@@ -829,5 +833,5 @@ const UI = (() => {
       </div>`;
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTournamentStart, renderTournamentMatch, renderTournamentResults, initCustomSelects, escapeHtml };
+  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTournamentStart, renderTournamentMatch, renderTournamentResults, initCustomSelects, escapeHtml, getGenreAccent };
 })();

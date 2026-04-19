@@ -2328,62 +2328,123 @@ input[type="date"].form-input { color-scheme: dark; }
 }
 .rp-close:hover { color: #fff; }
 .rp-title {
-  font-size: 1.15rem;
-  margin: 0 0 2px;
+  font-size: 1.1rem;
+  margin: 0 0 18px;
   color: var(--text);
   font-weight: 700;
 }
-.rp-subtitle {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin: 0 0 16px;
+.rp-section { margin-bottom: 16px; }
+.rp-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 9px;
 }
+.rp-section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+.rp-clear-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  letter-spacing: 0.02em;
+  transition: color 0.15s;
+}
+.rp-clear-btn:hover { color: var(--accent); }
 .rp-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
 }
 .rp-chip {
+  --g: rgba(255, 255, 255, 0.3);
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.08);
   color: var(--text);
   border-radius: 999px;
-  padding: 8px 14px;
-  font-size: 0.85rem;
+  padding: 7px 13px;
+  font-size: 0.82rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+  font-family: inherit;
 }
 .rp-chip:hover {
-  background: rgba(233,69,96,0.18);
-  border-color: rgba(233,69,96,0.5);
+  background: color-mix(in srgb, var(--g) 14%, rgba(255,255,255,0.04));
+  border-color: color-mix(in srgb, var(--g) 40%, transparent);
 }
 .rp-chip:active { transform: scale(0.96); }
-.rp-chip--any {
-  background: rgba(233,69,96,0.18);
-  border-color: rgba(233,69,96,0.45);
+.rp-chip--active {
+  background: color-mix(in srgb, var(--g) 32%, transparent);
+  border-color: color-mix(in srgb, var(--g) 75%, transparent);
   color: #fff;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--g) 40%, transparent) inset;
 }
-.rp-chip--any:hover {
-  background: rgba(233,69,96,0.28);
-  border-color: rgba(233,69,96,0.7);
+.rp-chip--active:hover {
+  background: color-mix(in srgb, var(--g) 40%, transparent);
+  border-color: color-mix(in srgb, var(--g) 90%, transparent);
+}
+.rp-duration-chip {
+  --g: var(--accent);
 }
 .rp-chip-count {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
-  background: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.05);
   padding: 1px 7px;
   border-radius: 999px;
   min-width: 18px;
   text-align: center;
   font-weight: 600;
+  transition: background 0.15s, color 0.15s;
 }
-.rp-chip--any .rp-chip-count {
-  background: rgba(255,255,255,0.15);
+.rp-chip--active .rp-chip-count {
+  background: rgba(255,255,255,0.18);
   color: #fff;
+}
+
+.rp-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.rp-count {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.rp-roll-btn {
+  padding: 10px 22px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(233,69,96,0.28);
+  transition: transform 0.12s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+.rp-roll-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(233,69,96,0.38); }
+.rp-roll-btn:active { transform: translateY(0) scale(0.97); }
+.rp-roll-btn--disabled,
+.rp-roll-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none !important;
 }
 
 /* === Slot machine highlight === */
