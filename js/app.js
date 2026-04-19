@@ -1175,15 +1175,12 @@ const App = (() => {
     }));
     const genres = [...genreCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 
-    // Duration presets — "Any" plus three caps. Exclude presets that leave no films.
+    // Duration slider bounds — derived from the actual watchlist runtimes.
     const knownRuntimes = allMovies.filter(m => m.runtime).map(m => m.runtime);
-    const maxKnown = knownRuntimes.length ? Math.max(...knownRuntimes) : 0;
-    const durationOptions = [
-      { value: 0,   label: 'Any length' },
-      { value: 90,  label: 'Under 90m' },
-      { value: 120, label: 'Under 2h' },
-      { value: 150, label: 'Under 2.5h' },
-    ].filter(d => d.value === 0 || maxKnown >= d.value - 30);
+    const hasRuntimes = knownRuntimes.length > 0;
+    const minRun = hasRuntimes ? Math.max(30, Math.floor(Math.min(...knownRuntimes) / 5) * 5) : 60;
+    const maxRun = hasRuntimes ? Math.ceil(Math.max(...knownRuntimes) / 5) * 5 : 240;
+    const showSlider = hasRuntimes && maxRun - minRun >= 15;
 
     const state = { selectedGenres: new Set(), maxDuration: 0 };
 
@@ -1193,10 +1190,6 @@ const App = (() => {
       const style = accent ? ` style="--g:${accent}"` : '';
       return `<button class="rp-chip rp-genre-chip" data-genre="${escape(g)}"${style}>${escape(g)}<span class="rp-chip-count">${c}</span></button>`;
     }).join('');
-
-    const durationChipsHtml = durationOptions.map(d =>
-      `<button class="rp-chip rp-duration-chip${d.value === 0 ? ' rp-chip--active' : ''}" data-duration="${d.value}">${escape(d.label)}</button>`
-    ).join('');
 
     const overlay = document.createElement('div');
     overlay.className = 'random-pick-overlay';
@@ -1211,12 +1204,17 @@ const App = (() => {
           </div>
           <div class="rp-chips">${genreChipsHtml}</div>
         </div>
-        ${durationOptions.length > 1 ? `
+        ${showSlider ? `
         <div class="rp-section">
           <div class="rp-section-head">
             <span class="rp-section-label">Max length</span>
+            <span class="rp-duration-value" id="rp-duration-value">Any length</span>
           </div>
-          <div class="rp-chips">${durationChipsHtml}</div>
+          <input type="range" class="rp-slider" id="rp-duration-slider" min="${minRun}" max="${maxRun}" step="5" value="${maxRun}">
+          <div class="rp-slider-range">
+            <span>${fmtDur(minRun)}</span>
+            <span>${fmtDur(maxRun)}</span>
+          </div>
         </div>` : ''}
         <div class="rp-footer">
           <div class="rp-count" id="rp-count">${allMovies.length} films match</div>
@@ -1275,14 +1273,21 @@ const App = (() => {
       updateCount();
     });
 
-    overlay.querySelectorAll('.rp-duration-chip').forEach(btn => {
-      btn.addEventListener('click', () => {
-        overlay.querySelectorAll('.rp-duration-chip').forEach(b => b.classList.remove('rp-chip--active'));
-        btn.classList.add('rp-chip--active');
-        state.maxDuration = parseInt(btn.dataset.duration, 10) || 0;
-        updateCount();
-      });
-    });
+    const slider = overlay.querySelector('#rp-duration-slider');
+    const durValue = overlay.querySelector('#rp-duration-value');
+    if (slider && durValue) {
+      const syncSlider = () => {
+        const v = parseInt(slider.value, 10);
+        const atMax = v >= maxRun;
+        state.maxDuration = atMax ? 0 : v;
+        durValue.textContent = atMax ? 'Any length' : `Under ${fmtDur(v)}`;
+        durValue.classList.toggle('rp-duration-value--active', !atMax);
+        const pct = ((v - minRun) / (maxRun - minRun)) * 100;
+        slider.style.setProperty('--fill', `${pct}%`);
+      };
+      slider.addEventListener('input', () => { syncSlider(); updateCount(); });
+      syncSlider();
+    }
 
     overlay.querySelector('#rp-roll-btn').addEventListener('click', () => {
       const pool = computePool();
@@ -1300,9 +1305,16 @@ const App = (() => {
       parts.push(gs.length <= 2 ? gs.join(' / ') : `${gs.length} genres`);
     }
     if (state.maxDuration > 0) {
-      parts.push(`under ${state.maxDuration}m`);
+      parts.push(`under ${fmtDur(state.maxDuration)}`);
     }
     return parts.join(' · ');
+  }
+
+  function fmtDur(m) {
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60);
+    const r = m % 60;
+    return r === 0 ? `${h}h` : `${h}h ${r}m`;
   }
 
   async function rollWatchlistPick(pool, genreLabel) {
