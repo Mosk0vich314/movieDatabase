@@ -496,8 +496,13 @@ const UI = (() => {
       const totalCount = groups[k].length;
       return `<div class="decade-section">
         <div class="decade-header">
-          <span class="decade-label">${k}</span>
-          <span class="decade-count">${totalCount} film${totalCount !== 1 ? 's' : ''}</span>
+          <div class="decade-label-group">
+            <span class="decade-label">${k}</span>
+            <span class="decade-count">${totalCount} film${totalCount !== 1 ? 's' : ''}</span>
+          </div>
+          <button class="decade-download-btn" data-decade="${k}">
+            <span style="font-size:1.1em;">&#11123;</span> Save Poster
+          </button>
         </div>
         <div class="decade-mosaic">${shuffled.map(({ m, sz }) => renderMosaicItem(m, sz)).join('')}</div>
       </div>`;

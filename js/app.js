@@ -842,30 +842,29 @@ const App = (() => {
 
       if (existingId) {
         movie.id = parseInt(existingId);
-        // Preserve original dateAdded for edits; use now when converting watchlist → catalogue
-        movie.dateAdded = isWatchlistConversion
-          ? new Date().toISOString()
-          : editingMovie.dateAdded;
+        movie.dateAdded = isWatchlistConversion ? new Date().toISOString() : editingMovie.dateAdded;
         await MovieDB.updateMovie(movie);
         UI.showToast('Movie updated!');
       } else {
-        const before = (await MovieDB.getAllMovies()).filter(m => !m.watchlist).length;
         await MovieDB.addMovie(movie);
-        const after = before + 1;
-        const hit = Stats.MILESTONE_VALUES.find(m => before < m && after >= m);
-        if (hit) localStorage.setItem('pendingMilestone', hit);
         UI.showToast('Movie added!');
       }
 
-      // AWAIT the suggestions so they are fully loaded BEFORE navigating to the catalogue.
-      // We also now trigger this if you just converted a movie from your watchlist!
+      // AWAIT the suggestions fetch BEFORE we reload the catalogue
       if ((!existingId || isWatchlistConversion) && movie.tmdbId) {
         await fetchSimilarSuggestions(movie.title, movie.tmdbId);
       }
 
       editingMovie = null;
       updateWatchlistBadge();
-      window.location.hash = '#catalogue';
+
+      // Force UI refresh even if the URL hash hasn't changed
+      if (window.location.hash === '#catalogue') {
+        loadCatalogue();
+        showView('catalogue');
+      } else {
+        window.location.hash = '#catalogue';
+      }
     } catch (err) {
       UI.showToast('Error saving movie: ' + err.message);
     }
@@ -1628,7 +1627,52 @@ const App = (() => {
       }
     });
 
-    document.getElementById('movie-grid').addEventListener('click', (e) => {
+    document.getElementById('movie-grid').addEventListener('click', async (e) => {
+      // 1. Check if the user clicked the Download button
+      const downloadBtn = e.target.closest('.decade-download-btn');
+      if (downloadBtn) {
+        e.stopPropagation();
+        const btnOriginalText = downloadBtn.innerHTML;
+        downloadBtn.innerHTML = 'Saving...';
+        downloadBtn.style.opacity = '0.7';
+        downloadBtn.style.pointerEvents = 'none';
+        
+        try {
+          // Dynamically load html2canvas if it isn't already loaded
+          if (!window.html2canvas) {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            document.head.appendChild(script);
+            await new Promise(r => script.onload = r);
+          }
+          
+          // Target the specific mosaic directly below this button
+          const container = downloadBtn.closest('.decade-section').querySelector('.decade-mosaic');
+          
+          // Take the snapshot in high-res
+          const canvas = await html2canvas(container, {
+            useCORS: true,
+            backgroundColor: '#0a0a14',
+            scale: 2 // 2x resolution for crisp saving
+          });
+          
+          // Trigger the download
+          const link = document.createElement('a');
+          link.download = `My-${downloadBtn.dataset.decade}-Mosaic.jpg`;
+          link.href = canvas.toDataURL('image/jpeg', 0.9);
+          link.click();
+        } catch (err) {
+          console.error(err);
+          UI.showToast('Failed to save image. (CORS issue with posters)');
+        } finally {
+          downloadBtn.innerHTML = btnOriginalText;
+          downloadBtn.style.opacity = '1';
+          downloadBtn.style.pointerEvents = 'auto';
+        }
+        return;
+      }
+
+      // 2. Normal movie card clicking
       const card = e.target.closest('.movie-card, .film-card, .poster-card, .mosaic-item');
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
     });
