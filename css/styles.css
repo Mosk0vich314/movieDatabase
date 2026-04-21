@@ -1731,10 +1731,11 @@ a:hover { color: var(--accent-hover); }
 .chart-toplists-row {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
 }
-.chart-toplist-btn { font-size: 0.8rem; padding: 7px 12px; }
-.chart-toplist-name { font-weight: 600; font-size: 0.82rem; }
+.chart-toplist-btn { font-size: 0.75rem; padding: 6px 10px; flex-shrink: 0; }
+.chart-toplist-name { font-weight: 600; font-size: 0.75rem; }
 
 .chart-list-inner { display: flex; flex-direction: column; }
 .chart-item {
