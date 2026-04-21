@@ -115,6 +115,45 @@ const UI = (() => {
     `;
   }
 
+  // Builds the external-ratings badges row. Pass withLabel=true for the "Also on" heading.
+  function buildExtBadgesHtml(movie, withLabel = false) {
+    const badges = [];
+    if (movie.voteAverage) {
+      const vc = movie.voteCount ? (movie.voteCount >= 1000 ? `${(movie.voteCount / 1000).toFixed(1)}k` : String(movie.voteCount)) : '';
+      badges.push(`<a href="https://www.themoviedb.org/movie/${movie.tmdbId}" target="_blank" rel="noopener" class="ext-badge ext-badge--tmdb" title="TMDb">
+        <span class="ext-badge-logo">TMDb</span>
+        <span class="ext-badge-score">${formatRating(movie.voteAverage)}</span>
+        ${vc ? `<span class="ext-badge-votes">${vc}</span>` : ''}
+      </a>`);
+    }
+    if (movie.imdbId) {
+      const sc = movie.imdbRating ? `<span class="ext-badge-score">${movie.imdbRating.toFixed(1)}</span>` : '';
+      const vt = movie.imdbVotes ? `<span class="ext-badge-votes">${movie.imdbVotes}</span>` : '';
+      badges.push(`<a href="https://www.imdb.com/title/${movie.imdbId}/" target="_blank" rel="noopener" class="ext-badge ext-badge--imdb" title="IMDb">
+        <span class="ext-badge-logo">IMDb</span>${sc}${vt}
+        ${!movie.imdbRating ? `<span class="ext-badge-arrow">&#8599;</span>` : ''}
+      </a>`);
+    }
+    if (movie.rtScore) {
+      const rv = parseInt(movie.rtScore);
+      badges.push(`<a href="https://www.rottentomatoes.com/search?search=${encodeURIComponent(movie.title)}" target="_blank" rel="noopener" class="ext-badge ${rv >= 60 ? 'ext-badge--rt-fresh' : 'ext-badge--rt-rotten'}" title="Rotten Tomatoes">
+        <span class="ext-badge-logo">${rv >= 60 ? '&#127813;' : '&#128169;'} RT</span>
+        <span class="ext-badge-score">${movie.rtScore}</span>
+      </a>`);
+    }
+    if (movie.tmdbId) {
+      badges.push(`<a href="https://letterboxd.com/tmdb/${movie.tmdbId}/" target="_blank" rel="noopener" class="ext-badge ext-badge--lb" title="Letterboxd">
+        <span class="ext-badge-logo">LBxd</span>
+        <span class="ext-badge-arrow">&#8599;</span>
+      </a>`);
+    }
+    if (!badges.length) return '';
+    const row = `<div class="ext-badges-row">${badges.join('')}</div>`;
+    return withLabel
+      ? `<div class="detail-ext-ratings"><div class="detail-ext-ratings-label">Also on</div>${row}</div>`
+      : row;
+  }
+
   function renderMovieDetail(movie, ctx = {}) {
     const poster = movie.poster
       ? `<img src="${movie.poster}" alt="${escapeHtml(movie.title)}" class="detail-poster">`
@@ -210,41 +249,7 @@ const UI = (() => {
       : '';
 
     // External ratings
-    const extBadges = [];
-    if (movie.voteAverage) {
-      const voteCount = movie.voteCount ? (movie.voteCount >= 1000 ? `${(movie.voteCount / 1000).toFixed(1)}k` : String(movie.voteCount)) : '';
-      extBadges.push(`<a href="https://www.themoviedb.org/movie/${movie.tmdbId}" target="_blank" rel="noopener" class="ext-badge ext-badge--tmdb" title="TMDb">
-        <span class="ext-badge-logo">TMDb</span>
-        <span class="ext-badge-score">${formatRating(movie.voteAverage)}</span>
-        ${voteCount ? `<span class="ext-badge-votes">${voteCount}</span>` : ''}
-      </a>`);
-    }
-    if (movie.imdbId) {
-      const imdbScore = movie.imdbRating ? `<span class="ext-badge-score">${movie.imdbRating.toFixed(1)}</span>` : '';
-      const imdbVotes = movie.imdbVotes ? `<span class="ext-badge-votes">${movie.imdbVotes}</span>` : '';
-      extBadges.push(`<a href="https://www.imdb.com/title/${movie.imdbId}/" target="_blank" rel="noopener" class="ext-badge ext-badge--imdb" title="IMDb">
-        <span class="ext-badge-logo">IMDb</span>
-        ${imdbScore}${imdbVotes}
-        ${!movie.imdbRating ? `<span class="ext-badge-arrow">&#8599;</span>` : ''}
-      </a>`);
-    }
-    if (movie.rtScore) {
-      const rtVal = parseInt(movie.rtScore);
-      const rtClass = rtVal >= 60 ? 'ext-badge--rt-fresh' : 'ext-badge--rt-rotten';
-      extBadges.push(`<a href="https://www.rottentomatoes.com/search?search=${encodeURIComponent(movie.title)}" target="_blank" rel="noopener" class="ext-badge ${rtClass}" title="Rotten Tomatoes">
-        <span class="ext-badge-logo">${rtVal >= 60 ? '&#127813;' : '&#128169;'} RT</span>
-        <span class="ext-badge-score">${movie.rtScore}</span>
-      </a>`);
-    }
-    if (movie.tmdbId) {
-      extBadges.push(`<a href="https://letterboxd.com/tmdb/${movie.tmdbId}/" target="_blank" rel="noopener" class="ext-badge ext-badge--lb" title="Letterboxd">
-        <span class="ext-badge-logo">LBxd</span>
-        <span class="ext-badge-arrow">&#8599;</span>
-      </a>`);
-    }
-    const extRatingsHtml = extBadges.length
-      ? `<div class="detail-ext-ratings"><div class="detail-ext-ratings-label">Also on</div><div class="ext-badges-row">${extBadges.join('')}</div></div>`
-      : '';
+    const extRatingsHtml = buildExtBadgesHtml(movie, true);
 
     return `
       ${backdropHtml}
@@ -869,5 +874,5 @@ const UI = (() => {
       </div>`;
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTournamentStart, renderTournamentMatch, renderTournamentResults, initCustomSelects, escapeHtml, getGenreAccent };
+  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTournamentStart, renderTournamentMatch, renderTournamentResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml };
 })();

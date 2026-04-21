@@ -768,6 +768,8 @@ const App = (() => {
     form.dataset.imdbVotes = data.imdbVotes || '';
     form.dataset.rtScore = data.rtScore || '';
 
+    document.getElementById('form-ext-ratings').innerHTML = UI.buildExtBadgesHtml(data);
+
     document.getElementById('form-watchlist-btn').style.display = editingMovie ? 'none' : '';
 
     if (editingMovie) {
@@ -873,7 +875,27 @@ const App = (() => {
     const tournamentBtn = allCatalogue.length >= 2
       ? `<button class="btn btn-primary tournament-launch-btn" id="launch-tournament">&#127942; Movie Tournament</button>`
       : '';
-    document.getElementById('chart-list').innerHTML = chartHtml + tournamentBtn;
+    const topListsHtml = `<div class="chart-toplists">
+      <div class="chart-toplists-label">Explore top lists</div>
+      <div class="chart-toplists-row">
+        <a href="https://letterboxd.com/films/top250/" target="_blank" rel="noopener" class="ext-badge ext-badge--lb chart-toplist-btn">
+          <span class="ext-badge-logo">LBxd</span>
+          <span class="chart-toplist-name">Top 250</span>
+          <span class="ext-badge-arrow">&#8599;</span>
+        </a>
+        <a href="https://www.themoviedb.org/movie/top-rated" target="_blank" rel="noopener" class="ext-badge ext-badge--tmdb chart-toplist-btn">
+          <span class="ext-badge-logo">TMDb</span>
+          <span class="chart-toplist-name">Top Rated</span>
+          <span class="ext-badge-arrow">&#8599;</span>
+        </a>
+        <a href="https://www.imdb.com/chart/top/" target="_blank" rel="noopener" class="ext-badge ext-badge--imdb chart-toplist-btn">
+          <span class="ext-badge-logo">IMDb</span>
+          <span class="chart-toplist-name">Top 250</span>
+          <span class="ext-badge-arrow">&#8599;</span>
+        </a>
+      </div>
+    </div>`;
+    document.getElementById('chart-list').innerHTML = topListsHtml + chartHtml + tournamentBtn;
   }
 
   function shuffle(arr) {

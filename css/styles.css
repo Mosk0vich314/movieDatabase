@@ -748,7 +748,9 @@ a:hover { color: var(--accent-hover); }
   border-radius: 8px;
   border-left: 3px solid var(--accent);
 }
-.form-overview { margin: 0 0 18px 0; }
+.form-overview { margin: 0 0 14px 0; }
+.form-ext-ratings { margin-bottom: 18px; }
+.form-ext-ratings:empty { display: none; }
 .detail-overview { margin: 0 0 16px 0; }
 .movie-card-overview { margin: 6px 0 8px 0; font-size: 0.78rem; padding: 6px 10px; }
 .genre-tag {
@@ -1708,6 +1710,28 @@ a:hover { color: var(--accent-hover); }
   text-transform: uppercase;
   margin-top: 4px;
 }
+/* === Chart Top-Lists Links === */
+.chart-toplists {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.chart-toplists-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+.chart-toplists-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chart-toplist-btn { font-size: 0.8rem; padding: 7px 12px; }
+.chart-toplist-name { font-weight: 600; font-size: 0.82rem; }
+
 .chart-list-inner { display: flex; flex-direction: column; }
 .chart-item {
   display: flex;
