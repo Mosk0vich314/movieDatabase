@@ -749,8 +749,12 @@ a:hover { color: var(--accent-hover); }
   border-left: 3px solid var(--accent);
 }
 .form-overview { margin: 0 0 14px 0; }
-.form-ext-ratings { margin-bottom: 18px; }
+.form-ext-ratings { margin-top: 16px; }
 .form-ext-ratings:empty { display: none; }
+.form-ext-ratings .ext-badges-row { flex-wrap: nowrap; overflow-x: auto; }
+.form-ext-ratings .ext-badge { padding: 5px 8px; font-size: 0.72rem; }
+.form-ext-ratings .ext-badge-votes { display: none; }
+.form-ext-ratings .ext-badge-score { font-size: 0.78rem; }
 .detail-overview { margin: 0 0 16px 0; }
 .movie-card-overview { margin: 6px 0 8px 0; font-size: 0.78rem; padding: 6px 10px; }
 .genre-tag {
