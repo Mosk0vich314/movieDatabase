@@ -1628,7 +1628,6 @@ const App = (() => {
     });
 
     document.getElementById('movie-grid').addEventListener('click', async (e) => {
-      // 1. Check if the user clicked the Download button
       const downloadBtn = e.target.closest('.decade-download-btn');
       if (downloadBtn) {
         e.stopPropagation();
@@ -1638,7 +1637,6 @@ const App = (() => {
         downloadBtn.style.pointerEvents = 'none';
 
         try {
-          // Dynamically load html2canvas if it isn't already loaded
           if (!window.html2canvas) {
             const script = document.createElement('script');
             script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
@@ -1646,38 +1644,62 @@ const App = (() => {
             await new Promise(r => script.onload = r);
           }
 
-          // Target the specific mosaic directly below this button
           const originalContainer = downloadBtn.closest('.decade-section').querySelector('.decade-mosaic');
+          const clone = originalContainer.cloneNode(true);
           
-          // Clone the grid to avoid modifying the visual UI
-          const container = originalContainer.cloneNode(true);
-          // Ensure it's not visible but is in the DOM for html2canvas
-          container.style.position = 'absolute';
-          container.style.left = '-9999px';
-          document.body.appendChild(container);
+          const rect = originalContainer.getBoundingClientRect();
+          clone.style.position = 'absolute';
+          clone.style.top = '-9999px'; 
+          clone.style.left = '0';
+          clone.style.width = rect.width + 'px'; 
+          clone.style.height = rect.height + 'px';
+          document.body.appendChild(clone);
 
-          // Remove all rating elements from the clone
-          const ratings = container.querySelectorAll('.mosaic-rating');
+          // Remove the ratings completely so they don't appear in the download
+          const ratings = clone.querySelectorAll('.mosaic-rating, .poster-rating, .rating-badge'); 
           ratings.forEach(r => r.remove());
 
-          // Take the snapshot in high-res
-          const canvas = await html2canvas(container, {
-            useCORS: true,
-            backgroundColor: '#0a0a14',
-            scale: 2 // 2x resolution for crisp saving
+          // Convert images directly to Base64 to bypass all Canvas CORS constraints
+          const images = clone.querySelectorAll('img');
+          const imagePromises = Array.from(images).map(async (img) => {
+            if (img.src && img.src.startsWith('http')) {
+              try {
+                const res = await fetch(img.src);
+                const blob = await res.blob();
+                const base64 = await new Promise((resolve) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result);
+                  reader.readAsDataURL(blob);
+                });
+                img.src = base64; 
+              } catch (err) {
+                console.error('Failed to convert image to base64', err);
+              }
+            }
           });
 
-          // Clean up the temporary clone
-          container.remove();
+          await Promise.all(imagePromises);
+          
+          // Let the Base64 images render into the DOM
+          await new Promise(r => setTimeout(r, 150));
 
-          // Trigger the download
+          const canvas = await html2canvas(clone, {
+            useCORS: true,
+            backgroundColor: '#0a0a14', // Matches your app's dark background
+            scale: 2,
+            width: rect.width,
+            height: rect.height
+          });
+
+          clone.remove(); 
+
           const link = document.createElement('a');
           link.download = `My-${downloadBtn.dataset.decade}-Mosaic.jpg`;
           link.href = canvas.toDataURL('image/jpeg', 0.9);
           link.click();
         } catch (err) {
           console.error(err);
-          UI.showToast('Failed to save image. (Likely CORS issue with posters)');
+          UI.showToast('Failed to save image.');
         } finally {
           downloadBtn.innerHTML = btnOriginalText;
           downloadBtn.style.opacity = '1';
@@ -1686,7 +1708,7 @@ const App = (() => {
         return;
       }
 
-      // 2. Normal movie card clicking
+      // Normal movie card clicking
       const card = e.target.closest('.movie-card, .film-card, .poster-card, .mosaic-item');
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
     });
