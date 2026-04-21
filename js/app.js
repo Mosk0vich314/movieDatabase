@@ -1662,9 +1662,17 @@ const App = (() => {
           // Convert images directly to Base64 to bypass all Canvas CORS constraints
           const images = clone.querySelectorAll('img');
           const imagePromises = Array.from(images).map(async (img) => {
+            // FORCE VISIBILITY: Overrides any lazy-load CSS hiding the clone's posters
+            img.style.opacity = '1';
+            img.style.visibility = 'visible';
+            img.classList.add('loaded');
+
             if (img.src && img.src.startsWith('http')) {
               try {
-                const res = await fetch(img.src);
+                // CACHE BUSTER: Forces the browser to ignore its tainted cache and ask for fresh permissions
+                const url = new URL(img.src);
+                url.searchParams.append('nocache', Date.now());
+                const res = await fetch(url.toString(), { cache: 'no-store' });
                 const blob = await res.blob();
                 const base64 = await new Promise((resolve) => {
                   const reader = new FileReader();
@@ -1680,12 +1688,12 @@ const App = (() => {
 
           await Promise.all(imagePromises);
           
-          // Let the Base64 images render into the DOM
+          // Let the Base64 images settle
           await new Promise(r => setTimeout(r, 150));
 
           const canvas = await html2canvas(clone, {
             useCORS: true,
-            backgroundColor: '#0a0a14', // Matches your app's dark background
+            backgroundColor: '#0a0a14', 
             scale: 2,
             width: rect.width,
             height: rect.height
