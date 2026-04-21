@@ -155,10 +155,14 @@ const App = (() => {
     document.getElementById('view-decades-btn').classList.toggle('active', viewMode === 'decades');
     document.getElementById('view-library-btn').classList.toggle('active', viewMode === 'library');
 
-    // Now Playing banner — most recently added film (sort by id: auto-incremented = always correct)
+    // Now Playing banner — most recently added/watched film
     const npWrap = document.getElementById('now-playing-wrap');
     if (movies.length > 0) {
-      const newest = [...movies].sort((a, b) => (b.id || 0) - (a.id || 0))[0];
+      const newest = [...movies].sort((a, b) => {
+        const da = a.dateAdded || '';
+        const db = b.dateAdded || '';
+        return db > da ? 1 : db < da ? -1 : (b.id || 0) - (a.id || 0);
+      })[0];
       npWrap.innerHTML = UI.renderNowPlaying(newest);
       npWrap.querySelector('.now-playing').addEventListener('click', () => {
         window.location.hash = `#detail/${newest.id}`;
@@ -168,30 +172,11 @@ const App = (() => {
     }
 
     // Similar suggestions panel
-    const sugWrap = document.getElementById('suggestions-wrap');
     if (pendingSuggestions) {
-      sugWrap.innerHTML = UI.renderSuggestionsPanel(pendingSuggestions.movieTitle, pendingSuggestions.results);
-      sugWrap.querySelector('.suggestions-dismiss').addEventListener('click', () => {
-        pendingSuggestions = null;
-        sugWrap.innerHTML = '';
-      });
-      sugWrap.querySelectorAll('.suggestion-wl-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-          e.stopPropagation();
-          addToWatchlist(parseInt(btn.dataset.tmdbId));
-          btn.textContent = '✓';
-          btn.disabled = true;
-        });
-      });
-      sugWrap.querySelectorAll('.suggestion-item').forEach(item => {
-        item.addEventListener('click', e => {
-          if (e.target.classList.contains('suggestion-wl-btn')) return;
-          selectSearchResult(parseInt(item.dataset.tmdbId));
-          showView('add');
-        });
-      });
+      renderSuggestionsInPlace();
     } else {
-      sugWrap.innerHTML = '';
+      const sugWrap = document.getElementById('suggestions-wrap');
+      if (sugWrap) sugWrap.innerHTML = '';
     }
 
     const filtered = applyFilters(movies);
@@ -852,7 +837,10 @@ const App = (() => {
       const existingId = document.getElementById('form-id').value;
       if (existingId) {
         movie.id = parseInt(existingId);
-        movie.dateAdded = editingMovie.dateAdded;
+        // Preserve original dateAdded for edits; use now when converting watchlist → catalogue
+        movie.dateAdded = (editingMovie && editingMovie.watchlist)
+          ? new Date().toISOString()
+          : editingMovie.dateAdded;
         await MovieDB.updateMovie(movie);
         UI.showToast('Movie updated!');
       } else {
@@ -1157,8 +1145,37 @@ const App = (() => {
       ]);
       const ownedIds = new Set(allMovies.map(m => String(m.tmdbId)));
       const filtered = recs.filter(r => !ownedIds.has(String(r.id))).slice(0, 8);
-      if (filtered.length >= 3) pendingSuggestions = { movieTitle, results: filtered };
+      if (filtered.length >= 3) {
+        pendingSuggestions = { movieTitle, results: filtered };
+        // If the user is already on catalogue when the fetch completes, inject directly
+        if (currentView === 'catalogue') renderSuggestionsInPlace();
+      }
     } catch (_) {}
+  }
+
+  function renderSuggestionsInPlace() {
+    const sugWrap = document.getElementById('suggestions-wrap');
+    if (!sugWrap || !pendingSuggestions) return;
+    sugWrap.innerHTML = UI.renderSuggestionsPanel(pendingSuggestions.movieTitle, pendingSuggestions.results);
+    sugWrap.querySelector('.suggestions-dismiss').addEventListener('click', () => {
+      pendingSuggestions = null;
+      sugWrap.innerHTML = '';
+    });
+    sugWrap.querySelectorAll('.suggestion-wl-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        addToWatchlist(parseInt(btn.dataset.tmdbId));
+        btn.textContent = '✓';
+        btn.disabled = true;
+      });
+    });
+    sugWrap.querySelectorAll('.suggestion-item').forEach(item => {
+      item.addEventListener('click', e => {
+        if (e.target.classList.contains('suggestion-wl-btn')) return;
+        selectSearchResult(parseInt(item.dataset.tmdbId));
+        showView('add');
+      });
+    });
   }
 
   async function randomPick() {
