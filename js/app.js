@@ -1634,9 +1634,9 @@ const App = (() => {
         e.stopPropagation();
         const btnOriginalText = downloadBtn.innerHTML;
         downloadBtn.innerHTML = 'Saving...';
-        downloadBtn.style.opacity = '0.7';
+        downloadBtn.style.opacity = '0.6';
         downloadBtn.style.pointerEvents = 'none';
-        
+
         try {
           // Dynamically load html2canvas if it isn't already loaded
           if (!window.html2canvas) {
@@ -1645,17 +1645,31 @@ const App = (() => {
             document.head.appendChild(script);
             await new Promise(r => script.onload = r);
           }
-          
+
           // Target the specific mosaic directly below this button
-          const container = downloadBtn.closest('.decade-section').querySelector('.decade-mosaic');
+          const originalContainer = downloadBtn.closest('.decade-section').querySelector('.decade-mosaic');
           
+          // Clone the grid to avoid modifying the visual UI
+          const container = originalContainer.cloneNode(true);
+          // Ensure it's not visible but is in the DOM for html2canvas
+          container.style.position = 'absolute';
+          container.style.left = '-9999px';
+          document.body.appendChild(container);
+
+          // Remove all rating elements from the clone
+          const ratings = container.querySelectorAll('.mosaic-rating');
+          ratings.forEach(r => r.remove());
+
           // Take the snapshot in high-res
           const canvas = await html2canvas(container, {
             useCORS: true,
             backgroundColor: '#0a0a14',
             scale: 2 // 2x resolution for crisp saving
           });
-          
+
+          // Clean up the temporary clone
+          container.remove();
+
           // Trigger the download
           const link = document.createElement('a');
           link.download = `My-${downloadBtn.dataset.decade}-Mosaic.jpg`;
@@ -1663,7 +1677,7 @@ const App = (() => {
           link.click();
         } catch (err) {
           console.error(err);
-          UI.showToast('Failed to save image. (CORS issue with posters)');
+          UI.showToast('Failed to save image. (Likely CORS issue with posters)');
         } finally {
           downloadBtn.innerHTML = btnOriginalText;
           downloadBtn.style.opacity = '1';

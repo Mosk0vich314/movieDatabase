@@ -427,18 +427,17 @@ const UI = (() => {
 
   function mosaicSizeByRank(rank, total) {
     // Mathematically flawless packing for 3 columns:
-    // 1 XL (2x2) REQUIRES 2 SMs to fill its side. 1 LG (2x1) REQUIRES 1 SM to fill its side.
     // This exact ratio guarantees the grid never leaves empty holes at the end.
-    if (total >= 10) { if (rank < 1) return 'sz-xl'; if (rank < 3) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 2 LG, 7 SM
-    if (total === 9) { if (rank < 1) return 'sz-xl'; if (rank < 4) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 3 LG, 5 SM
-    if (total === 8) { if (rank < 1) return 'sz-xl'; if (rank < 2) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 1 LG, 6 SM
-    if (total === 7) { if (rank < 1) return 'sz-xl'; if (rank < 3) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 2 LG, 4 SM
-    if (total === 6) { if (rank < 1) return 'sz-xl'; return 'sz-sm'; }                               // 1 XL, 0 LG, 5 SM
-    if (total === 5) { if (rank < 1) return 'sz-xl'; if (rank < 2) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 1 LG, 3 SM
-    if (total === 4) { if (rank < 2) return 'sz-lg'; return 'sz-sm'; }                               // 0 XL, 2 LG, 2 SM
-    if (total === 3) { return 'sz-sm'; }                                                             // 0 XL, 0 LG, 3 SM
-    if (total === 2) { if (rank < 1) return 'sz-lg'; return 'sz-sm'; }                               // 0 XL, 1 LG, 1 SM
-    return 'sz-sm';
+    if (total >= 10) { if (rank < 1) return 'sz-xl'; if (rank < 3) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 2 LG, 7 SM = 15 cells (✓)
+    if (total === 9) { if (rank < 1) return 'sz-xl'; if (rank < 4) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 3 LG, 5 SM = 15 cells (✓)
+    if (total === 8) { if (rank < 1) return 'sz-xl'; if (rank < 2) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 1 LG, 6 SM = 12 cells (✓)
+    if (total === 7) { if (rank < 1) return 'sz-xl'; if (rank < 3) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 2 LG, 4 SM = 12 cells (✓)
+    if (total === 6) { if (rank < 1) return 'sz-xl'; return 'sz-sm'; }                               // 1 XL, 0 LG, 5 SM = 9 cells (✓)
+    if (total === 5) { if (rank < 1) return 'sz-xl'; if (rank < 2) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 1 LG, 3 SM = 9 cells (✓)
+    if (total === 4) { if (rank < 2) return 'sz-lg'; return 'sz-sm'; }                               // 0 XL, 2 LG, 2 SM = 6 cells (✓)
+    if (total === 3) { return 'sz-sm'; }                                                             // 0 XL, 0 LG, 3 SM = 3 cells (✓)
+    if (total === 2) { if (rank < 1) return 'sz-lg'; return 'sz-sm'; }                               // 0 XL, 1 LG, 1 SM = 3 cells (✓)
+    return 'sz-sm'; // For 1 movie (just a SM, self-contained shape, doesn't leave gaps)
   }
 
   // Deterministic shuffle — same seed always produces same order (per decade)
@@ -502,7 +501,7 @@ const UI = (() => {
             <span class="decade-count">${totalCount} film${totalCount !== 1 ? 's' : ''}</span>
           </div>
           <button class="decade-download-btn" data-decade="${k}">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> 
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             Save Poster
           </button>
         </div>
