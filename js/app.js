@@ -1597,7 +1597,7 @@ const App = (() => {
     });
 
     document.getElementById('movie-grid').addEventListener('click', (e) => {
-      const card = e.target.closest('.movie-card, .film-card, .poster-card');
+      const card = e.target.closest('.movie-card, .film-card, .poster-card, .mosaic-item');
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
     });
 

@@ -1444,6 +1444,84 @@ a:hover { color: var(--accent-hover); }
 .decade-scroll::-webkit-scrollbar { height: 2px; }
 .decade-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
+/* === Decade Mosaic Grid === */
+.decade-mosaic {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 130px;
+  grid-auto-flow: row dense;
+  gap: 3px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mosaic-item {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--surface);
+  transition: filter 0.2s ease;
+}
+
+.mosaic-item:hover { filter: brightness(1.12); }
+
+.mosaic-item.sz-xl { grid-column: span 2; grid-row: span 2; }
+.mosaic-item.sz-lg { grid-column: span 1; grid-row: span 2; }
+.mosaic-item.sz-sm { grid-column: span 1; grid-row: span 1; }
+
+.mosaic-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.mosaic-item img.loaded { opacity: 1; }
+
+.mosaic-no-img {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  padding: 0.5rem;
+  text-align: center;
+  background: var(--surface);
+}
+
+.mosaic-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 22px 7px 7px;
+  background: linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mosaic-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+}
+
+.mosaic-rating {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+}
+
 .film-card {
   flex-shrink: 0;
   position: relative;
@@ -3117,6 +3195,7 @@ input[type="date"].form-input { color-scheme: dark; }
 .movie-card-poster,
 .film-card,
 .poster-card,
+.mosaic-item,
 .search-result-poster,
 .mlt-poster,
 .detail-poster-wrap,
@@ -3139,6 +3218,8 @@ input[type="date"].form-input { color-scheme: dark; }
 .movie-card-poster:has(.no-poster),
 .film-card:has(img.loaded),
 .film-card:has(.no-poster-lane),
+.mosaic-item:has(img.loaded),
+.mosaic-item:has(.mosaic-no-img),
 .poster-card:has(img.loaded),
 .poster-card:has(.poster-card-no-img),
 .search-result-poster:has(img.loaded),

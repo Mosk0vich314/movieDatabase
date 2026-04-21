@@ -420,6 +420,36 @@ const UI = (() => {
     }</div>`;
   }
 
+  function getMosaicSize(movie, sorted) {
+    const n = sorted.length;
+    if (n <= 1) return 'sz-xl';
+    const idx = sorted.findIndex(m => m.id === movie.id);
+    if (n <= 2) return idx === 0 ? 'sz-xl' : 'sz-lg';
+    if (idx === 0) return 'sz-xl';
+    const maxR = sorted[0].rating || 0;
+    const r = movie.rating || 0;
+    if (maxR === 0) return 'sz-sm';
+    return (r / maxR) >= 0.85 ? 'sz-lg' : 'sz-sm';
+  }
+
+  function renderMosaicItem(movie, sorted) {
+    const sz = getMosaicSize(movie, sorted);
+    const img = movie.backdrop || movie.poster || '';
+    const imgHtml = img
+      ? `<img src="${img}" alt="${escapeHtml(movie.title)}" loading="lazy">`
+      : `<div class="mosaic-no-img">${escapeHtml(movie.title)}</div>`;
+    const ratingHtml = movie.rating
+      ? `<span class="mosaic-rating" style="color:${ratingColor(movie.rating)}">${formatRating(movie.rating)}</span>`
+      : '';
+    return `<div class="mosaic-item ${sz}" data-id="${movie.id}">
+      ${imgHtml}
+      <div class="mosaic-overlay">
+        ${ratingHtml}
+        <span class="mosaic-title">${escapeHtml(movie.title)}</span>
+      </div>
+    </div>`;
+  }
+
   function renderDecadeLanes(movies, dir = 'desc') {
     const groups = {};
     movies.forEach(m => {
@@ -436,10 +466,16 @@ const UI = (() => {
       return dir === 'asc' ? parseInt(a) - parseInt(b) : parseInt(b) - parseInt(a);
     });
 
-    return renderLanes(keys.map(k => ({
-      label: k,
-      films: [...groups[k]].sort((a, b) => (b.rating || 0) - (a.rating || 0))
-    })));
+    return `<div class="decade-lanes">${keys.map(k => {
+      const films = [...groups[k]].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      return `<div class="decade-section">
+        <div class="decade-header">
+          <span class="decade-label">${k}</span>
+          <span class="decade-count">${films.length} film${films.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="decade-mosaic">${films.map(m => renderMosaicItem(m, films)).join('')}</div>
+      </div>`;
+    }).join('')}</div>`;
   }
 
   function renderRatingLanes(movies, dir = 'desc') {
