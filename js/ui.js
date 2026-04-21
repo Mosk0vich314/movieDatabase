@@ -426,10 +426,18 @@ const UI = (() => {
   }
 
   function mosaicSizeByRank(rank, total) {
-    if (total <= 1) return 'sz-xl';
-    if (rank <= 1) return 'sz-xl'; // Makes the top TWO movies huge instead of just one
-    if (rank <= 4) return 'sz-lg'; // Next 3 get medium size
-    return 'sz-sm';                // The rest (up to 10) are small
+    // Mathematically calculates exact cell sizes so grid-auto-flow: dense
+    // ALWAYS builds a perfect rectangle in a 3-column layout.
+    if (total >= 10) { if (rank < 2) return 'sz-xl'; if (rank < 4) return 'sz-lg'; return 'sz-sm'; }
+    if (total === 9) { if (rank < 1) return 'sz-xl'; if (rank < 4) return 'sz-lg'; return 'sz-sm'; }
+    if (total === 8) { if (rank < 1) return 'sz-xl'; if (rank < 2) return 'sz-lg'; return 'sz-sm'; }
+    if (total === 7) { if (rank < 2) return 'sz-xl'; if (rank < 4) return 'sz-lg'; return 'sz-sm'; }
+    if (total === 6) { if (rank < 1) return 'sz-xl'; if (rank < 2) return 'sz-lg'; return 'sz-sm'; }
+    if (total === 5) { if (rank < 1) return 'sz-xl'; if (rank < 2) return 'sz-lg'; return 'sz-sm'; }
+    if (total === 4) { if (rank < 2) return 'sz-lg'; return 'sz-sm'; }
+    if (total === 3) { return 'sz-lg'; }
+    if (total === 2) { if (rank < 1) return 'sz-xl'; return 'sz-lg'; }
+    return 'sz-xl';
   }
 
   // Deterministic shuffle — same seed always produces same order (per decade)

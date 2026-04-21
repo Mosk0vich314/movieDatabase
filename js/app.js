@@ -838,10 +838,12 @@ const App = (() => {
 
     try {
       const existingId = document.getElementById('form-id').value;
+      const isWatchlistConversion = (editingMovie && editingMovie.watchlist);
+
       if (existingId) {
         movie.id = parseInt(existingId);
         // Preserve original dateAdded for edits; use now when converting watchlist → catalogue
-        movie.dateAdded = (editingMovie && editingMovie.watchlist)
+        movie.dateAdded = isWatchlistConversion
           ? new Date().toISOString()
           : editingMovie.dateAdded;
         await MovieDB.updateMovie(movie);
@@ -853,9 +855,14 @@ const App = (() => {
         const hit = Stats.MILESTONE_VALUES.find(m => before < m && after >= m);
         if (hit) localStorage.setItem('pendingMilestone', hit);
         UI.showToast('Movie added!');
-        // Fetch similar suggestions in the background
-        if (movie.tmdbId) fetchSimilarSuggestions(movie.title, movie.tmdbId);
       }
+
+      // AWAIT the suggestions so they are fully loaded BEFORE navigating to the catalogue.
+      // We also now trigger this if you just converted a movie from your watchlist!
+      if ((!existingId || isWatchlistConversion) && movie.tmdbId) {
+        await fetchSimilarSuggestions(movie.title, movie.tmdbId);
+      }
+
       editingMovie = null;
       updateWatchlistBadge();
       window.location.hash = '#catalogue';
