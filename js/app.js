@@ -12,7 +12,8 @@ const App = (() => {
   let searchMode = 'movie';
   let selectedDirectorName = '';
   let currentFilmography = null;
-  let pendingSuggestions = null;
+  // Pulls suggestions from local storage if they exist
+  let pendingSuggestions = JSON.parse(localStorage.getItem('savedSuggestions') || 'null');
 
   function migrateRatings() {
     if (localStorage.getItem('ratingMigrated10')) return Promise.resolve();
@@ -895,7 +896,7 @@ const App = (() => {
         </a>
       </div>
     </div>`;
-    document.getElementById('chart-list').innerHTML = topListsHtml + chartHtml + tournamentBtn;
+    document.getElementById('chart-list').innerHTML = chartHtml + tournamentBtn + topListsHtml;
   }
 
   function shuffle(arr) {
@@ -1169,6 +1170,7 @@ const App = (() => {
       const filtered = recs.filter(r => !ownedIds.has(String(r.id))).slice(0, 8);
       if (filtered.length >= 3) {
         pendingSuggestions = { movieTitle, results: filtered };
+        localStorage.setItem('savedSuggestions', JSON.stringify(pendingSuggestions)); // Saves them!
         // If the user is already on catalogue when the fetch completes, inject directly
         if (currentView === 'catalogue') renderSuggestionsInPlace();
       }
@@ -1181,6 +1183,7 @@ const App = (() => {
     sugWrap.innerHTML = UI.renderSuggestionsPanel(pendingSuggestions.movieTitle, pendingSuggestions.results);
     sugWrap.querySelector('.suggestions-dismiss').addEventListener('click', () => {
       pendingSuggestions = null;
+      localStorage.removeItem('savedSuggestions'); // Clears the save when dismissed
       sugWrap.innerHTML = '';
     });
     sugWrap.querySelectorAll('.suggestion-wl-btn').forEach(btn => {

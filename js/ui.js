@@ -425,20 +425,27 @@ const UI = (() => {
     }</div>`;
   }
 
-  function getMosaicSize(movie, sorted) {
-    const n = sorted.length;
-    if (n <= 1) return 'sz-xl';
-    const idx = sorted.findIndex(m => m.id === movie.id);
-    if (n <= 2) return idx === 0 ? 'sz-xl' : 'sz-lg';
-    if (idx === 0) return 'sz-xl';
-    const maxR = sorted[0].rating || 0;
-    const r = movie.rating || 0;
-    if (maxR === 0) return 'sz-sm';
-    return (r / maxR) >= 0.85 ? 'sz-lg' : 'sz-sm';
+  function mosaicSizeByRank(rank, total) {
+    if (total <= 1) return 'sz-xl';
+    if (rank <= 1) return 'sz-xl'; // Makes the top TWO movies huge instead of just one
+    if (rank <= 4) return 'sz-lg'; // Next 3 get medium size
+    return 'sz-sm';                // The rest (up to 10) are small
   }
 
-  function renderMosaicItem(movie, sorted) {
-    const sz = getMosaicSize(movie, sorted);
+  // Deterministic shuffle — same seed always produces same order (per decade)
+  function seededShuffle(arr, seed) {
+    const a = [...arr];
+    let s = (seed ^ 0x5a5a5a5a) >>> 0;
+    for (let i = a.length - 1; i > 0; i--) {
+      s = (Math.imul(s ^ (s >>> 17), 0x45d9f3b)) >>> 0;
+      s = (s ^ (s >>> 13)) >>> 0;
+      const j = s % (i + 1);
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function renderMosaicItem(movie, sizeClass) {
     const img = movie.backdrop || movie.poster || '';
     const imgHtml = img
       ? `<img src="${img}" alt="${escapeHtml(movie.title)}" loading="lazy">`
@@ -446,7 +453,7 @@ const UI = (() => {
     const ratingHtml = movie.rating
       ? `<span class="mosaic-rating" style="color:${ratingColor(movie.rating)}">${formatRating(movie.rating)}</span>`
       : '';
-    return `<div class="mosaic-item ${sz}" data-id="${movie.id}">
+    return `<div class="mosaic-item ${sizeClass}" data-id="${movie.id}">
       ${imgHtml}
       <div class="mosaic-overlay">
         ${ratingHtml}
@@ -472,13 +479,19 @@ const UI = (() => {
     });
 
     return `<div class="decade-lanes">${keys.map(k => {
-      const films = [...groups[k]].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      // Top 10 by rating, sizes assigned by rank, then shuffled for visual variety
+      const sorted = [...groups[k]].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 10);
+      const total = sorted.length;
+      const withSizes = sorted.map((m, rank) => ({ m, sz: mosaicSizeByRank(rank, total) }));
+      // True random shuffle so it's a fresh, organic layout every time you load
+      const shuffled = withSizes.sort(() => Math.random() - 0.5); 
+      const totalCount = groups[k].length;
       return `<div class="decade-section">
         <div class="decade-header">
           <span class="decade-label">${k}</span>
-          <span class="decade-count">${films.length} film${films.length !== 1 ? 's' : ''}</span>
+          <span class="decade-count">${totalCount} film${totalCount !== 1 ? 's' : ''}</span>
         </div>
-        <div class="decade-mosaic">${films.map(m => renderMosaicItem(m, films)).join('')}</div>
+        <div class="decade-mosaic">${shuffled.map(({ m, sz }) => renderMosaicItem(m, sz)).join('')}</div>
       </div>`;
     }).join('')}</div>`;
   }

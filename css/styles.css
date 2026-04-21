@@ -1715,10 +1715,16 @@ a:hover { color: var(--accent-hover); }
   margin-top: 4px;
 }
 /* === Chart Top-Lists Links === */
+#view-chart {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 140px); /* Gives the container full height */
+}
+
 .chart-toplists {
-  margin-bottom: 24px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border);
+  margin-top: auto; /* Pushes the badges to the absolute bottom */
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
 }
 .chart-toplists-label {
   font-size: 0.72rem;
