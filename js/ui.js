@@ -1,10 +1,12 @@
 const UI = (() => {
-  // Stable within a session, new on refresh — lets you escape a bad mosaic layout by refreshing
-  const SESSION_SEED = (() => {
-    let s = sessionStorage.getItem('mosaic-seed');
-    if (!s) { s = (Math.random() * 0x7fffffff | 0).toString(); sessionStorage.setItem('mosaic-seed', s); }
-    return parseInt(s);
-  })();
+  const decadeSeeds = {};
+  function getDecadeSeed(key) {
+    if (!(key in decadeSeeds)) decadeSeeds[key] = Math.random() * 0x7fffffff | 0;
+    return decadeSeeds[key];
+  }
+  function reshuffleDecade(key) {
+    decadeSeeds[key] = Math.random() * 0x7fffffff | 0;
+  }
 
   function showToast(message, duration = 3000) {
     const toast = document.getElementById('toast');
@@ -497,7 +499,7 @@ const UI = (() => {
       const sorted = [...groups[k]].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 10);
       const total = sorted.length;
       const withSizes = sorted.map((m, rank) => ({ m, sz: mosaicSizeByRank(rank, total) }));
-      const seed = (SESSION_SEED + (parseInt(k) || 0)) | 0;
+      const seed = getDecadeSeed(k);
       const shuffled = seededShuffle(withSizes, seed);
       const totalCount = groups[k].length;
       return `<div class="decade-section">
@@ -506,10 +508,16 @@ const UI = (() => {
             <span class="decade-label">${k}</span>
             <span class="decade-count">${totalCount} film${totalCount !== 1 ? 's' : ''}</span>
           </div>
-          <button class="decade-download-btn" data-decade="${k}">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            Save Poster
-          </button>
+          <div class="decade-header-actions">
+            <button class="decade-reshuffle-btn" data-decade="${k}" title="Try different layout">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
+              Reshuffle
+            </button>
+            <button class="decade-download-btn" data-decade="${k}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Save Poster
+            </button>
+          </div>
         </div>
         <div class="decade-mosaic">${shuffled.map(({ m, sz }) => renderMosaicItem(m, sz)).join('')}</div>
       </div>`;
@@ -907,5 +915,5 @@ const UI = (() => {
       </div>`;
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTournamentStart, renderTournamentMatch, renderTournamentResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml };
+  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTournamentStart, renderTournamentMatch, renderTournamentResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml, reshuffleDecade };
 })();

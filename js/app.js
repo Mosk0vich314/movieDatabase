@@ -1628,6 +1628,14 @@ const App = (() => {
     });
 
     document.getElementById('movie-grid').addEventListener('click', async (e) => {
+      const reshuffleBtn = e.target.closest('.decade-reshuffle-btn');
+      if (reshuffleBtn) {
+        e.stopPropagation();
+        UI.reshuffleDecade(reshuffleBtn.dataset.decade);
+        loadCatalogue();
+        return;
+      }
+
       const downloadBtn = e.target.closest('.decade-download-btn');
       if (downloadBtn) {
         e.stopPropagation();
