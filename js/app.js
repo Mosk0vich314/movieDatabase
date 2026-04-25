@@ -1235,21 +1235,32 @@ const App = (() => {
         overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
       }
 
-      let touchX0 = 0, dragActive = false;
-      const THRESHOLD = 75;
+      let touchX0 = 0, touchY0 = 0, dragActive = false, dragConfirmed = false;
+      const THRESHOLD = 32;
 
       dragEl.addEventListener('touchstart', e => {
         touchX0 = e.touches[0].clientX;
+        touchY0 = e.touches[0].clientY;
         dragActive = true;
+        dragConfirmed = false;
         dragEl.style.transition = 'none';
         dragEl.style.willChange = 'transform';
       }, { passive: true });
 
       dragEl.addEventListener('touchmove', e => {
         if (!dragActive) return;
-        const dx = Math.max(0, e.touches[0].clientX - touchX0);
-        dragEl.style.transform = `translateX(${dx}px) rotate(${dx * 0.025}deg)`;
-      }, { passive: true });
+        const dx = e.touches[0].clientX - touchX0;
+        const dy = e.touches[0].clientY - touchY0;
+        // Confirm horizontal drag on first significant movement
+        if (!dragConfirmed) {
+          if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+          if (Math.abs(dy) > Math.abs(dx)) { dragActive = false; return; } // vertical scroll wins
+          dragConfirmed = true;
+        }
+        e.preventDefault();
+        const clampedDx = Math.max(0, Math.min(dx, window.innerWidth));
+        dragEl.style.transform = `translateX(${clampedDx}px) rotate(${clampedDx * 0.015}deg)`;
+      }, { passive: false });
 
       dragEl.addEventListener('touchend', e => {
         if (!dragActive) return;

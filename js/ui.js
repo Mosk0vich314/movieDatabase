@@ -215,7 +215,7 @@ const UI = (() => {
 
     const hasPeople = (movie.directors || []).length > 0 || (movie.cast || []).length > 0;
     const posterSlideHtml = hasPeople
-      ? `<div class="detail-poster-drag" id="detail-poster-drag">${poster}<div class="detail-drag-hint">›</div></div>`
+      ? `<div class="detail-poster-drag" id="detail-poster-drag">${poster}</div>`
       : `<div class="detail-poster-wrap">${poster}</div>`;
 
     // Date added
