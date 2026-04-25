@@ -11,6 +11,7 @@ const App = (() => {
   let watchlistViewMode = (['array', 'decades', 'library'].includes(_storedWLView) ? _storedWLView : null) || 'library';
   let searchMode = 'movie';
   let selectedDirectorName = '';
+  let pendingPersonSearch = null;
   let currentFilmography = null;
   // Pulls suggestions from local storage if they exist
   let pendingSuggestions = JSON.parse(localStorage.getItem('savedSuggestions') || 'null');
@@ -101,7 +102,20 @@ const App = (() => {
     if (view === 'chart') loadChart();
     if (view !== 'chart') tournament = null;
     if (view === 'stats') loadStats();
-    if (view === 'add') resetAddView();
+    if (view === 'add') {
+      resetAddView();
+      if (pendingPersonSearch) {
+        const { mode, query } = pendingPersonSearch;
+        pendingPersonSearch = null;
+        searchMode = mode;
+        document.querySelectorAll('.smt-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+        const inp = document.getElementById('tmdb-search');
+        inp.value = query;
+        inp.placeholder = mode === 'director' ? 'Search for a director...' : 'Search for an actor...';
+        if (mode === 'director') searchDirector();
+        else if (mode === 'actor') searchActor();
+      }
+    }
   }
 
   function showView(name) {
@@ -1164,6 +1178,52 @@ const App = (() => {
         window.location.hash = movie.watchlist ? '#watchlist' : '#catalogue';
       }
     });
+
+    // People slide panel — swipe & person tap
+    const slideContainer = document.getElementById('detail-poster-slides');
+    const slideTrack = document.getElementById('detail-slide-track');
+    if (slideContainer && slideTrack) {
+      let slideIdx = 0;
+      let touchX0 = 0;
+      const dots = slideContainer.querySelectorAll('.detail-slide-dot');
+
+      function goToSlide(i) {
+        slideIdx = i;
+        slideTrack.style.transform = `translateX(${i * -50}%)`;
+        dots.forEach((d, j) => d.classList.toggle('active', j === i));
+      }
+
+      slideContainer.addEventListener('touchstart', e => { touchX0 = e.touches[0].clientX; }, { passive: true });
+      slideContainer.addEventListener('touchend', e => {
+        const diff = touchX0 - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 40) goToSlide(diff > 0 ? 1 : 0);
+      });
+      dots.forEach((dot, i) => dot.addEventListener('click', () => goToSlide(i)));
+
+      slideTrack.addEventListener('click', e => {
+        const pill = e.target.closest('.detail-person[data-person-mode]');
+        if (!pill) return;
+        e.stopPropagation();
+        pendingPersonSearch = { mode: pill.dataset.personMode, query: pill.dataset.personName };
+        window.location.hash = '#add';
+      });
+
+      // Async fetch director profile photos
+      slideTrack.querySelectorAll('[data-director-name]').forEach(async el => {
+        const name = el.dataset.directorName;
+        try {
+          const results = await TMDB.searchPerson(name);
+          const person = (results || []).find(p => p.known_for_department === 'Directing') || results[0];
+          if (person?.profile_path) {
+            const img = document.createElement('img');
+            img.src = TMDB.profileUrl(person.profile_path);
+            img.alt = name;
+            img.onload = () => img.classList.add('loaded');
+            el.replaceWith(img);
+          }
+        } catch (_) {}
+      });
+    }
   }
 
   async function fetchSimilarSuggestions(movieTitle, tmdbId) {
