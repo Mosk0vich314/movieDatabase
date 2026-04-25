@@ -1179,49 +1179,86 @@ const App = (() => {
       }
     });
 
-    // People slide panel — swipe & person tap
-    const slideContainer = document.getElementById('detail-poster-slides');
-    const slideTrack = document.getElementById('detail-slide-track');
-    if (slideContainer && slideTrack) {
-      let slideIdx = 0;
-      let touchX0 = 0;
-      const dots = slideContainer.querySelectorAll('.detail-slide-dot');
-
-      function goToSlide(i) {
-        slideIdx = i;
-        slideTrack.style.transform = `translateX(${i * -50}%)`;
-        dots.forEach((d, j) => d.classList.toggle('active', j === i));
-      }
-
-      slideContainer.addEventListener('touchstart', e => { touchX0 = e.touches[0].clientX; }, { passive: true });
-      slideContainer.addEventListener('touchend', e => {
-        const diff = touchX0 - e.changedTouches[0].clientX;
-        if (Math.abs(diff) > 40) goToSlide(diff > 0 ? 1 : 0);
-      });
-      dots.forEach((dot, i) => dot.addEventListener('click', () => goToSlide(i)));
-
-      slideTrack.addEventListener('click', e => {
-        const pill = e.target.closest('.detail-person[data-person-mode]');
-        if (!pill) return;
-        e.stopPropagation();
-        pendingPersonSearch = { mode: pill.dataset.personMode, query: pill.dataset.personName };
-        window.location.hash = '#add';
-      });
-
-      // Async fetch director profile photos
-      slideTrack.querySelectorAll('[data-director-name]').forEach(async el => {
-        const name = el.dataset.directorName;
+    // Drag-to-reveal people overlay
+    const dragEl = document.getElementById('detail-poster-drag');
+    if (dragEl) {
+      const directorPhotos = {};
+      // Pre-fetch director photos in background
+      (movie.directors || []).forEach(async name => {
         try {
           const results = await TMDB.searchPerson(name);
           const person = (results || []).find(p => p.known_for_department === 'Directing') || results[0];
-          if (person?.profile_path) {
-            const img = document.createElement('img');
-            img.src = TMDB.profileUrl(person.profile_path);
-            img.alt = name;
-            img.onload = () => img.classList.add('loaded');
-            el.replaceWith(img);
-          }
+          if (person?.profile_path) directorPhotos[name] = TMDB.profileUrl(person.profile_path);
         } catch (_) {}
+      });
+
+      function buildBubbleHtml(p, i) {
+        const initials = p.name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        const photoHtml = p.photoUrl
+          ? `<img src="${p.photoUrl}" alt="${UI.escapeHtml(p.name)}">`
+          : `<span>${initials}</span>`;
+        return `<div class="people-bubble" style="--i:${i}" data-person-name="${UI.escapeHtml(p.name)}" data-person-mode="${p.mode}">
+          <div class="people-bubble-photo">${photoHtml}</div>
+          <span class="people-bubble-role">${UI.escapeHtml(p.role)}</span>
+          <span class="people-bubble-name">${UI.escapeHtml(p.name)}</span>
+        </div>`;
+      }
+
+      function showPeopleOverlay() {
+        if (document.getElementById('people-overlay')) return;
+        const people = [];
+        (movie.directors || []).forEach(name => people.push({ name, mode: 'director', role: 'Director', photoUrl: directorPhotos[name] || '' }));
+        (movie.cast || []).slice(0, 5).forEach(c => people.push({ name: c.name, mode: 'actor', role: c.character || 'Actor', photoUrl: c.profileUrl || '' }));
+
+        const overlay = document.createElement('div');
+        overlay.id = 'people-overlay';
+        overlay.className = 'people-overlay';
+        overlay.innerHTML = `<div class="people-overlay-inner">${people.map(buildBubbleHtml).join('')}</div>`;
+        document.body.appendChild(overlay);
+
+        overlay.addEventListener('click', e => {
+          const bubble = e.target.closest('.people-bubble');
+          if (bubble) {
+            pendingPersonSearch = { mode: bubble.dataset.personMode, query: bubble.dataset.personName };
+            dismissOverlay();
+            window.location.hash = '#add';
+          } else {
+            dismissOverlay();
+          }
+        });
+      }
+
+      function dismissOverlay() {
+        const overlay = document.getElementById('people-overlay');
+        if (!overlay) return;
+        overlay.classList.add('people-overlay--out');
+        overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
+      }
+
+      let touchX0 = 0, dragActive = false;
+      const THRESHOLD = 75;
+
+      dragEl.addEventListener('touchstart', e => {
+        touchX0 = e.touches[0].clientX;
+        dragActive = true;
+        dragEl.style.transition = 'none';
+        dragEl.style.willChange = 'transform';
+      }, { passive: true });
+
+      dragEl.addEventListener('touchmove', e => {
+        if (!dragActive) return;
+        const dx = Math.max(0, e.touches[0].clientX - touchX0);
+        dragEl.style.transform = `translateX(${dx}px) rotate(${dx * 0.025}deg)`;
+      }, { passive: true });
+
+      dragEl.addEventListener('touchend', e => {
+        if (!dragActive) return;
+        dragActive = false;
+        dragEl.style.willChange = '';
+        const dx = Math.max(0, e.changedTouches[0].clientX - touchX0);
+        dragEl.style.transition = 'transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        dragEl.style.transform = 'translateX(0) rotate(0deg)';
+        if (dx >= THRESHOLD) showPeopleOverlay();
       });
     }
   }

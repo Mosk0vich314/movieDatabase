@@ -213,45 +213,9 @@ const UI = (() => {
         </div>`
       : '';
 
-    const directorPills = (movie.directors || []).map(name => {
-      const initials = name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
-      return `<div class="detail-person" data-person-name="${escapeHtml(name)}" data-person-mode="director">
-        <div class="detail-person-photo-wrap">
-          <div class="detail-person-initials" data-director-name="${escapeHtml(name)}">${initials}</div>
-        </div>
-        <span class="detail-person-role">Director</span>
-        <span class="detail-person-name">${escapeHtml(name)}</span>
-      </div>`;
-    }).join('');
-
-    const castPills = (movie.cast || []).slice(0, 5).map(c => {
-      const initials = c.name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
-      const photoHtml = c.profileUrl
-        ? `<img src="${c.profileUrl}" alt="${escapeHtml(c.name)}" loading="lazy">`
-        : `<div class="detail-person-initials">${initials}</div>`;
-      return `<div class="detail-person" data-person-name="${escapeHtml(c.name)}" data-person-mode="actor">
-        <div class="detail-person-photo-wrap">${photoHtml}</div>
-        <span class="detail-person-role">${escapeHtml(c.character || 'Actor')}</span>
-        <span class="detail-person-name">${escapeHtml(c.name)}</span>
-      </div>`;
-    }).join('');
-
-    const hasPeoplePanel = directorPills || castPills;
-    const peoplePanelHtml = hasPeoplePanel ? `
-      <div class="detail-slide detail-slide--people">
-        <div class="detail-people-grid">${directorPills}${castPills}</div>
-      </div>` : '';
-    const posterSlideHtml = hasPeoplePanel
-      ? `<div class="detail-poster-slides" id="detail-poster-slides">
-          <div class="detail-slide-track" id="detail-slide-track">
-            <div class="detail-slide detail-slide--poster">${poster}</div>
-            ${peoplePanelHtml}
-          </div>
-          <div class="detail-slide-dots">
-            <span class="detail-slide-dot active"></span>
-            <span class="detail-slide-dot"></span>
-          </div>
-        </div>`
+    const hasPeople = (movie.directors || []).length > 0 || (movie.cast || []).length > 0;
+    const posterSlideHtml = hasPeople
+      ? `<div class="detail-poster-drag" id="detail-poster-drag">${poster}<div class="detail-drag-hint">›</div></div>`
       : `<div class="detail-poster-wrap">${poster}</div>`;
 
     // Date added
