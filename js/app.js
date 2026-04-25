@@ -1248,7 +1248,14 @@ const App = (() => {
         dragEl.style.willChange = '';
         dragEl.style.transition = 'transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)';
         dragEl.style.transform = 'translateX(0)';
-        if (dx >= THRESHOLD) showPeopleOverlay();
+        if (dx >= THRESHOLD) {
+          // Wait for the spring-back to finish before revealing the overlay,
+          // so any stale touchend-to-click on the bubble grid is dropped.
+          dragEl.addEventListener('transitionend', function handler() {
+            dragEl.removeEventListener('transitionend', handler);
+            showPeopleOverlay();
+          });
+        }
       }
 
       dragEl.addEventListener('touchstart', e => {

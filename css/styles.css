@@ -787,13 +787,12 @@ a:hover { color: var(--accent-hover); }
   width: 80px;
   cursor: pointer;
   opacity: 0;
-  transform: scale(0.4);
-  animation: bubble-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  animation-delay: calc(var(--i) * 0.07s);
+  animation: bubble-fade 0.25s ease forwards;
+  animation-delay: calc(var(--i) * 0.04s);
   -webkit-tap-highlight-color: transparent;
 }
-@keyframes bubble-pop {
-  to { opacity: 1; transform: scale(1); }
+@keyframes bubble-fade {
+  to { opacity: 1; }
 }
 .people-bubble-photo {
   width: 70px;
