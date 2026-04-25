@@ -487,14 +487,11 @@ const UI = (() => {
     });
 
     return `<div class="decade-lanes">${keys.map(k => {
-      // Top 10 by rating, sizes assigned by rank, then shuffled for visual variety
       const sorted = [...groups[k]].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 10);
-      // Isolate to the top 10 so the geometry math always forms a flawless rectangle
-      const top10 = sorted.slice(0, 10);
-      const total = top10.length;
-      const withSizes = top10.map((m, rank) => ({ m, sz: mosaicSizeByRank(rank, total) }));
-      // True random shuffle so it's a fresh, organic layout every time you load
-      const shuffled = withSizes.sort(() => Math.random() - 0.5); 
+      const total = sorted.length;
+      const withSizes = sorted.map((m, rank) => ({ m, sz: mosaicSizeByRank(rank, total) }));
+      const seed = sorted.reduce((s, m) => (s + (m.id || 0)) | 0, parseInt(k) || 0);
+      const shuffled = seededShuffle(withSizes, seed);
       const totalCount = groups[k].length;
       return `<div class="decade-section">
         <div class="decade-header">
