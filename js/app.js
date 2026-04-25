@@ -1235,7 +1235,7 @@ const App = (() => {
         overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
       }
 
-      let touchX0 = 0, dragActive = false, maxDx = 0;
+      let touchX0 = 0, touchY0 = 0, tracking = false, dragging = false, maxDx = 0;
       const THRESHOLD = 40;
 
       function getMaxDrag() {
@@ -1243,14 +1243,11 @@ const App = (() => {
         return Math.max(0, window.innerWidth - rect.left - 20);
       }
 
-      function endDrag(dx) {
-        dragActive = false;
+      function springBack(dx) {
         dragEl.style.willChange = '';
         dragEl.style.transition = 'transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)';
         dragEl.style.transform = 'translateX(0)';
         if (dx >= THRESHOLD) {
-          // Wait for the spring-back to finish before revealing the overlay,
-          // so any stale touchend-to-click on the bubble grid is dropped.
           dragEl.addEventListener('transitionend', function handler() {
             dragEl.removeEventListener('transitionend', handler);
             showPeopleOverlay();
@@ -1260,28 +1257,48 @@ const App = (() => {
 
       dragEl.addEventListener('touchstart', e => {
         touchX0 = e.touches[0].clientX;
+        touchY0 = e.touches[0].clientY;
+        tracking = true;
+        dragging = false;
         maxDx = getMaxDrag();
-        dragActive = true;
-        dragEl.style.transition = 'none';
-        dragEl.style.willChange = 'transform';
-      }, { passive: false });
+      }, { passive: true });
 
       dragEl.addEventListener('touchmove', e => {
-        if (!dragActive) return;
+        if (!tracking) return;
+        const dx = e.touches[0].clientX - touchX0;
+        const dy = e.touches[0].clientY - touchY0;
+        // Direction not yet decided — wait for ~8px of motion, then commit
+        if (!dragging) {
+          if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+          if (Math.abs(dy) > Math.abs(dx)) {
+            // Vertical intent — release the gesture so the page scrolls normally
+            tracking = false;
+            return;
+          }
+          // Horizontal intent — claim the gesture
+          dragging = true;
+          dragEl.style.transition = 'none';
+          dragEl.style.willChange = 'transform';
+        }
         e.preventDefault();
-        const dx = Math.max(0, Math.min(e.touches[0].clientX - touchX0, maxDx));
-        dragEl.style.transform = `translateX(${dx}px)`;
+        const clamped = Math.max(0, Math.min(dx, maxDx));
+        dragEl.style.transform = `translateX(${clamped}px)`;
       }, { passive: false });
 
       dragEl.addEventListener('touchend', e => {
-        if (!dragActive) return;
+        if (!tracking && !dragging) return;
+        tracking = false;
+        if (!dragging) return;
+        dragging = false;
         const dx = Math.max(0, e.changedTouches[0].clientX - touchX0);
-        endDrag(dx);
+        springBack(dx);
       });
 
       dragEl.addEventListener('touchcancel', () => {
-        if (!dragActive) return;
-        endDrag(0);
+        if (!dragging) { tracking = false; return; }
+        tracking = false;
+        dragging = false;
+        springBack(0);
       });
     }
   }

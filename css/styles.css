@@ -739,7 +739,7 @@ a:hover { color: var(--accent-hover); }
 .detail-poster-drag {
   flex-shrink: 0;
   cursor: grab;
-  touch-action: none;
+  touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
 }
