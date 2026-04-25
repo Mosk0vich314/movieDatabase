@@ -1,4 +1,11 @@
 const UI = (() => {
+  // Stable within a session, new on refresh — lets you escape a bad mosaic layout by refreshing
+  const SESSION_SEED = (() => {
+    let s = sessionStorage.getItem('mosaic-seed');
+    if (!s) { s = (Math.random() * 0x7fffffff | 0).toString(); sessionStorage.setItem('mosaic-seed', s); }
+    return parseInt(s);
+  })();
+
   function showToast(message, duration = 3000) {
     const toast = document.getElementById('toast');
     toast.textContent = message;
@@ -490,7 +497,7 @@ const UI = (() => {
       const sorted = [...groups[k]].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 10);
       const total = sorted.length;
       const withSizes = sorted.map((m, rank) => ({ m, sz: mosaicSizeByRank(rank, total) }));
-      const seed = sorted.reduce((s, m) => (s + (m.id || 0)) | 0, parseInt(k) || 0);
+      const seed = (SESSION_SEED + (parseInt(k) || 0)) | 0;
       const shuffled = seededShuffle(withSizes, seed);
       const totalCount = groups[k].length;
       return `<div class="decade-section">
