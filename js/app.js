@@ -1235,41 +1235,46 @@ const App = (() => {
         overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
       }
 
-      let touchX0 = 0, touchY0 = 0, dragActive = false, dragConfirmed = false;
-      const THRESHOLD = 32;
+      let touchX0 = 0, dragActive = false, maxDx = 0;
+      const THRESHOLD = 40;
+
+      function getMaxDrag() {
+        const rect = dragEl.getBoundingClientRect();
+        return Math.max(0, window.innerWidth - rect.left - 20);
+      }
+
+      function endDrag(dx) {
+        dragActive = false;
+        dragEl.style.willChange = '';
+        dragEl.style.transition = 'transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        dragEl.style.transform = 'translateX(0)';
+        if (dx >= THRESHOLD) showPeopleOverlay();
+      }
 
       dragEl.addEventListener('touchstart', e => {
         touchX0 = e.touches[0].clientX;
-        touchY0 = e.touches[0].clientY;
+        maxDx = getMaxDrag();
         dragActive = true;
-        dragConfirmed = false;
         dragEl.style.transition = 'none';
         dragEl.style.willChange = 'transform';
-      }, { passive: true });
+      }, { passive: false });
 
       dragEl.addEventListener('touchmove', e => {
         if (!dragActive) return;
-        const dx = e.touches[0].clientX - touchX0;
-        const dy = e.touches[0].clientY - touchY0;
-        // Confirm horizontal drag on first significant movement
-        if (!dragConfirmed) {
-          if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
-          if (Math.abs(dy) > Math.abs(dx)) { dragActive = false; return; } // vertical scroll wins
-          dragConfirmed = true;
-        }
         e.preventDefault();
-        const clampedDx = Math.max(0, Math.min(dx, window.innerWidth));
-        dragEl.style.transform = `translateX(${clampedDx}px) rotate(${clampedDx * 0.015}deg)`;
+        const dx = Math.max(0, Math.min(e.touches[0].clientX - touchX0, maxDx));
+        dragEl.style.transform = `translateX(${dx}px)`;
       }, { passive: false });
 
       dragEl.addEventListener('touchend', e => {
         if (!dragActive) return;
-        dragActive = false;
-        dragEl.style.willChange = '';
         const dx = Math.max(0, e.changedTouches[0].clientX - touchX0);
-        dragEl.style.transition = 'transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)';
-        dragEl.style.transform = 'translateX(0) rotate(0deg)';
-        if (dx >= THRESHOLD) showPeopleOverlay();
+        endDrag(dx);
+      });
+
+      dragEl.addEventListener('touchcancel', () => {
+        if (!dragActive) return;
+        endDrag(0);
       });
     }
   }
