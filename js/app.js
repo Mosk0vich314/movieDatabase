@@ -12,6 +12,7 @@ const App = (() => {
   let searchMode = 'movie';
   let selectedDirectorName = '';
   let pendingPersonSearch = null;
+  let lastPickedId = null;
   let currentFilmography = null;
   // Pulls suggestions from local storage if they exist
   let pendingSuggestions = JSON.parse(localStorage.getItem('savedSuggestions') || 'null');
@@ -1505,11 +1506,16 @@ const App = (() => {
   async function rollWatchlistPick(pool, genreLabel) {
     if (pool.length === 0) { UI.showToast('No films match that genre'); return; }
     if (pool.length === 1) {
+      lastPickedId = pool[0].id;
       window.location.hash = `#detail/${pool[0].id}`;
       return;
     }
 
-    const winner = pool[Math.floor(Math.random() * pool.length)];
+    const pickPool = pool.length > 1 && lastPickedId != null
+      ? pool.filter(m => m.id !== lastPickedId)
+      : pool;
+    const winner = pickPool[Math.floor(Math.random() * pickPool.length)];
+    lastPickedId = winner.id;
     const poolIds = new Set(pool.map(m => m.id));
 
     // If library mode, do slot-machine animation through matching cases
