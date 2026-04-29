@@ -85,6 +85,7 @@ const App = (() => {
       '#add': 'add',
       '#watchlist': 'watchlist',
       '#chart': 'chart',
+      '#inventory': 'inventory',
       '#stats': 'stats',
     };
 
@@ -103,6 +104,7 @@ const App = (() => {
     if (view === 'chart') loadChart();
     if (view !== 'chart') tournament = null;
     if (view === 'stats') loadStats();
+    if (view === 'inventory') loadInventory();
     if (view === 'add') {
       resetAddView();
       if (pendingPersonSearch) {
@@ -1569,6 +1571,149 @@ const App = (() => {
     setTimeout(() => { window.location.hash = `#detail/${winner.id}`; }, 800);
   }
 
+  // --- Inventory ---
+
+  let inventoryQueue = [];
+  let inventoryIndex = 0;
+
+  async function loadInventory() {
+    const all = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
+    const content = document.getElementById('inventory-content');
+    if (all.length === 0) {
+      content.innerHTML = '<p class="inventory-empty">Your catalogue is empty. Add some films first.</p>';
+      document.getElementById('inventory-progress').textContent = '';
+      return;
+    }
+
+    const valid = new Set(all.map(m => m.id));
+    inventoryQueue = inventoryQueue.filter(id => valid.has(id));
+    if (inventoryQueue.length === 0) {
+      inventoryQueue = shuffle(all.map(m => m.id));
+      inventoryIndex = 0;
+    }
+    if (inventoryIndex >= inventoryQueue.length) inventoryIndex = 0;
+
+    renderInventory(all);
+  }
+
+  function renderInventory(allMovies) {
+    const focusId = inventoryQueue[inventoryIndex];
+    const focus = allMovies.find(m => m.id === focusId);
+    if (!focus) return;
+
+    const focusGenres = new Set(focus.genres || []);
+    const others = allMovies.filter(m => m.id !== focus.id);
+    const sameGenre = others.filter(m => (m.genres || []).some(g => focusGenres.has(g)));
+    const candidates = sameGenre.length > 0 ? sameGenre : others;
+
+    const focusRating = focus.rating || 5;
+    const neighbors = candidates
+      .map(m => ({ m, d: Math.abs((m.rating || focusRating) - focusRating) }))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 4)
+      .map(x => x.m);
+
+    const progress = document.getElementById('inventory-progress');
+    progress.textContent = `${inventoryIndex + 1} / ${inventoryQueue.length}`;
+
+    const content = document.getElementById('inventory-content');
+    content.innerHTML = `
+      <div class="inventory-focus">${renderInventoryItem(focus, true)}</div>
+      ${neighbors.length > 0 ? `
+        <div class="inventory-neighbors-label">Compare with</div>
+        <div class="inventory-neighbors">
+          ${neighbors.map(m => renderInventoryItem(m, false)).join('')}
+        </div>
+      ` : ''}
+    `;
+
+    content.querySelectorAll('.inv-slider').forEach(slider => {
+      const id = parseInt(slider.dataset.id, 10);
+      const item = slider.closest('.inventory-item');
+      const valueEl = item.querySelector('.inv-rating-value');
+      const paint = () => {
+        const v = parseFloat(slider.value);
+        const color = UI.ratingColor(v);
+        valueEl.textContent = UI.formatRating(v);
+        valueEl.style.color = color;
+        const pct = ((v - 1) / 9) * 100;
+        slider.style.background = `linear-gradient(to right, ${color} 0%, ${color} ${pct}%, var(--star-empty) ${pct}%, var(--star-empty) 100%)`;
+      };
+      paint();
+      slider.addEventListener('input', paint);
+      slider.addEventListener('change', async () => {
+        const v = parseFloat(slider.value);
+        await updateInventoryRating(id, v);
+      });
+    });
+
+    content.querySelectorAll('.inv-clear').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = parseInt(btn.dataset.id, 10);
+        await updateInventoryRating(id, 0);
+        const fresh = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
+        renderInventory(fresh);
+      });
+    });
+
+    content.querySelectorAll('.inv-poster').forEach(el => {
+      el.addEventListener('click', () => {
+        window.location.hash = `#detail/${el.dataset.id}`;
+      });
+    });
+  }
+
+  function renderInventoryItem(movie, isFocus) {
+    const escape = UI.escapeHtml;
+    const r = movie.rating || 0;
+    const sliderVal = r > 0 ? r : 5;
+    const valDisplay = r > 0 ? UI.formatRating(r) : '-';
+    const valColor = r > 0 ? UI.ratingColor(r) : '';
+    const poster = movie.poster
+      ? `<img src="${movie.poster}" alt="" class="inv-poster" data-id="${movie.id}" loading="lazy">`
+      : `<div class="inv-poster inv-poster-empty" data-id="${movie.id}"></div>`;
+    return `
+      <div class="inventory-item${isFocus ? ' inventory-item--focus' : ''}" data-id="${movie.id}">
+        ${poster}
+        <div class="inv-body">
+          <div class="inv-title">${escape(movie.title)}</div>
+          <div class="inv-meta">${escape(movie.year || '')}${movie.directors && movie.directors.length ? ' &middot; ' + escape(movie.directors[0]) : ''}</div>
+          <div class="inv-rating">
+            <span class="inv-rating-value" style="color:${valColor}">${valDisplay}</span>
+            <span class="inv-rating-max">/10</span>
+          </div>
+          <input type="range" class="inv-slider rating-slider" min="1" max="10" step="0.1" value="${sliderVal}" data-id="${movie.id}">
+          ${r > 0 ? `<button class="btn-link inv-clear" data-id="${movie.id}">Clear rating</button>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  async function updateInventoryRating(id, rating) {
+    const movie = await MovieDB.getMovie(id);
+    if (!movie) return;
+    movie.rating = rating > 0 ? Math.round(rating * 10) / 10 : 0;
+    await MovieDB.updateMovie(movie);
+  }
+
+  function inventoryNext() {
+    if (inventoryQueue.length === 0) return;
+    inventoryIndex = (inventoryIndex + 1) % inventoryQueue.length;
+    loadInventory();
+  }
+
+  function inventoryPrev() {
+    if (inventoryQueue.length === 0) return;
+    inventoryIndex = (inventoryIndex - 1 + inventoryQueue.length) % inventoryQueue.length;
+    loadInventory();
+  }
+
+  function inventoryReshuffle() {
+    inventoryQueue = [];
+    inventoryIndex = 0;
+    loadInventory();
+  }
+
   // --- Stats ---
 
   async function loadStats() {
@@ -1946,6 +2091,9 @@ const App = (() => {
     document.getElementById('wl-view-decades-btn').addEventListener('click', () => setWatchlistViewMode('decades'));
     document.getElementById('wl-view-library-btn').addEventListener('click', () => setWatchlistViewMode('library'));
     document.getElementById('wl-random-pick').addEventListener('click', randomPick);
+    document.getElementById('inventory-next').addEventListener('click', inventoryNext);
+    document.getElementById('inventory-prev').addEventListener('click', inventoryPrev);
+    document.getElementById('inventory-shuffle').addEventListener('click', inventoryReshuffle);
     document.getElementById('watchlist-search').addEventListener('input', loadWatchlist);
     document.getElementById('watchlist-search-clear').addEventListener('click', () => {
       document.getElementById('watchlist-search').value = '';

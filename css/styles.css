@@ -3469,3 +3469,108 @@ input[type="date"].form-input { color-scheme: dark; }
 .detail-backdrop-img.loaded {
   opacity: 1;
 }
+
+/* === Inventory === */
+.inventory-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.inventory-progress {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.inventory-nav { display: flex; gap: 8px; }
+.inventory-nav .btn { padding: 8px 14px; font-size: 0.9rem; }
+.inventory-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 40px 20px;
+}
+.inventory-focus { margin-bottom: 24px; }
+.inventory-neighbors-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.inventory-neighbors {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.inventory-item {
+  display: flex;
+  gap: 14px;
+  padding: 12px;
+  background: var(--card-bg, #1a1d28);
+  border-radius: 12px;
+  align-items: flex-start;
+}
+.inventory-item--focus {
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(124, 92, 252, 0.12), rgba(233, 69, 96, 0.08));
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.inv-poster {
+  width: 70px;
+  height: 105px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+  cursor: pointer;
+  background: #222;
+}
+.inventory-item--focus .inv-poster {
+  width: 100px;
+  height: 150px;
+}
+.inv-poster-empty { background: #222; }
+.inv-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.inv-title {
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.inventory-item--focus .inv-title { font-size: 1.2rem; }
+.inv-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.inv-rating {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  margin-top: 4px;
+}
+.inv-rating-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text-muted);
+}
+.inventory-item--focus .inv-rating-value { font-size: 1.8rem; }
+.inv-rating-max { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+.inv-slider { max-width: 100%; margin-top: 4px; }
+.inv-clear {
+  align-self: flex-start;
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
