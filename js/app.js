@@ -12,7 +12,7 @@ const App = (() => {
   let searchMode = 'movie';
   let selectedDirectorName = '';
   let pendingPersonSearch = null;
-  let lastPickedId = null;
+  let recentPickIds = [];
   let currentFilmography = null;
   // Pulls suggestions from local storage if they exist
   let pendingSuggestions = JSON.parse(localStorage.getItem('savedSuggestions') || 'null');
@@ -1505,17 +1505,29 @@ const App = (() => {
 
   async function rollWatchlistPick(pool, genreLabel) {
     if (pool.length === 0) { UI.showToast('No films match that genre'); return; }
-    if (pool.length === 1) {
-      lastPickedId = pool[0].id;
-      window.location.hash = `#detail/${pool[0].id}`;
+    // Deduplicate by tmdbId so a film accidentally added twice doesn't get double probability
+    const seen = new Set();
+    const deduped = pool.filter(m => {
+      const key = m.tmdbId || m.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    if (deduped.length === 1) {
+      recentPickIds = [deduped[0].id];
+      window.location.hash = `#detail/${deduped[0].id}`;
       return;
     }
 
-    const pickPool = pool.length > 1 && lastPickedId != null
-      ? pool.filter(m => m.id !== lastPickedId)
-      : pool;
-    const winner = pickPool[Math.floor(Math.random() * pickPool.length)];
-    lastPickedId = winner.id;
+    // Exclude the last 3 picks when possible so the same film can't dominate a short session
+    const RECENT_WINDOW = Math.min(3, Math.floor(deduped.length / 2));
+    const pickPool = recentPickIds.length > 0
+      ? deduped.filter(m => !recentPickIds.includes(m.id))
+      : deduped;
+    const effectivePool = pickPool.length > 0 ? pickPool : deduped;
+    const winner = effectivePool[Math.floor(Math.random() * effectivePool.length)];
+    recentPickIds = [winner.id, ...recentPickIds].slice(0, RECENT_WINDOW);
     const poolIds = new Set(pool.map(m => m.id));
 
     // If library mode, do slot-machine animation through matching cases
