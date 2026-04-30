@@ -4675,3 +4675,320 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
   border-color: rgba(64, 188, 121, 0.5);
   color: #40bc79;
 }
+
+/* ============================================================
+   === Phase 3 features ===
+   Ticket Stub modal, Year in Review (Wrapped-style).
+   ============================================================ */
+
+/* --- Ticket button on detail --- */
+.btn-ticket {
+  background: linear-gradient(180deg, rgba(245, 197, 24, 0.18), rgba(245, 197, 24, 0.06));
+  border-color: rgba(245, 197, 24, 0.45);
+  color: #ffd86b;
+}
+.btn-ticket:hover {
+  background: linear-gradient(180deg, rgba(245, 197, 24, 0.3), rgba(245, 197, 24, 0.12));
+  border-color: rgba(245, 197, 24, 0.7);
+  box-shadow: 0 0 16px rgba(245, 197, 24, 0.3);
+}
+
+/* --- Ticket modal --- */
+.ticket-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: trailerIn 0.22s ease-out;
+}
+.ticket-modal--out { animation: trailerOut 0.18s ease-in forwards; }
+.ticket-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  -webkit-backdrop-filter: blur(8px);
+          backdrop-filter: blur(8px);
+}
+.ticket-modal-content {
+  position: relative;
+  width: min(94vw, 1100px);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.ticket-modal-close {
+  position: absolute;
+  top: -42px;
+  right: 0;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
+  font-size: 1.4rem;
+  cursor: pointer;
+  z-index: 2;
+  font-family: inherit;
+  line-height: 1;
+}
+.ticket-canvas-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+.ticket-canvas {
+  width: 100%;
+  max-width: 1000px;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  box-shadow:
+    0 30px 80px rgba(0,0,0,0.85),
+    0 0 0 1px rgba(255, 220, 130, 0.15),
+    0 0 60px rgba(245, 197, 24, 0.18);
+  filter: drop-shadow(0 0 24px rgba(245, 197, 24, 0.12));
+  animation: ticketDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes ticketDrop {
+  from { opacity: 0; transform: translateY(-30px) rotate(-3deg); }
+  to   { opacity: 1; transform: translateY(0) rotate(0); }
+}
+.ticket-loading,
+.ticket-error {
+  color: rgba(255,255,255,0.7);
+  font-style: italic;
+  font-size: 0.95rem;
+  padding: 40px;
+  text-align: center;
+}
+.ticket-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.ticket-actions .btn { min-width: 130px; }
+@media (max-width: 600px) {
+  .ticket-modal-close { top: 8px; right: 8px; }
+  .ticket-canvas-wrap { padding: 0 4px; }
+}
+
+/* --- Year in Review launch button on Stats --- */
+.yir-launch-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  margin-bottom: 22px;
+  background:
+    linear-gradient(135deg, rgba(245, 197, 24, 0.12), rgba(233, 69, 96, 0.1) 50%, rgba(124, 92, 252, 0.12)),
+    var(--bg-card);
+  border: 1px solid rgba(245, 197, 24, 0.3);
+  border-radius: var(--radius-lg);
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.25s ease, border-color 0.25s;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+.yir-launch-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 25%, rgba(255,255,255,0.08) 50%, transparent 75%);
+  transform: translateX(-100%);
+  transition: transform 0.7s ease;
+}
+.yir-launch-btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(245, 197, 24, 0.6);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 30px rgba(245, 197, 24, 0.18);
+}
+.yir-launch-btn:hover::before { transform: translateX(100%); }
+.yir-launch-btn:active { transform: translateY(0) scale(0.99); }
+.yir-launch-icon {
+  font-size: 2rem;
+  filter: drop-shadow(0 0 12px rgba(245, 197, 24, 0.5));
+  flex-shrink: 0;
+}
+.yir-launch-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.yir-launch-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #ffd86b;
+}
+.yir-launch-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.yir-launch-arrow {
+  font-size: 1rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* --- Year in Review fullscreen modal --- */
+.yir-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  background: #050510;
+  display: flex;
+  flex-direction: column;
+  animation: yirIn 0.3s ease-out;
+}
+.yir-modal--out { animation: yirOut 0.2s ease-in forwards; }
+@keyframes yirIn  { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes yirOut { from { opacity: 1; } to { opacity: 0; } }
+
+.yir-progress {
+  display: flex;
+  gap: 4px;
+  padding: 14px 16px 0;
+  z-index: 3;
+  position: relative;
+}
+.yir-progress-seg {
+  flex: 1;
+  height: 3px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.yir-progress-fill {
+  width: 0;
+  height: 100%;
+  background: #fff;
+  border-radius: 2px;
+}
+
+.yir-close {
+  position: absolute;
+  top: 28px;
+  right: 16px;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
+  font-size: 1.4rem;
+  cursor: pointer;
+  z-index: 4;
+  line-height: 1;
+  font-family: inherit;
+}
+
+.yir-stage {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.yir-tap-zones {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  z-index: 2;
+}
+.yir-tap-prev { flex: 1; cursor: pointer; }
+.yir-tap-next { flex: 2; cursor: pointer; }
+
+.yir-slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  animation: yirSlideIn 0.35s ease-out;
+}
+@keyframes yirSlideIn {
+  from { opacity: 0; transform: scale(1.05); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.yir-slide-bg {
+  position: absolute;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  object-fit: cover;
+  filter: blur(28px) brightness(0.45) saturate(1.2);
+  animation: yirKenBurns 6s ease-out infinite alternate;
+  z-index: 0;
+}
+@keyframes yirKenBurns {
+  from { transform: scale(1) translate(0, 0); }
+  to   { transform: scale(1.12) translate(-2%, -1%); }
+}
+.yir-slide-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 40px 28px;
+  max-width: 100%;
+}
+.yir-slide-subtitle {
+  font-size: 0.8rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255, 220, 130, 0.85);
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-shadow: 0 0 18px rgba(245, 197, 24, 0.4);
+  animation: yirRise 0.45s 0.1s ease-out backwards;
+}
+.yir-slide-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 12vw, 7rem);
+  line-height: 1.05;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.01em;
+  text-shadow: 0 4px 30px rgba(0,0,0,0.7), 0 0 60px rgba(233, 69, 96, 0.3);
+  word-wrap: break-word;
+  animation: yirRise 0.5s 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+@keyframes yirRise {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.yir-slide--intro .yir-slide-title,
+.yir-slide--outro .yir-slide-title {
+  font-size: clamp(3.5rem, 18vw, 9rem);
+  background: linear-gradient(135deg, #ffd86b, #f5c518, #ffd86b);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 24px rgba(245, 197, 24, 0.45));
+}
+.yir-slide--stat .yir-slide-title {
+  font-size: clamp(4rem, 22vw, 10rem);
+  background: linear-gradient(135deg, #fff, var(--accent));
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.yir-slide--genre .yir-slide-title,
+.yir-slide--decade .yir-slide-title {
+  background: linear-gradient(135deg, #fff, var(--accent2));
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

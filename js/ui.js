@@ -290,6 +290,7 @@ const UI = (() => {
               : `<button class="btn btn-primary" id="detail-edit" data-id="${movie.id}">Edit</button>`
             }
             ${!movie.watchlist ? `<button class="btn btn-secondary" id="detail-rewatch">&#8634; Rewatch</button>` : ''}
+            ${!movie.watchlist && (movie.rating || 0) > 0 ? `<button class="btn btn-secondary btn-ticket" id="detail-ticket" type="button">&#127903; Ticket Stub</button>` : ''}
             <button class="btn btn-danger" id="detail-delete" data-id="${movie.id}">Delete</button>
           </div>
         </div>

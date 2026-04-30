@@ -1300,6 +1300,14 @@ const App = (() => {
       });
     }
 
+    const ticketBtn = document.getElementById('detail-ticket');
+    if (ticketBtn) {
+      ticketBtn.addEventListener('click', async () => {
+        haptic(12);
+        await openTicketStub(movie);
+      });
+    }
+
     document.getElementById('detail-delete').addEventListener('click', async () => {
       const msg = movie.watchlist
         ? 'Remove this movie from your watchlist?'
@@ -1484,6 +1492,457 @@ const App = (() => {
     document.addEventListener('keydown', function onEsc(e) {
       if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
     });
+  }
+
+  // ---- Ticket Stub generator ----
+  function _loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+
+  function _ticketSerial(movie) {
+    const id = (movie.id || 0).toString().padStart(5, '0');
+    const yr = movie.year || '----';
+    return `№ ${yr}-${id}`;
+  }
+
+  async function generateTicketStub(movie) {
+    const W = 1100, H = 460;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Body
+    const bodyGrad = ctx.createLinearGradient(0, 0, 0, H);
+    bodyGrad.addColorStop(0, '#f5e3bd');
+    bodyGrad.addColorStop(1, '#e6cd95');
+    ctx.fillStyle = bodyGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Soft texture (cross-hatch noise)
+    ctx.save();
+    ctx.globalAlpha = 0.05;
+    for (let i = 0; i < 600; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? '#5a3a18' : '#3a2510';
+      ctx.fillRect(Math.random() * W, Math.random() * H, 1.5, 1.5);
+    }
+    ctx.restore();
+
+    // Inner double border
+    ctx.strokeStyle = '#5a3a18';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(18, 18, W - 36, H - 36);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(28, 28, W - 56, H - 56);
+
+    // Perforation line
+    const perfX = W - 220;
+    ctx.save();
+    ctx.strokeStyle = '#5a3a18';
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.moveTo(perfX, 28);
+    ctx.lineTo(perfX, H - 28);
+    ctx.stroke();
+    ctx.restore();
+
+    // Half-circle perforations top/bottom of perf line
+    ctx.fillStyle = '#0a0a14';
+    ctx.beginPath(); ctx.arc(perfX, 0, 12, 0, Math.PI); ctx.fill();
+    ctx.beginPath(); ctx.arc(perfX, H, 12, Math.PI, 2 * Math.PI); ctx.fill();
+
+    // Poster
+    if (movie.poster) {
+      try {
+        const img = await _loadImage(movie.poster);
+        const pH = H - 80;
+        const pW = pH * (2 / 3);
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.4)';
+        ctx.shadowBlur = 14;
+        ctx.shadowOffsetY = 4;
+        roundedRect(ctx, 50, 40, pW, pH, 8);
+        ctx.clip();
+        ctx.drawImage(img, 50, 40, pW, pH);
+        ctx.restore();
+      } catch (_) {}
+    }
+
+    // Text block
+    const tx = 50 + (H - 80) * (2 / 3) + 28;
+
+    ctx.fillStyle = '#5a3a18';
+    ctx.font = '600 14px "Cinzel", serif';
+    ctx.textBaseline = 'top';
+    ctx.fillText('CINEMA · ADMIT ONE', tx, 50);
+
+    ctx.fillStyle = '#1a0e02';
+    ctx.font = '700 48px "Cinzel", "Times New Roman", serif';
+    const titleLines = wrapText(ctx, movie.title || 'Untitled', perfX - tx - 20);
+    let yCursor = 80;
+    for (let i = 0; i < Math.min(2, titleLines.length); i++) {
+      ctx.fillText(titleLines[i], tx, yCursor);
+      yCursor += 54;
+    }
+
+    ctx.fillStyle = '#5a3a18';
+    ctx.font = '400 22px "Cinzel", serif';
+    ctx.fillText(movie.year || '', tx, yCursor + 4);
+    yCursor += 40;
+
+    // Director
+    if ((movie.directors || []).length) {
+      ctx.font = 'italic 18px serif';
+      ctx.fillStyle = '#3a2510';
+      ctx.fillText(`directed by ${movie.directors[0]}`, tx, yCursor);
+      yCursor += 30;
+    }
+
+    // Rating — large
+    yCursor = Math.max(yCursor, 240);
+    ctx.font = '800 26px "Cinzel", serif';
+    ctx.fillStyle = '#5a3a18';
+    ctx.fillText('YOUR RATING', tx, yCursor);
+    yCursor += 32;
+    ctx.font = '900 86px "Cinzel", serif';
+    ctx.fillStyle = '#c0392b';
+    ctx.fillText(UI.formatRating(movie.rating || 0) + '/10', tx, yCursor);
+
+    // Date watched (bottom)
+    const dateStr = movie.dateAdded
+      ? new Date(movie.dateAdded).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
+      : '';
+    ctx.font = '600 16px "Cinzel", serif';
+    ctx.fillStyle = '#3a2510';
+    ctx.fillText(dateStr, tx, H - 70);
+    ctx.font = '400 12px monospace';
+    ctx.fillStyle = '#5a3a18';
+    ctx.fillText(_ticketSerial(movie), tx, H - 46);
+
+    // Stub side
+    const sx = perfX + 110;
+    ctx.save();
+    ctx.translate(sx, H / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.font = '900 56px "Cinzel", serif';
+    ctx.fillStyle = '#1a0e02';
+    ctx.fillText('ADMIT ONE', 0, -40);
+    ctx.font = '600 16px "Cinzel", serif';
+    ctx.fillStyle = '#5a3a18';
+    ctx.fillText(_ticketSerial(movie), 0, 12);
+    ctx.font = '400 12px monospace';
+    ctx.fillStyle = '#5a3a18';
+    ctx.fillText('— ROW A · SEAT 1 —', 0, 38);
+    ctx.restore();
+
+    return canvas;
+  }
+
+  function roundedRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function wrapText(ctx, text, maxWidth) {
+    const words = (text || '').split(' ');
+    const lines = []; let current = '';
+    for (const w of words) {
+      const test = current ? current + ' ' + w : w;
+      if (ctx.measureText(test).width > maxWidth && current) {
+        lines.push(current); current = w;
+      } else current = test;
+    }
+    if (current) lines.push(current);
+    return lines;
+  }
+
+  async function openTicketStub(movie) {
+    if (document.getElementById('ticket-modal')) return;
+    const modal = document.createElement('div');
+    modal.id = 'ticket-modal';
+    modal.className = 'ticket-modal';
+    modal.innerHTML = `
+      <div class="ticket-modal-backdrop"></div>
+      <div class="ticket-modal-content">
+        <button class="ticket-modal-close" aria-label="Close">&times;</button>
+        <div class="ticket-canvas-wrap">
+          <div class="ticket-loading">Printing your stub…</div>
+        </div>
+        <div class="ticket-actions">
+          <button class="btn btn-primary ticket-download" type="button" disabled>&#11015; Download</button>
+          <button class="btn btn-secondary ticket-share" type="button" disabled>Share</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const close = () => {
+      modal.classList.add('ticket-modal--out');
+      setTimeout(() => modal.remove(), 200);
+    };
+    modal.querySelector('.ticket-modal-close').addEventListener('click', close);
+    modal.querySelector('.ticket-modal-backdrop').addEventListener('click', close);
+
+    let canvas;
+    try {
+      canvas = await generateTicketStub(movie);
+    } catch (e) {
+      modal.querySelector('.ticket-canvas-wrap').innerHTML = '<div class="ticket-error">Could not generate ticket. The poster may not allow downloads.</div>';
+      return;
+    }
+    canvas.classList.add('ticket-canvas');
+    const wrap = modal.querySelector('.ticket-canvas-wrap');
+    wrap.innerHTML = '';
+    wrap.appendChild(canvas);
+
+    const dlBtn = modal.querySelector('.ticket-download');
+    const shareBtn = modal.querySelector('.ticket-share');
+    dlBtn.disabled = false;
+    shareBtn.disabled = false;
+
+    dlBtn.addEventListener('click', () => {
+      haptic(10);
+      const link = document.createElement('a');
+      link.download = `ticket-${(movie.title || 'movie').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+
+    shareBtn.addEventListener('click', async () => {
+      haptic(10);
+      try {
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+        if (!blob) throw new Error('blob fail');
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], 'ticket.png', { type: 'image/png' })] })) {
+          await navigator.share({
+            files: [new File([blob], `ticket-${movie.title}.png`, { type: 'image/png' })],
+            title: `Ticket Stub — ${movie.title}`,
+            text: `Just watched ${movie.title} (${movie.year}) — ${UI.formatRating(movie.rating)}/10`,
+          });
+        } else {
+          dlBtn.click();
+        }
+      } catch (_) {}
+    });
+  }
+
+  // ---- Year in Review ----
+  function computeYearInReview(allMovies, year) {
+    const inYear = allMovies.filter(m => {
+      if (m.watchlist) return false;
+      if (!m.dateAdded) return false;
+      return new Date(m.dateAdded).getFullYear() === year;
+    });
+
+    const totalCount = inYear.length;
+    const totalMinutes = inYear.reduce((s, m) => s + (m.runtime || 0), 0);
+    const totalHours = Math.round(totalMinutes / 60);
+
+    const ratedOnly = inYear.filter(m => (m.rating || 0) > 0);
+    const avgRating = ratedOnly.length > 0
+      ? (ratedOnly.reduce((s, m) => s + m.rating, 0) / ratedOnly.length)
+      : 0;
+
+    const genreCounts = {};
+    inYear.forEach(m => (m.genres || []).forEach(g => genreCounts[g] = (genreCounts[g] || 0) + 1));
+    const topGenre = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0] || null;
+
+    const dirCounts = {};
+    inYear.forEach(m => (m.directors || []).forEach(d => dirCounts[d] = (dirCounts[d] || 0) + 1));
+    const topDir = Object.entries(dirCounts).sort((a, b) => b[1] - a[1])[0] || null;
+
+    const decadeCounts = {};
+    inYear.forEach(m => {
+      if (!m.year) return;
+      const dec = Math.floor(parseInt(m.year) / 10) * 10;
+      decadeCounts[dec] = (decadeCounts[dec] || 0) + 1;
+    });
+    const topDecade = Object.entries(decadeCounts).sort((a, b) => b[1] - a[1])[0] || null;
+
+    const hiddenGems = inYear
+      .filter(m => (m.rating || 0) >= 8 && m.voteCount && m.voteCount < 5000)
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+      .slice(0, 1);
+
+    const rewatched = inYear.filter(m => m.rewatches > 0).sort((a, b) => b.rewatches - a.rewatches).slice(0, 1);
+    const best = [...inYear].sort((a, b) => (b.rating || 0) - (a.rating || 0))[0] || null;
+
+    return {
+      year, totalCount, totalHours, totalMinutes, avgRating,
+      topGenre, topDir, topDecade, hiddenGems, rewatched, best,
+    };
+  }
+
+  function renderYearInReviewSlides(s) {
+    const slides = [];
+    slides.push({
+      title: `${s.year}`,
+      subtitle: 'YOUR YEAR IN CINEMA',
+      kind: 'intro',
+    });
+    slides.push({
+      title: s.totalCount.toString(),
+      subtitle: s.totalCount === 1 ? 'film logged' : 'films logged',
+      kind: 'stat',
+    });
+    if (s.totalHours > 0) {
+      const days = (s.totalMinutes / 60 / 24).toFixed(1);
+      slides.push({
+        title: `${s.totalHours}h`,
+        subtitle: `that's ${days} days in the dark`,
+        kind: 'stat',
+      });
+    }
+    if (s.avgRating > 0) {
+      slides.push({
+        title: s.avgRating.toFixed(1),
+        subtitle: 'your average rating',
+        kind: 'stat',
+      });
+    }
+    if (s.topGenre) {
+      slides.push({
+        title: s.topGenre[0],
+        subtitle: `your top genre · ${s.topGenre[1]} films`,
+        kind: 'genre',
+      });
+    }
+    if (s.topDir) {
+      slides.push({
+        title: s.topDir[0],
+        subtitle: `most-watched auteur · ${s.topDir[1]} films`,
+        kind: 'director',
+      });
+    }
+    if (s.topDecade) {
+      slides.push({
+        title: `'${(s.topDecade[0] % 100).toString().padStart(2, '0')}s`,
+        subtitle: `your favourite decade · ${s.topDecade[1]} films`,
+        kind: 'decade',
+      });
+    }
+    if (s.best) {
+      slides.push({
+        title: s.best.title,
+        subtitle: `your highest rated · ${UI.formatRating(s.best.rating)}/10`,
+        kind: 'movie',
+        movie: s.best,
+      });
+    }
+    if (s.hiddenGems.length) {
+      slides.push({
+        title: s.hiddenGems[0].title,
+        subtitle: `hidden gem of the year`,
+        kind: 'movie',
+        movie: s.hiddenGems[0],
+      });
+    }
+    if (s.rewatched.length) {
+      slides.push({
+        title: s.rewatched[0].title,
+        subtitle: `most rewatched · ${s.rewatched[0].rewatches}× rewound`,
+        kind: 'movie',
+        movie: s.rewatched[0],
+      });
+    }
+    slides.push({
+      title: 'THE END',
+      subtitle: `until next year`,
+      kind: 'outro',
+    });
+    return slides;
+  }
+
+  function openYearInReview(allMovies, year) {
+    if (document.getElementById('yir-modal')) return;
+    const stats = computeYearInReview(allMovies, year);
+    if (stats.totalCount === 0) {
+      UI.showToast(`No films logged in ${year} yet`);
+      return;
+    }
+    const slides = renderYearInReviewSlides(stats);
+
+    const modal = document.createElement('div');
+    modal.id = 'yir-modal';
+    modal.className = 'yir-modal';
+    modal.innerHTML = `
+      <div class="yir-progress">
+        ${slides.map((_, i) => `<div class="yir-progress-seg" data-idx="${i}"><div class="yir-progress-fill"></div></div>`).join('')}
+      </div>
+      <button class="yir-close" aria-label="Close">&times;</button>
+      <div class="yir-stage" id="yir-stage"></div>
+      <div class="yir-tap-zones">
+        <div class="yir-tap-prev"></div>
+        <div class="yir-tap-next"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    let idx = 0;
+    const SLIDE_MS = 3800;
+    let timer = null;
+
+    function showSlide(i) {
+      idx = i;
+      const slide = slides[i];
+      const stage = document.getElementById('yir-stage');
+      const movie = slide.movie;
+      const backdrop = movie?.backdrop || movie?.poster || '';
+      stage.innerHTML = `
+        <div class="yir-slide yir-slide--${slide.kind}">
+          ${backdrop ? `<img src="${backdrop}" class="yir-slide-bg" alt="">` : ''}
+          <div class="yir-slide-content">
+            <div class="yir-slide-subtitle">${UI.escapeHtml(slide.subtitle || '')}</div>
+            <div class="yir-slide-title">${UI.escapeHtml(slide.title || '')}</div>
+          </div>
+        </div>`;
+      modal.querySelectorAll('.yir-progress-seg').forEach((seg, j) => {
+        const fill = seg.querySelector('.yir-progress-fill');
+        if (j < i) { fill.style.width = '100%'; fill.style.transition = 'none'; }
+        else if (j === i) {
+          fill.style.transition = 'none';
+          fill.style.width = '0%';
+          fill.offsetWidth;
+          fill.style.transition = `width ${SLIDE_MS}ms linear`;
+          fill.style.width = '100%';
+        } else { fill.style.width = '0%'; fill.style.transition = 'none'; }
+      });
+      haptic(6);
+      clearTimeout(timer);
+      timer = setTimeout(next, SLIDE_MS);
+    }
+    function next() {
+      if (idx < slides.length - 1) showSlide(idx + 1);
+      else close();
+    }
+    function prev() { showSlide(Math.max(0, idx - 1)); }
+    function close() {
+      clearTimeout(timer);
+      modal.classList.add('yir-modal--out');
+      setTimeout(() => modal.remove(), 250);
+    }
+
+    modal.querySelector('.yir-close').addEventListener('click', close);
+    modal.querySelector('.yir-tap-prev').addEventListener('click', prev);
+    modal.querySelector('.yir-tap-next').addEventListener('click', next);
+    document.addEventListener('keydown', function onKey(e) {
+      if (!document.getElementById('yir-modal')) { document.removeEventListener('keydown', onKey); return; }
+      if (e.key === 'Escape') close();
+      else if (e.key === 'ArrowLeft') prev();
+      else if (e.key === 'ArrowRight') next();
+    });
+
+    showSlide(0);
   }
 
   async function fetchSimilarSuggestions(movieTitle, tmdbId) {
@@ -1901,9 +2360,27 @@ const App = (() => {
     const movies = allMovies.filter(m => !m.watchlist);
     const stats = Stats.compute(movies);
     const container = document.getElementById('stats-container');
-    container.innerHTML = `<div id="director-marathons-wrap"></div>` + Stats.render(stats);
+    const currentYear = new Date().getFullYear();
+    const yirBanner = `
+      <button class="yir-launch-btn" id="yir-launch" type="button">
+        <span class="yir-launch-icon">&#127916;</span>
+        <span class="yir-launch-text">
+          <span class="yir-launch-title">${currentYear} · Year in Review</span>
+          <span class="yir-launch-sub">A Wrapped-style retrospective of your year in cinema</span>
+        </span>
+        <span class="yir-launch-arrow">&#10095;</span>
+      </button>`;
+    container.innerHTML = yirBanner + `<div id="director-marathons-wrap"></div>` + Stats.render(stats);
     animateCounters(container);
     loadDirectorMarathons(allMovies);
+
+    const yirBtn = document.getElementById('yir-launch');
+    if (yirBtn) {
+      yirBtn.addEventListener('click', () => {
+        haptic(15);
+        openYearInReview(allMovies, currentYear);
+      });
+    }
   }
 
   // ---- Complete the Director: filmography lanes for favorite directors ----
