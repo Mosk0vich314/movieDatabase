@@ -3598,23 +3598,35 @@ input[type="date"].form-input { color-scheme: dark; }
    Cinematic refinements layered on top of the base styles.
    ============================================================ */
 
-/* --- Cinematic app title: pulsing accent halo --- */
+/* --- Cinematic app title: light sweeps left→right and back across letters --- */
 .app-title {
   color: #fff !important;
-  animation: titlePulse 3.2s ease-in-out infinite !important;
+  text-shadow: 0 0 22px rgba(233, 69, 96, 0.4) !important;
 }
-@keyframes titlePulse {
-  0%, 100% {
-    text-shadow:
-      0 0 14px rgba(233, 69, 96, 0.35),
-      0 0 28px rgba(233, 69, 96, 0.15);
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .app-title {
+    background-image: linear-gradient(
+      100deg,
+      #b8b8c8 0%,
+      #d8d8e2 30%,
+      #ffffff 45%,
+      #ff9bb0 50%,
+      #ffffff 55%,
+      #d8d8e2 70%,
+      #b8b8c8 100%
+    );
+    background-size: 260% 100%;
+    background-position: 130% 50%;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: titleSheen 4.8s ease-in-out infinite alternate !important;
   }
-  50% {
-    text-shadow:
-      0 0 28px rgba(233, 69, 96, 0.95),
-      0 0 60px rgba(233, 69, 96, 0.55),
-      0 0 100px rgba(124, 92, 252, 0.35);
-  }
+}
+@keyframes titleSheen {
+  0%   { background-position: 130% 50%; }
+  100% { background-position: -30% 50%; }
 }
 
 /* Decorative side rules flanking the title */
