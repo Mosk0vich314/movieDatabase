@@ -3839,7 +3839,6 @@ input[type="date"].form-input { color-scheme: dark; }
 
 /* --- Honor reduced motion preferences --- */
 @media (prefers-reduced-motion: reduce) {
-  .app-title,
   .empty-state::before,
   .taste-dna-card::before {
     animation: none;
@@ -3854,8 +3853,6 @@ input[type="date"].form-input { color-scheme: dark; }
    ============================================================ */
 
 html, body {
-  /* Stop iOS rubber-band/pull-to-refresh on the whole page */
-  overscroll-behavior-y: none;
   /* Prevent iOS auto text-size inflation in landscape */
   -webkit-text-size-adjust: 100%;
 }
