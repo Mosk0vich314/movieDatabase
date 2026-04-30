@@ -1912,13 +1912,33 @@ a:hover { color: var(--accent-hover); }
   margin-bottom: 10px;
 }
 .chart-toplists-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
 }
-.chart-toplist-btn { font-size: 0.75rem; padding: 6px 10px; flex-shrink: 0; }
-.chart-toplist-name { font-weight: 600; font-size: 0.75rem; }
+.chart-toplist-btn {
+  font-size: 0.72rem;
+  padding: 9px 8px;
+  min-width: 0;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chart-toplist-btn .ext-badge-logo { font-weight: 800; letter-spacing: 0.02em; }
+.chart-toplist-name {
+  font-weight: 600;
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chart-toplist-btn .ext-badge-arrow { font-size: 0.7rem; opacity: 0.65; }
+@media (max-width: 360px) {
+  .chart-toplist-btn { font-size: 0.66rem; padding: 8px 4px; gap: 3px; }
+  .chart-toplist-name { font-size: 0.66rem; }
+  .chart-toplist-btn .ext-badge-arrow { display: none; }
+}
 
 .chart-list-inner { display: flex; flex-direction: column; }
 .chart-item {
@@ -3828,4 +3848,102 @@ input[type="date"].form-input { color-scheme: dark; }
   }
   .view { animation: none; }
   .movie-card:hover .movie-card-poster img { transform: none; }
+}
+
+/* ============================================================
+   === Native-feel layer ===
+   Strip out browser-y behaviors that feel webby on mobile.
+   ============================================================ */
+
+html, body {
+  /* Stop iOS rubber-band/pull-to-refresh on the whole page */
+  overscroll-behavior-y: none;
+  /* Prevent iOS auto text-size inflation in landscape */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  /* Respect iPhone safe areas */
+  padding-bottom: max(80px, env(safe-area-inset-bottom));
+  /* No double-tap zoom anywhere on the chrome */
+  touch-action: manipulation;
+}
+
+/* No selection caret on chrome elements (keep it on prose) */
+.app-header,
+.app-nav,
+.nav-link,
+.btn,
+.filter-toggle-btn,
+.view-toggle-btn,
+.smt-btn,
+.custom-select,
+.custom-select-trigger,
+.custom-select-option,
+.movie-card-title,
+.movie-card-year,
+.movie-card-director,
+.chart-header-title,
+.chart-toplist-btn,
+.genre-tag,
+.rating-badge,
+.toast,
+.empty-state,
+.tournament-launch-btn {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Allow selection inside actual content surfaces */
+.detail-overview,
+.detail-notes p,
+.form-overview,
+.form-input,
+.search-input {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Smoother momentum scrolling on horizontal lanes */
+.movie-grid,
+.chart-toplists-row,
+[class*="lane"],
+[class*="scroll"] {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide horizontal scrollbars on lane-style scrollers — they're not native */
+.decade-lane::-webkit-scrollbar,
+.lane-scroll::-webkit-scrollbar,
+.ext-badges-row::-webkit-scrollbar { height: 0; display: none; }
+.decade-lane,
+.lane-scroll,
+.ext-badges-row { scrollbar-width: none; }
+
+/* Larger tap targets — iOS HIG min 44px */
+.nav-link,
+.btn,
+.filter-toggle-btn,
+.view-toggle-btn,
+.smt-btn,
+.input-clear { min-height: 40px; }
+
+/* Sticky nav also needs the safe-area top inset */
+.app-nav {
+  padding-top: max(6px, calc(env(safe-area-inset-top) * 0.4));
+}
+
+/* Toast lifts above the home indicator */
+.toast {
+  bottom: max(24px, calc(env(safe-area-inset-bottom) + 16px));
+}
+
+/* Native-style press dim on links/cards */
+.movie-card:active,
+.search-result:active,
+.nav-link:active,
+.chart-toplist-btn:active {
+  filter: brightness(0.92);
+  transition-duration: 0.05s;
 }

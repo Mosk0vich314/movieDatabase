@@ -902,9 +902,9 @@ const App = (() => {
     const topListsHtml = `<div class="chart-toplists">
       <div class="chart-toplists-label">Explore top lists</div>
       <div class="chart-toplists-row">
-        <a href="https://letterboxd.com/films/top250/" target="_blank" rel="noopener" class="ext-badge ext-badge--lb chart-toplist-btn">
+        <a href="https://letterboxd.com/films/popular/" target="_blank" rel="noopener" class="ext-badge ext-badge--lb chart-toplist-btn">
           <span class="ext-badge-logo">LBxd</span>
-          <span class="chart-toplist-name">Top 250</span>
+          <span class="chart-toplist-name">Popular</span>
           <span class="ext-badge-arrow">&#8599;</span>
         </a>
         <a href="https://www.themoviedb.org/movie/top-rated" target="_blank" rel="noopener" class="ext-badge ext-badge--tmdb chart-toplist-btn">
