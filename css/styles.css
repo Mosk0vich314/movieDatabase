@@ -1880,10 +1880,8 @@ a:hover { color: var(--accent-hover); }
   font-family: 'Bebas Neue', sans-serif;
   font-size: 2.2rem;
   letter-spacing: 0.1em;
-  background: linear-gradient(120deg, #fff 30%, var(--accent));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #fff;
+  text-shadow: 0 0 18px rgba(233, 69, 96, 0.35);
   line-height: 1;
 }
 .chart-header-sub {
@@ -3580,25 +3578,25 @@ input[type="date"].form-input { color-scheme: dark; }
    Cinematic refinements layered on top of the base styles.
    ============================================================ */
 
-/* --- Cinematic app title: gradient sheen + soft pulse --- */
+/* --- Cinematic app title: solid white with animated accent glow --- */
 .app-title {
-  background: linear-gradient(100deg,
-    #fff 0%,
-    #fff 38%,
-    var(--accent-hover) 50%,
-    #fff 62%,
-    #fff 100%);
-  background-size: 220% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  animation: titleSheen 9s ease-in-out infinite;
-  filter: drop-shadow(0 0 22px rgba(233, 69, 96, 0.35));
+  color: #fff;
+  text-shadow:
+    0 0 22px rgba(233, 69, 96, 0.45),
+    0 0 40px rgba(233, 69, 96, 0.25);
+  animation: titleGlow 6s ease-in-out infinite;
 }
-@keyframes titleSheen {
-  0%, 100% { background-position: 100% 50%; }
-  50%      { background-position: 0% 50%; }
+@keyframes titleGlow {
+  0%, 100% {
+    text-shadow:
+      0 0 22px rgba(233, 69, 96, 0.45),
+      0 0 40px rgba(233, 69, 96, 0.2);
+  }
+  50% {
+    text-shadow:
+      0 0 28px rgba(233, 69, 96, 0.7),
+      0 0 60px rgba(233, 69, 96, 0.35);
+  }
 }
 
 /* Decorative side rules flanking the title */
