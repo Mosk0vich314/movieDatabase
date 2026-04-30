@@ -17,6 +17,11 @@ const App = (() => {
   // Pulls suggestions from local storage if they exist
   let pendingSuggestions = JSON.parse(localStorage.getItem('savedSuggestions') || 'null');
 
+  // Hidden Gems lens — high personal ratings, low TMDB vote counts
+  let gemsLens = localStorage.getItem('gemsLens') === '1';
+  const GEM_RATING_MIN = 7;
+  const GEM_VOTE_MAX = 5000;
+
   // Haptic helper — silent no-op on unsupported devices
   function haptic(pattern = 8) {
     try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (_) {}
@@ -397,6 +402,11 @@ const App = (() => {
       if (director && !(m.directors || []).includes(director)) return false;
       if (minRating && (m.rating || 0) < minRating) return false;
       if (search && !m.title.toLowerCase().includes(search)) return false;
+      if (gemsLens) {
+        if ((m.rating || 0) < GEM_RATING_MIN) return false;
+        const vc = m.voteCount || 0;
+        if (vc === 0 || vc > GEM_VOTE_MAX) return false;
+      }
       return true;
     });
   }
@@ -1887,11 +1897,166 @@ const App = (() => {
   // --- Stats ---
 
   async function loadStats() {
-    const movies = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
+    const allMovies = await MovieDB.getAllMovies();
+    const movies = allMovies.filter(m => !m.watchlist);
     const stats = Stats.compute(movies);
     const container = document.getElementById('stats-container');
-    container.innerHTML = Stats.render(stats);
+    container.innerHTML = `<div id="director-marathons-wrap"></div>` + Stats.render(stats);
     animateCounters(container);
+    loadDirectorMarathons(allMovies);
+  }
+
+  // ---- Complete the Director: filmography lanes for favorite directors ----
+  const DIR_FILMO_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
+  const DIR_FAV_RATING = 8;
+
+  function findFavoriteDirectors(movies) {
+    const counts = new Map(); // director -> {films: Set<tmdbId>, highCount: number}
+    for (const m of movies) {
+      if (m.watchlist) continue;
+      for (const d of (m.directors || [])) {
+        if (!counts.has(d)) counts.set(d, { films: new Set(), highCount: 0 });
+        const entry = counts.get(d);
+        entry.films.add(String(m.tmdbId));
+        if ((m.rating || 0) >= DIR_FAV_RATING) entry.highCount++;
+      }
+    }
+    return [...counts.entries()]
+      .filter(([, info]) => info.highCount >= 2)
+      .sort((a, b) => b[1].highCount - a[1].highCount)
+      .map(([name, info]) => ({ name, ownedTmdbIds: info.films, highCount: info.highCount }));
+  }
+
+  async function getDirectorFilmography(name) {
+    const cacheKey = `dirFilmo:${name}`;
+    try {
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+      if (cached && Date.now() - cached.t < DIR_FILMO_CACHE_TTL) return cached.data;
+    } catch (_) {}
+    try {
+      const persons = await TMDB.searchPerson(name);
+      const person = (persons || []).find(p => p.known_for_department === 'Directing') || (persons || [])[0];
+      if (!person) return null;
+      const credits = await TMDB.getPersonMovieCredits(person.id);
+      const directed = (credits.crew || []).filter(c => c.job === 'Director');
+      const data = {
+        personId: person.id,
+        profileUrl: person.profile_path ? TMDB.profileUrl(person.profile_path) : '',
+        films: directed.map(f => ({
+          id: f.id,
+          title: f.title,
+          year: f.release_date ? f.release_date.slice(0, 4) : '',
+          poster: f.poster_path ? TMDB.posterUrl(f.poster_path, 'w154') : '',
+          voteCount: f.vote_count || 0,
+          voteAverage: f.vote_average || 0,
+          releaseDate: f.release_date || '',
+        })),
+      };
+      try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), data })); } catch (_) {}
+      return data;
+    } catch (_) { return null; }
+  }
+
+  async function loadDirectorMarathons(allMovies) {
+    const wrap = document.getElementById('director-marathons-wrap');
+    if (!wrap) return;
+    const favorites = findFavoriteDirectors(allMovies);
+    if (favorites.length === 0) { wrap.innerHTML = ''; return; }
+
+    const ownedAll = new Set(allMovies.map(m => String(m.tmdbId)));
+    wrap.innerHTML = `<div class="director-marathons">
+      <div class="dm-section-label"><span class="dm-icon">&#127916;</span> Complete the Director</div>
+      <div class="dm-section-sub">Films from auteurs you've rated highly</div>
+      <div class="dm-list" id="dm-list"><div class="dm-loading">Loading filmographies…</div></div>
+    </div>`;
+
+    const list = wrap.querySelector('#dm-list');
+    list.innerHTML = '';
+    const top = favorites.slice(0, 4); // limit API calls
+
+    for (const fav of top) {
+      const filmo = await getDirectorFilmography(fav.name);
+      if (!filmo || !filmo.films) continue;
+      const unwatched = filmo.films
+        .filter(f => f.releaseDate && new Date(f.releaseDate) <= new Date())
+        .filter(f => !ownedAll.has(String(f.id)))
+        .filter(f => f.voteCount >= 50) // skip ultra-obscure to keep the lane meaningful
+        .sort((a, b) => (b.voteAverage * Math.log10(b.voteCount + 10)) - (a.voteAverage * Math.log10(a.voteCount + 10)))
+        .slice(0, 12);
+
+      if (unwatched.length === 0) continue;
+      const total = filmo.films.filter(f => f.releaseDate && new Date(f.releaseDate) <= new Date()).length;
+      const owned = total - unwatched.length;
+
+      const photoHtml = filmo.profileUrl
+        ? `<img src="${filmo.profileUrl}" alt="${UI.escapeHtml(fav.name)}" class="dm-photo">`
+        : `<div class="dm-photo dm-photo-placeholder">${UI.escapeHtml(fav.name).split(' ').map(w => w[0]).join('').slice(0, 2)}</div>`;
+
+      const filmsHtml = unwatched.map(f => `
+        <div class="dm-film" data-tmdb-id="${f.id}">
+          ${f.poster
+            ? `<img src="${f.poster}" class="dm-film-poster" alt="${UI.escapeHtml(f.title)}" loading="lazy">`
+            : `<div class="dm-film-poster dm-film-poster-empty"></div>`}
+          <div class="dm-film-title">${UI.escapeHtml(f.title)}</div>
+          <div class="dm-film-year">${f.year || ''}</div>
+          <button class="dm-add-btn" data-tmdb-id="${f.id}" type="button">+ Watchlist</button>
+        </div>
+      `).join('');
+
+      const dirEl = document.createElement('div');
+      dirEl.className = 'dm-director';
+      dirEl.innerHTML = `
+        <div class="dm-header">
+          ${photoHtml}
+          <div class="dm-meta">
+            <div class="dm-name">${UI.escapeHtml(fav.name)}</div>
+            <div class="dm-progress-row">
+              <div class="dm-progress-bar"><div class="dm-progress-fill" style="width:${(owned / Math.max(total, 1)) * 100}%"></div></div>
+              <div class="dm-progress-text">${owned}/${total} watched</div>
+            </div>
+          </div>
+        </div>
+        <div class="dm-films-scroll">${filmsHtml}</div>
+      `;
+      list.appendChild(dirEl);
+
+      dirEl.querySelectorAll('.dm-add-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const id = parseInt(btn.dataset.tmdbId);
+          haptic(10);
+          btn.disabled = true;
+          btn.textContent = 'Adding…';
+          try {
+            await addToWatchlist(id);
+            btn.textContent = '&#10003; Added';
+            btn.classList.add('dm-add-btn--added');
+            const card = btn.closest('.dm-film');
+            if (card) setTimeout(() => card.remove(), 500);
+          } catch (_) {
+            btn.disabled = false;
+            btn.textContent = '+ Watchlist';
+          }
+        });
+      });
+      dirEl.querySelectorAll('.dm-film').forEach(card => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('.dm-add-btn')) return;
+          // Open Add view pre-loaded from TMDB ID
+          const id = parseInt(card.dataset.tmdbId);
+          window.location.hash = '#add';
+          setTimeout(() => {
+            const input = document.getElementById('tmdb-search');
+            if (input) {
+              input.value = `https://www.themoviedb.org/movie/${id}`;
+              document.getElementById('tmdb-search-btn').click();
+            }
+          }, 80);
+        });
+      });
+    }
+
+    if (!list.children.length) wrap.innerHTML = '';
   }
 
   function animateCounters(container) {
@@ -2236,6 +2401,19 @@ const App = (() => {
       panel.classList.toggle('open');
       btn.classList.toggle('open');
     });
+
+    const gemsBtn = document.getElementById('gems-toggle');
+    if (gemsBtn) {
+      gemsBtn.classList.toggle('active', gemsLens);
+      gemsBtn.addEventListener('click', () => {
+        gemsLens = !gemsLens;
+        localStorage.setItem('gemsLens', gemsLens ? '1' : '0');
+        gemsBtn.classList.toggle('active', gemsLens);
+        haptic(8);
+        loadCatalogue();
+        if (gemsLens) UI.showToast('&#128142; Hidden Gems lens — your high ratings, the world hasn\'t found yet');
+      });
+    }
 
     function updateFilterBadge() {
       const active = [
