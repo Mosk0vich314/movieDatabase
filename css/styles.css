@@ -2519,7 +2519,7 @@ input[type="date"].form-input { color-scheme: dark; }
 .np-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(100deg, rgba(10,10,20,0.97) 0%, rgba(10,10,20,0.75) 55%, rgba(10,10,20,0.25) 100%);
+  background: linear-gradient(180deg, transparent 35%, rgba(0,0,0,0.55) 100%);
   transition: opacity 0.25s;
 }
 .np-content {
@@ -2528,28 +2528,32 @@ input[type="date"].form-input { color-scheme: dark; }
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 16px 20px;
+  justify-content: flex-end;
+  padding: 12px 16px 14px;
 }
 .np-label {
   font-size: 0.52rem;
   letter-spacing: 0.22em;
-  color: var(--accent);
+  color: #fff;
   font-weight: 800;
   text-transform: uppercase;
   margin-bottom: 6px;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.9), 0 0 12px rgba(233, 69, 96, 0.6);
+  align-self: flex-start;
 }
 .np-title {
   font-size: 1.05rem;
   font-weight: 700;
   line-height: 1.25;
   margin-bottom: 3px;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.85);
 }
-.np-year { font-size: 0.85rem; opacity: 0.5; font-weight: 400; }
-.np-director { font-size: 0.73rem; color: var(--text-muted); margin-bottom: 5px; }
+.np-year { font-size: 0.85rem; opacity: 0.7; font-weight: 400; }
+.np-director { font-size: 0.73rem; color: #ffd; opacity: 0.85; text-shadow: 0 1px 4px rgba(0,0,0,0.9); }
 .np-meta { display: flex; align-items: center; gap: 10px; }
-.np-rating { font-size: 0.95rem; font-weight: 700; }
-.np-rewatch { font-size: 0.68rem; color: var(--text-muted); }
+.np-rating { font-size: 0.95rem; font-weight: 700; text-shadow: 0 1px 4px rgba(0,0,0,0.9); }
+.np-rewatch { font-size: 0.68rem; color: rgba(255,255,255,0.7); text-shadow: 0 1px 4px rgba(0,0,0,0.9); }
 
 /* === Rewatch badge on cards === */
 .film-card { position: relative; }
@@ -4205,8 +4209,8 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(10,10,20,0.55) 0%, rgba(10,10,20,0.92) 100%),
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245, 197, 24, 0.18), transparent 70%);
+    linear-gradient(180deg, transparent 25%, rgba(0,0,0,0.65) 75%, rgba(0,0,0,0.9) 100%),
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(245, 197, 24, 0.15), transparent 70%);
 }
 .ts-content {
   position: relative;
@@ -4264,9 +4268,87 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
 }
 .ts-showtime { font-weight: 600; letter-spacing: 0.04em; }
 .ts-countdown { font-variant-numeric: tabular-nums; opacity: 0.85; }
-.ts-actions { display: flex; gap: 6px; margin-top: 10px; }
-.ts-actions .btn { padding: 7px 12px; font-size: 0.74rem; }
-.ts-actions .ts-reroll { padding: 7px 11px; font-size: 0.95rem; }
+.ts-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+/* Cinematic ticket-style "I watched it" button */
+.ts-actions .ts-watched {
+  position: relative;
+  background: linear-gradient(180deg, #f5c518 0%, #d6a512 100%);
+  color: #1a1408;
+  border: 1px solid #ffe98a;
+  border-radius: 4px;
+  padding: 9px 16px 9px 22px;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(255, 233, 138, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -2px 4px rgba(120, 80, 0, 0.35),
+    0 4px 14px rgba(245, 197, 24, 0.3),
+    0 0 0 1px rgba(0, 0, 0, 0.4);
+  transition: transform 0.1s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.ts-actions .ts-watched::before,
+.ts-actions .ts-watched::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bg);
+  transform: translateY(-50%);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.6);
+}
+.ts-actions .ts-watched::before { left: -4px; }
+.ts-actions .ts-watched::after  { right: -4px; }
+.ts-actions .ts-watched:hover {
+  filter: brightness(1.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -2px 4px rgba(120, 80, 0, 0.35),
+    0 6px 22px rgba(245, 197, 24, 0.5),
+    0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.ts-actions .ts-watched:active { transform: scale(0.96); }
+
+/* Reroll button — projector lens style */
+.ts-actions .ts-reroll {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #2a2a44 0%, #0e0e1c 90%);
+  border: 1px solid rgba(245, 197, 24, 0.4);
+  color: #ffd86b;
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 18px rgba(245, 197, 24, 0.1),
+    0 4px 14px rgba(0, 0, 0, 0.5);
+  transition: transform 0.3s ease, border-color 0.2s, box-shadow 0.2s;
+}
+.ts-actions .ts-reroll:hover {
+  border-color: rgba(245, 197, 24, 0.8);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 22px rgba(245, 197, 24, 0.2),
+    0 6px 20px rgba(245, 197, 24, 0.25);
+}
+.ts-actions .ts-reroll:active { transform: rotate(180deg) scale(0.95); }
+
+/* Soften the showtime text for readability over backdrop */
+.ts-meta {
+  text-shadow: 0 1px 6px rgba(0,0,0,0.85);
+  color: rgba(255, 220, 160, 0.85);
+}
 
 /* --- Play Trailer button on detail backdrop --- */
 .trailer-play-btn {

@@ -392,7 +392,7 @@ const UI = (() => {
         ${backdrop ? `<img src="${backdrop}" class="np-backdrop" alt="">` : ''}
         <div class="np-overlay"></div>
         <div class="np-content">
-          <div class="np-label">NOW PLAYING</div>
+          <div class="np-label">JUST ADDED</div>
           <div class="np-title">${escapeHtml(movie.title)}<span class="np-year"> ${movie.year || ''}</span></div>
           ${dirLine}
           <div class="np-meta">${rating}${rewatchLine}</div>
