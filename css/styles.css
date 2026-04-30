@@ -3574,3 +3574,260 @@ input[type="date"].form-input { color-scheme: dark; }
   font-size: 0.8rem;
   margin-top: 2px;
 }
+
+/* ============================================================
+   === Visual Polish Layer ===
+   Cinematic refinements layered on top of the base styles.
+   ============================================================ */
+
+/* --- Cinematic app title: gradient sheen + soft pulse --- */
+.app-title {
+  background: linear-gradient(100deg,
+    #fff 0%,
+    #fff 38%,
+    var(--accent-hover) 50%,
+    #fff 62%,
+    #fff 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: titleSheen 9s ease-in-out infinite;
+  filter: drop-shadow(0 0 22px rgba(233, 69, 96, 0.35));
+}
+@keyframes titleSheen {
+  0%, 100% { background-position: 100% 50%; }
+  50%      { background-position: 0% 50%; }
+}
+
+/* Decorative side rules flanking the title */
+.app-header {
+  position: relative;
+}
+.app-header::before,
+.app-header::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: clamp(28px, 12vw, 80px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(233, 69, 96, 0.45), transparent);
+  pointer-events: none;
+}
+.app-header::before { left: max(16px, calc(50% - 8.5em)); transform: translateY(2px); }
+.app-header::after  { right: max(16px, calc(50% - 8.5em)); transform: translateY(2px); }
+@media (max-width: 480px) {
+  .app-header::before,
+  .app-header::after { display: none; }
+}
+
+/* --- View fade-in on route change --- */
+.view { animation: viewFadeIn 0.32s cubic-bezier(0.4, 0, 0.2, 1); }
+@keyframes viewFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Buttons: tactile press feedback --- */
+.btn:active            { transform: translateY(0) scale(0.97); transition-duration: 0.08s; }
+.btn-primary:active    { transform: translateY(0) scale(0.97); box-shadow: 0 1px 6px var(--accent-glow); }
+.filter-toggle-btn:active,
+.view-toggle-btn:active,
+.smt-btn:active        { transform: scale(0.96); transition-duration: 0.08s; }
+
+/* Subtle ripple-glow on primary buttons */
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.18) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+.btn-primary:hover::before { transform: translateX(120%); }
+
+/* --- Nav: glow under active tab + smooth hover underline --- */
+.nav-link.active::after {
+  box-shadow: 0 0 12px var(--accent), 0 0 4px var(--accent);
+  width: 28px;
+  transition: width 0.25s ease, box-shadow 0.25s ease;
+}
+.nav-link::before {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+  transform: translateX(-50%);
+  opacity: 0.55;
+  transition: width 0.22s ease;
+  pointer-events: none;
+}
+.nav-link:not(.active):hover::before { width: 18px; }
+
+/* --- Movie card: cinematic hover sheen + smoother lift --- */
+.movie-card {
+  position: relative;
+  isolation: isolate;
+}
+.movie-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 55%, rgba(233, 69, 96, 0.0) 100%);
+  opacity: 0;
+  transition: opacity var(--transition);
+  z-index: 1;
+}
+.movie-card:hover::after {
+  opacity: 1;
+  background: linear-gradient(180deg, transparent 50%, rgba(233, 69, 96, 0.12) 100%);
+}
+.movie-card-info { position: relative; z-index: 2; }
+
+/* Poster zoom inside card on hover */
+.movie-card-poster { overflow: hidden; }
+.movie-card-poster img {
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease;
+}
+.movie-card:hover .movie-card-poster img { transform: scale(1.045); }
+
+/* --- Empty state: cinematic illustration --- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.empty-state::before {
+  content: '';
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid rgba(233, 69, 96, 0.35);
+  background:
+    radial-gradient(circle at center, rgba(233, 69, 96, 0.12) 0%, transparent 70%),
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(255,255,255,0.12) 0deg 18deg,
+      transparent 18deg 60deg
+    );
+  box-shadow: 0 0 30px rgba(233, 69, 96, 0.15), inset 0 0 0 6px rgba(10,10,20,0.85);
+  animation: reelSpin 14s linear infinite;
+  opacity: 0.85;
+}
+@keyframes reelSpin { to { transform: rotate(360deg); } }
+.empty-state p { font-size: 0.95rem; max-width: 32ch; line-height: 1.5; }
+
+/* --- Toast: layered shadow + accent glow --- */
+.toast {
+  box-shadow:
+    0 12px 40px rgba(0,0,0,0.55),
+    0 0 24px rgba(233, 69, 96, 0.18);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  backdrop-filter: blur(20px) saturate(1.2);
+}
+
+/* --- Form preview: subtle gradient frame --- */
+.form-movie-preview {
+  background:
+    linear-gradient(135deg, rgba(233, 69, 96, 0.05), rgba(124, 92, 252, 0.05)),
+    var(--bg-card);
+  position: relative;
+}
+.form-movie-preview::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(233, 69, 96, 0.35), transparent 40%, rgba(124, 92, 252, 0.3));
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* --- Stat cards: hover glow lift --- */
+.stat-card {
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: radial-gradient(circle at 50% 0%, rgba(233, 69, 96, 0.18), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.stat-card:hover::before { opacity: 1; }
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg), 0 0 24px rgba(233, 69, 96, 0.12);
+}
+
+/* --- Filter toggle button: accent ring on active --- */
+.filter-toggle-btn.open {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+/* --- Genre tag tactile feel --- */
+.genre-tag { cursor: default; }
+.genre-tag:active { transform: scale(0.96); }
+
+/* --- Detail poster: deeper shadow + tilt-on-hover --- */
+.detail-poster {
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.45s ease;
+}
+.detail-poster-wrap:hover .detail-poster,
+.detail-poster-drag:hover .detail-poster {
+  transform: translateY(-4px);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.85), 0 0 40px rgba(233, 69, 96, 0.18);
+}
+
+/* --- Selection color --- */
+::selection {
+  background: rgba(233, 69, 96, 0.45);
+  color: #fff;
+}
+
+/* --- Smoother focus ring on keyboard nav --- */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.btn:focus-visible,
+.filter-toggle-btn:focus-visible,
+.view-toggle-btn:focus-visible,
+.smt-btn:focus-visible {
+  outline-offset: 3px;
+}
+
+/* --- Honor reduced motion preferences --- */
+@media (prefers-reduced-motion: reduce) {
+  .app-title,
+  .empty-state::before,
+  .taste-dna-card::before {
+    animation: none;
+  }
+  .view { animation: none; }
+  .movie-card:hover .movie-card-poster img { transform: none; }
+}
