@@ -3954,3 +3954,68 @@ body {
   filter: brightness(0.92);
   transition-duration: 0.05s;
 }
+
+/* ============================================================
+   === Cinema layer ===
+   Vignette + projector beam for a theater atmosphere.
+   ============================================================ */
+
+/* Theater vignette: soft dark gradient hugging the screen edges */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9997;
+  background:
+    radial-gradient(
+      ellipse 110% 80% at 50% 50%,
+      transparent 55%,
+      rgba(0, 0, 0, 0.35) 90%,
+      rgba(0, 0, 0, 0.6) 100%
+    );
+  mix-blend-mode: multiply;
+}
+
+/* Projector beam descending behind the app title */
+.app-header::before,
+.app-header::after { display: none; } /* drop the side rules — beam reads better solo */
+.app-header {
+  position: relative;
+  isolation: isolate;
+}
+.app-header > .app-title { position: relative; z-index: 1; }
+.app-header::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  width: 320px;
+  height: 220px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(
+      ellipse 50% 100% at 50% 0%,
+      rgba(255, 220, 230, 0.18) 0%,
+      rgba(233, 69, 96, 0.12) 30%,
+      rgba(124, 92, 252, 0.06) 60%,
+      transparent 80%
+    );
+  filter: blur(2px);
+  animation: projectorFlicker 4.8s ease-in-out infinite;
+}
+@keyframes projectorFlicker {
+  0%, 100% { opacity: 0.85; }
+  43%      { opacity: 1; }
+  47%      { opacity: 0.78; }
+  50%      { opacity: 0.95; }
+  73%      { opacity: 0.88; }
+  76%      { opacity: 0.7; }
+  80%      { opacity: 0.92; }
+}
+@media (max-width: 480px) {
+  .app-header::before { width: 240px; height: 180px; top: -30px; }
+}
