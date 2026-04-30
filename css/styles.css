@@ -4176,3 +4176,208 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
   0%   { opacity: 0.4; }
   100% { opacity: 1; }
 }
+
+/* ============================================================
+   === Phase 1 features ===
+   Tonight's Screening, Trailer modal, Play Trailer button.
+   ============================================================ */
+
+/* --- Tonight's Screening banner --- */
+.tonight-screening {
+  position: relative;
+  height: 200px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin: 0 0 14px;
+  cursor: pointer;
+  border: 1px solid rgba(245, 197, 24, 0.35);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 24px rgba(245, 197, 24, 0.12);
+  isolation: isolate;
+}
+.ts-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center 35%;
+}
+.ts-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(10,10,20,0.55) 0%, rgba(10,10,20,0.92) 100%),
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245, 197, 24, 0.18), transparent 70%);
+}
+.ts-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 14px 18px 16px;
+  gap: 4px;
+}
+.ts-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  font-size: 0.6rem;
+  letter-spacing: 0.24em;
+  font-weight: 800;
+  color: #ffd86b;
+  text-shadow: 0 0 8px rgba(245, 197, 24, 0.6);
+  padding: 4px 10px;
+  border: 1px solid rgba(245, 197, 24, 0.5);
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(245, 197, 24, 0.12), rgba(245, 197, 24, 0.04));
+  margin-bottom: 6px;
+}
+.ts-bulb {
+  display: inline-block;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #ffd86b;
+  box-shadow: 0 0 6px rgba(245, 197, 24, 0.9);
+  animation: bulbBlink 1.2s ease-in-out infinite alternate;
+}
+.ts-label .ts-bulb:last-child { animation-delay: 0.6s; }
+.ts-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: #fff;
+  text-shadow: 0 2px 14px rgba(0,0,0,0.7);
+  letter-spacing: 0.02em;
+}
+.ts-year { font-weight: 400; opacity: 0.6; font-size: 0.95rem; }
+.ts-director { font-size: 0.78rem; color: var(--accent); opacity: 0.85; }
+.ts-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.7);
+  margin-top: 4px;
+}
+.ts-showtime { font-weight: 600; letter-spacing: 0.04em; }
+.ts-countdown { font-variant-numeric: tabular-nums; opacity: 0.85; }
+.ts-actions { display: flex; gap: 6px; margin-top: 10px; }
+.ts-actions .btn { padding: 7px 12px; font-size: 0.74rem; }
+.ts-actions .ts-reroll { padding: 7px 11px; font-size: 0.95rem; }
+
+/* --- Play Trailer button on detail backdrop --- */
+.trailer-play-btn {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(0,0,0,0.55);
+  -webkit-backdrop-filter: blur(10px);
+          backdrop-filter: blur(10px);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.5);
+}
+.trailer-play-btn:hover {
+  background: rgba(233, 69, 96, 0.85);
+  border-color: rgba(255,255,255,0.6);
+  box-shadow: 0 6px 22px rgba(233, 69, 96, 0.4);
+}
+.trailer-play-btn:active { transform: scale(0.96); }
+.trailer-play-btn .tpb-icon { font-size: 0.7rem; }
+.detail-poster-wrap > .trailer-play-btn,
+.detail-poster-drag > .trailer-play-btn {
+  bottom: 8px;
+  right: 8px;
+  padding: 8px 12px;
+  font-size: 0.7rem;
+}
+
+/* --- Trailer modal --- */
+.trailer-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: trailerIn 0.22s ease-out;
+}
+.trailer-modal--out { animation: trailerOut 0.18s ease-in forwards; }
+@keyframes trailerIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes trailerOut { from { opacity: 1; } to { opacity: 0; } }
+.trailer-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  -webkit-backdrop-filter: blur(8px);
+          backdrop-filter: blur(8px);
+}
+.trailer-modal-frame {
+  position: relative;
+  width: min(94vw, 960px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.trailer-modal-title {
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  padding: 0 4px;
+  text-shadow: 0 0 14px rgba(0,0,0,0.7);
+}
+.trailer-modal-iframe-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 40px rgba(233, 69, 96, 0.18);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.trailer-modal-iframe-wrap iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.trailer-modal-close {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+  z-index: 2;
+  transition: background 0.15s, transform 0.1s;
+}
+.trailer-modal-close:hover { background: var(--accent); }
+.trailer-modal-close:active { transform: scale(0.92); }
+@media (max-width: 480px) {
+  .trailer-modal-frame { width: 100vw; padding: 0 8px; }
+  .trailer-modal-close { top: -42px; right: 4px; }
+}

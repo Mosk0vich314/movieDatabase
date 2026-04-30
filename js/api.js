@@ -180,6 +180,34 @@ const TMDB = (() => {
     return res.json();
   }
 
+  async function getMovieVideos(tmdbId) {
+    const key = getApiKey();
+    if (!key) return [];
+    try {
+      const url = `${BASE_URL}/movie/${tmdbId}/videos?api_key=${encodeURIComponent(key)}`;
+      const res = await fetch(url);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.results || [];
+    } catch (_) { return []; }
+  }
+
+  // Pick the best trailer video: official > Trailer > Teaser, YouTube only
+  function pickBestTrailer(videos) {
+    if (!Array.isArray(videos) || videos.length === 0) return null;
+    const yt = videos.filter(v => v.site === 'YouTube');
+    if (yt.length === 0) return null;
+    const score = (v) => {
+      let s = 0;
+      if (v.type === 'Trailer') s += 10;
+      else if (v.type === 'Teaser') s += 5;
+      if (v.official) s += 4;
+      if ((v.iso_639_1 || '').toLowerCase() === 'en') s += 1;
+      return s;
+    };
+    return yt.slice().sort((a, b) => score(b) - score(a))[0] || null;
+  }
+
   async function getMovieRecommendations(tmdbId) {
     const key = getApiKey();
     if (!key) return [];
@@ -202,5 +230,5 @@ const TMDB = (() => {
     return `${IMG_BASE}/${size}${path}`;
   }
 
-  return { getApiKey, setApiKey, searchMovies, getMovieDetails, searchPerson, searchActor, getPersonMovieCredits, getMovieRecommendations, fetchOmdbData, posterUrl, profileUrl };
+  return { getApiKey, setApiKey, searchMovies, getMovieDetails, searchPerson, searchActor, getPersonMovieCredits, getMovieRecommendations, getMovieVideos, pickBestTrailer, fetchOmdbData, posterUrl, profileUrl };
 })();

@@ -17,6 +17,106 @@ const App = (() => {
   // Pulls suggestions from local storage if they exist
   let pendingSuggestions = JSON.parse(localStorage.getItem('savedSuggestions') || 'null');
 
+  // Haptic helper — silent no-op on unsupported devices
+  function haptic(pattern = 8) {
+    try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (_) {}
+  }
+
+  // ---- Tonight's Screening: one daily-pinned watchlist pick ----
+  const TONIGHT_KEY = 'tonightScreening';
+
+  function todayKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+  }
+
+  async function pickTonightsScreening(force = false) {
+    const movies = (await MovieDB.getAllMovies()).filter(m => m.watchlist);
+    if (movies.length === 0) {
+      localStorage.removeItem(TONIGHT_KEY);
+      return null;
+    }
+    const stored = JSON.parse(localStorage.getItem(TONIGHT_KEY) || 'null');
+    const today = todayKey();
+    if (!force && stored && stored.date === today) {
+      const stillExists = movies.find(m => m.id === stored.id);
+      if (stillExists) return stillExists;
+    }
+    const candidate = movies[Math.floor(Math.random() * movies.length)];
+    localStorage.setItem(TONIGHT_KEY, JSON.stringify({ date: today, id: candidate.id }));
+    return candidate;
+  }
+
+  async function renderTonightsScreening() {
+    const wrap = document.getElementById('tonight-wrap');
+    if (!wrap) return;
+    const movie = await pickTonightsScreening(false);
+    if (!movie) { wrap.innerHTML = ''; return; }
+    const backdrop = movie.backdrop || movie.poster || '';
+    const dirLine = (movie.directors || []).length > 0
+      ? `<div class="ts-director">${UI.escapeHtml(movie.directors[0])}</div>` : '';
+    const yearLine = movie.year ? `<span class="ts-year">${movie.year}</span>` : '';
+    const showtime = '20:00'; // Doors open at 8pm
+    wrap.innerHTML = `
+      <div class="tonight-screening" data-id="${movie.id}">
+        ${backdrop ? `<img src="${backdrop}" class="ts-backdrop" alt="">` : ''}
+        <div class="ts-overlay"></div>
+        <div class="ts-content">
+          <div class="ts-label">
+            <span class="ts-bulb"></span> TONIGHT'S SCREENING <span class="ts-bulb"></span>
+          </div>
+          <div class="ts-title">${UI.escapeHtml(movie.title)} ${yearLine}</div>
+          ${dirLine}
+          <div class="ts-meta">
+            <span class="ts-showtime">Doors open at ${showtime}</span>
+            <span class="ts-countdown" id="ts-countdown"></span>
+          </div>
+          <div class="ts-actions">
+            <button class="btn btn-primary ts-watched" type="button">&#10003; I watched it</button>
+            <button class="btn btn-secondary ts-reroll" type="button" title="New pick">&#8634;</button>
+          </div>
+        </div>
+      </div>`;
+    const card = wrap.querySelector('.tonight-screening');
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      window.location.hash = `#detail/${movie.id}`;
+    });
+    wrap.querySelector('.ts-watched').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      haptic([10, 30, 10]);
+      await markAsWatched(movie.id);
+      localStorage.removeItem(TONIGHT_KEY);
+    });
+    wrap.querySelector('.ts-reroll').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      haptic(8);
+      await pickTonightsScreening(true);
+      renderTonightsScreening();
+    });
+    startCountdownTicker();
+  }
+
+  let countdownIv = null;
+  function startCountdownTicker() {
+    if (countdownIv) clearInterval(countdownIv);
+    const tick = () => {
+      const el = document.getElementById('ts-countdown');
+      if (!el) { clearInterval(countdownIv); countdownIv = null; return; }
+      const now = new Date();
+      const target = new Date();
+      target.setHours(20, 0, 0, 0);
+      let diff = target - now;
+      if (diff <= 0) { el.textContent = '· Showing now'; return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      el.textContent = `· in ${h ? h + 'h ' : ''}${m}m ${h ? '' : s + 's'}`.trim();
+    };
+    tick();
+    countdownIv = setInterval(tick, 1000);
+  }
+
   function migrateRatings() {
     if (localStorage.getItem('ratingMigrated10')) return Promise.resolve();
     return MovieDB.getAllMovies().then(movies => {
@@ -33,11 +133,25 @@ const App = (() => {
       setupRouting();
       setupEventListeners();
       setupImageLoader();
+      setupHaptics();
       UI.initCustomSelects();
       navigate(window.location.hash || '#catalogue');
       updateWatchlistBadge();
       registerServiceWorker();
     });
+  }
+
+  // Delegated, lightweight haptic feedback on key UI surfaces
+  function setupHaptics() {
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      if (t.closest('.nav-link')) return haptic(6);
+      if (t.closest('.btn-primary')) return haptic(10);
+      if (t.closest('.btn, .filter-toggle-btn, .view-toggle-btn, .smt-btn')) return haptic(5);
+      if (t.closest('.movie-card, .film-card, .now-playing, .tonight-screening')) return haptic(4);
+      if (t.closest('.fcs')) return haptic(8);
+    }, true);
   }
 
   // Marks <img> elements with .loaded once decoded so CSS can fade them in
@@ -172,6 +286,8 @@ const App = (() => {
     document.getElementById('view-array-btn').classList.toggle('active', viewMode === 'array');
     document.getElementById('view-decades-btn').classList.toggle('active', viewMode === 'decades');
     document.getElementById('view-library-btn').classList.toggle('active', viewMode === 'library');
+
+    renderTonightsScreening();
 
     // Now Playing banner — most recently added/watched film
     const npWrap = document.getElementById('now-playing-wrap');
@@ -443,6 +559,7 @@ const App = (() => {
   }
 
   async function addToWatchlist(tmdbId) {
+    haptic(12);
     if (!TMDB.getApiKey()) {
       UI.showToast('No TMDB API key configured.');
       return;
@@ -830,6 +947,7 @@ const App = (() => {
 
   async function saveMovie(e) {
     e.preventDefault();
+    haptic([10, 30, 10]);
     const form = document.getElementById('movie-form');
 
     const movie = {
@@ -1113,6 +1231,8 @@ const App = (() => {
     const ctx = { allMovies: allMovies.filter(m => !m.watchlist) };
     document.getElementById('movie-detail').innerHTML = UI.renderMovieDetail(movie, ctx);
 
+    setupTrailerButton(movie);
+
     document.getElementById('detail-back').addEventListener('click', () => {
       window.location.hash = movie.watchlist ? '#watchlist' : '#catalogue';
     });
@@ -1304,6 +1424,56 @@ const App = (() => {
         springBack(0);
       });
     }
+  }
+
+  async function setupTrailerButton(movie) {
+    if (!movie.tmdbId) return;
+    const wrap = document.querySelector('.detail-backdrop-wrap') || document.querySelector('.detail-poster-wrap') || document.querySelector('.detail-poster-drag');
+    if (!wrap) return;
+    let videos = [];
+    try { videos = await TMDB.getMovieVideos(movie.tmdbId); } catch (_) { return; }
+    const trailer = TMDB.pickBestTrailer(videos);
+    if (!trailer) return;
+    const btn = document.createElement('button');
+    btn.className = 'trailer-play-btn';
+    btn.type = 'button';
+    btn.innerHTML = '<span class="tpb-icon">&#9654;</span> Play Trailer';
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      haptic(15);
+      openTrailerModal(trailer.key, movie.title);
+    });
+    wrap.appendChild(btn);
+  }
+
+  function openTrailerModal(youtubeKey, title) {
+    if (document.getElementById('trailer-modal')) return;
+    const modal = document.createElement('div');
+    modal.id = 'trailer-modal';
+    modal.className = 'trailer-modal';
+    modal.innerHTML = `
+      <div class="trailer-modal-backdrop"></div>
+      <div class="trailer-modal-frame">
+        <button class="trailer-modal-close" aria-label="Close">&times;</button>
+        <div class="trailer-modal-title">${UI.escapeHtml(title || 'Trailer')}</div>
+        <div class="trailer-modal-iframe-wrap">
+          <iframe
+            src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(youtubeKey)}?autoplay=1&rel=0&modestbranding=1"
+            frameborder="0"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowfullscreen></iframe>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    const close = () => {
+      modal.classList.add('trailer-modal--out');
+      setTimeout(() => modal.remove(), 200);
+    };
+    modal.querySelector('.trailer-modal-close').addEventListener('click', close);
+    modal.querySelector('.trailer-modal-backdrop').addEventListener('click', close);
+    document.addEventListener('keydown', function onEsc(e) {
+      if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
+    });
   }
 
   async function fetchSimilarSuggestions(movieTitle, tmdbId) {
@@ -1889,13 +2059,17 @@ const App = (() => {
     });
 
     let sliderWasTen = false;
+    let lastTickRating = -1;
     document.getElementById('rating-slider').addEventListener('input', (e) => {
-      selectedRating = parseFloat(parseFloat(e.target.value).toFixed(1));
+      const v = parseFloat(parseFloat(e.target.value).toFixed(1));
+      const tick = Math.round(v);
+      if (tick !== lastTickRating) { haptic(5); lastTickRating = tick; }
+      selectedRating = v;
       updateRatingDisplay();
     });
     document.getElementById('rating-slider').addEventListener('change', (e) => {
       const val = parseFloat(parseFloat(e.target.value).toFixed(1));
-      if (val === 10 && !sliderWasTen) spawnStarBurst(document.getElementById('rating-display-value'));
+      if (val === 10 && !sliderWasTen) { spawnStarBurst(document.getElementById('rating-display-value')); haptic([20, 40, 60]); }
       sliderWasTen = val === 10;
     });
     document.getElementById('rating-clear').addEventListener('click', () => {
