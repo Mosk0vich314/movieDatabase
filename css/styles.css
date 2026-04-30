@@ -3598,24 +3598,22 @@ input[type="date"].form-input { color-scheme: dark; }
    Cinematic refinements layered on top of the base styles.
    ============================================================ */
 
-/* --- Cinematic app title: solid white with animated accent glow --- */
+/* --- Cinematic app title: pulsing accent halo --- */
 .app-title {
-  color: #fff;
-  text-shadow:
-    0 0 22px rgba(233, 69, 96, 0.45),
-    0 0 40px rgba(233, 69, 96, 0.25);
-  animation: titleGlow 6s ease-in-out infinite;
+  color: #fff !important;
+  animation: titlePulse 3.2s ease-in-out infinite !important;
 }
-@keyframes titleGlow {
+@keyframes titlePulse {
   0%, 100% {
     text-shadow:
-      0 0 22px rgba(233, 69, 96, 0.45),
-      0 0 40px rgba(233, 69, 96, 0.2);
+      0 0 14px rgba(233, 69, 96, 0.35),
+      0 0 28px rgba(233, 69, 96, 0.15);
   }
   50% {
     text-shadow:
-      0 0 28px rgba(233, 69, 96, 0.7),
-      0 0 60px rgba(233, 69, 96, 0.35);
+      0 0 28px rgba(233, 69, 96, 0.95),
+      0 0 60px rgba(233, 69, 96, 0.55),
+      0 0 100px rgba(124, 92, 252, 0.35);
   }
 }
 
