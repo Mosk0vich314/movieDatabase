@@ -2395,6 +2395,7 @@ const App = (() => {
 
   // ---- Complete the Director: filmography lanes for favorite directors ----
   const DIR_FILMO_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
+  const DIR_FILMO_CACHE_VER = 'v3'; // bump to invalidate old caches
   const DIR_FAV_RATING = 8;
 
   function findFavoriteDirectors(movies) {
@@ -2415,7 +2416,7 @@ const App = (() => {
   }
 
   async function getDirectorFilmography(name) {
-    const cacheKey = `dirFilmo:${name}`;
+    const cacheKey = `dirFilmo_${DIR_FILMO_CACHE_VER}:${name}`;
     try {
       const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
       if (cached && Date.now() - cached.t < DIR_FILMO_CACHE_TTL) return cached.data;
@@ -2425,7 +2426,12 @@ const App = (() => {
       const person = (persons || []).find(p => p.known_for_department === 'Directing') || (persons || [])[0];
       if (!person) return null;
       const credits = await TMDB.getPersonMovieCredits(person.id);
-      const directed = (credits.crew || []).filter(c => c.job === 'Director');
+      // Filter to director credits only, deduplicate by id, require ≥500 votes
+      // (shorts, behind-the-scenes, and featurettes rarely exceed this threshold)
+      const seen = new Set();
+      const directed = (credits.crew || [])
+        .filter(c => c.job === 'Director' && c.id && !seen.has(c.id) && seen.add(c.id))
+        .filter(c => (c.vote_count || 0) >= 500 && c.release_date && c.title);
       const data = {
         personId: person.id,
         profileUrl: person.profile_path ? TMDB.profileUrl(person.profile_path) : '',
@@ -2464,16 +2470,17 @@ const App = (() => {
     for (const fav of top) {
       const filmo = await getDirectorFilmography(fav.name);
       if (!filmo || !filmo.films) continue;
-      const unwatched = filmo.films
-        .filter(f => f.releaseDate && new Date(f.releaseDate) <= new Date())
+      const now = new Date();
+      const released = filmo.films.filter(f => f.releaseDate && new Date(f.releaseDate) <= now);
+      const total = released.length;
+      const owned = released.filter(f => ownedAll.has(String(f.id))).length;
+
+      const unwatched = released
         .filter(f => !ownedAll.has(String(f.id)))
-        .filter(f => f.voteCount >= 50) // skip ultra-obscure to keep the lane meaningful
         .sort((a, b) => (b.voteAverage * Math.log10(b.voteCount + 10)) - (a.voteAverage * Math.log10(a.voteCount + 10)))
         .slice(0, 12);
 
       if (unwatched.length === 0) continue;
-      const total = filmo.films.filter(f => f.releaseDate && new Date(f.releaseDate) <= new Date()).length;
-      const owned = total - unwatched.length;
 
       const photoHtml = filmo.profileUrl
         ? `<img src="${filmo.profileUrl}" alt="${UI.escapeHtml(fav.name)}" class="dm-photo">`
