@@ -21,6 +21,11 @@ const App = (() => {
   let gemsLens = localStorage.getItem('gemsLens') === '1';
   const GEM_RATING_MIN = 7;
   const GEM_VOTE_MAX = 5000;
+  function isGem(m) {
+    if ((m.rating || 0) < GEM_RATING_MIN) return false;
+    const vc = m.voteCount || 0;
+    return vc > 0 && vc <= GEM_VOTE_MAX;
+  }
 
   // Haptic helper — silent no-op on unsupported devices
   function haptic(pattern = 8) {
@@ -347,6 +352,16 @@ const App = (() => {
       // decades (default)
       grid.innerHTML = UI.renderDecadeLanes(filtered, 'desc');
     }
+
+    // Gems lens: highlight matching cards, dim others — no filtering
+    const catalogueView = document.getElementById('view-catalogue');
+    catalogueView.classList.toggle('gems-lens', gemsLens);
+    if (gemsLens) {
+      const gemIds = new Set(movies.filter(isGem).map(m => String(m.id)));
+      grid.querySelectorAll('[data-id]').forEach(el => {
+        el.classList.toggle('gem', gemIds.has(el.dataset.id));
+      });
+    }
   }
 
   function sortForGrid(movies, sortVal) {
@@ -402,11 +417,6 @@ const App = (() => {
       if (director && !(m.directors || []).includes(director)) return false;
       if (minRating && (m.rating || 0) < minRating) return false;
       if (search && !m.title.toLowerCase().includes(search)) return false;
-      if (gemsLens) {
-        if ((m.rating || 0) < GEM_RATING_MIN) return false;
-        const vc = m.voteCount || 0;
-        if (vc === 0 || vc > GEM_VOTE_MAX) return false;
-      }
       return true;
     });
   }
@@ -2888,7 +2898,8 @@ const App = (() => {
         gemsBtn.classList.toggle('active', gemsLens);
         haptic(8);
         loadCatalogue();
-        if (gemsLens) UI.showToast('&#128142; Hidden Gems lens — your high ratings, the world hasn\'t found yet');
+        if (gemsLens) UI.showToast('✦ Gems highlighted — your discoveries the world hasn’t found yet');
+        else UI.showToast('Gem highlights off');
       });
     }
 

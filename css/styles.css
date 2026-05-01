@@ -4480,22 +4480,32 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
    ============================================================ */
 
 /* --- Hidden Gems toggle --- */
-.gems-toggle-btn {
-  font-size: 1rem;
-  padding: 9px 12px;
-  line-height: 1;
-}
 .gems-toggle-btn.active {
   background: linear-gradient(180deg, rgba(245, 197, 24, 0.18), rgba(245, 197, 24, 0.06));
   border-color: rgba(245, 197, 24, 0.55);
   color: #ffd86b;
   box-shadow: 0 0 0 2px rgba(245, 197, 24, 0.15), 0 0 18px rgba(245, 197, 24, 0.25);
   text-shadow: 0 0 6px rgba(245, 197, 24, 0.6);
-  animation: gemPulse 2.4s ease-in-out infinite;
 }
-@keyframes gemPulse {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(245, 197, 24, 0.15), 0 0 18px rgba(245, 197, 24, 0.25); }
-  50%      { box-shadow: 0 0 0 2px rgba(245, 197, 24, 0.25), 0 0 28px rgba(245, 197, 24, 0.45); }
+
+/* --- Gems lens: highlight gems, dim everything else --- */
+#view-catalogue.gems-lens .film-card:not(.gem),
+#view-catalogue.gems-lens .mosaic-item:not(.gem),
+#view-catalogue.gems-lens .poster-card:not(.gem) {
+  opacity: 0.2;
+  filter: saturate(0.15);
+  transition: opacity 0.35s, filter 0.35s;
+}
+#view-catalogue.gems-lens .film-card.gem,
+#view-catalogue.gems-lens .mosaic-item.gem,
+#view-catalogue.gems-lens .poster-card.gem {
+  box-shadow: 0 0 0 2px rgba(245, 197, 24, 0.85), 0 0 24px rgba(245, 197, 24, 0.35);
+  transition: box-shadow 0.35s;
+  animation: gemGlow 2.8s ease-in-out infinite;
+}
+@keyframes gemGlow {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(245, 197, 24, 0.75), 0 0 18px rgba(245, 197, 24, 0.25); }
+  50%      { box-shadow: 0 0 0 2px rgba(245, 197, 24, 1.00), 0 0 32px rgba(245, 197, 24, 0.50); }
 }
 
 /* --- Complete the Director --- */
