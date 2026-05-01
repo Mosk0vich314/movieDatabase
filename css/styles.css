@@ -262,6 +262,11 @@ a:hover { color: var(--accent-hover); }
   outline: none;
   transition: all var(--transition);
 }
+/* Pill-shaped search bars for native app feel */
+.search-input {
+  border-radius: 100px;
+  padding-left: 20px;
+}
 .form-input:focus, .search-input:focus, .filter-select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-glow), 0 0 20px rgba(233, 69, 96, 0.1);
@@ -375,32 +380,47 @@ a:hover { color: var(--accent-hover); }
 
 /* === Views === */
 .view { padding-top: 16px; }
+/* Prevent negative-margin backdrop hero from causing horizontal scroll */
+#view-detail { overflow-x: clip; }
 
 /* === Catalogue Controls === */
 .catalogue-controls { margin-bottom: 24px; }
 .catalogue-top-bar {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  align-items: center;
   margin-bottom: 10px;
 }
-.catalogue-top-bar .input-wrap { flex: 1; }
+.catalogue-search-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.catalogue-search-row .input-wrap { flex: 1; }
+.catalogue-secondary-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
 .filter-toggle-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 11px 14px;
+  padding: 10px 16px;
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 100px;
   color: var(--text);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition);
   white-space: nowrap;
   flex-shrink: 0;
   font-family: inherit;
+  letter-spacing: 0.01em;
+  text-decoration: none;
 }
 .filter-toggle-btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); }
 .filter-toggle-btn.active { border-color: var(--border-accent); color: var(--accent); background: rgba(233,69,96,0.08); }
@@ -4059,27 +4079,17 @@ body::before {
   100% { background-position: 0 50%; opacity: 0.55; }
 }
 
-/* --- (2) Letterbox bars over detail backdrop hero --- */
+/* --- (2) Letterbox: subtle top vignette on detail backdrop (replaces hard black bars) --- */
 .detail-backdrop-wrap::before {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
   top: 0;
-  height: 8%;
-  background: #000;
+  height: 48px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 100%);
   z-index: 4;
   pointer-events: none;
-  box-shadow: 0 0 24px rgba(0,0,0,0.8);
-}
-.detail-backdrop-wrap > .detail-letterbox-bottom,
-.detail-backdrop-wrap::marker { /* fallback */ }
-
-/* Bottom bar via a layered radial — keep ::after used by genre tint, so use box-shadow inset on wrap */
-.detail-backdrop-wrap {
-  box-shadow:
-    inset 0 -8% 0 -1px rgba(0,0,0,0.85),
-    inset 0  8% 0 -1px rgba(0,0,0,0.85);
 }
 
 /* --- (3) Film-strip divider between decade sections --- */
@@ -4681,16 +4691,77 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
    Ticket Stub modal, Year in Review (Wrapped-style).
    ============================================================ */
 
-/* --- Ticket button on detail --- */
-.btn-ticket {
-  background: linear-gradient(180deg, rgba(245, 197, 24, 0.18), rgba(245, 197, 24, 0.06));
-  border-color: rgba(245, 197, 24, 0.45);
-  color: #ffd86b;
+/* --- Ticket Stub strip below movie info --- */
+.detail-ticket-strip {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(245, 197, 24, 0.18);
 }
-.btn-ticket:hover {
-  background: linear-gradient(180deg, rgba(245, 197, 24, 0.3), rgba(245, 197, 24, 0.12));
-  border-color: rgba(245, 197, 24, 0.7);
-  box-shadow: 0 0 16px rgba(245, 197, 24, 0.3);
+.detail-ticket-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 18px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(245, 197, 24, 0.04) 0px, rgba(245, 197, 24, 0.04) 2px,
+      transparent 2px, transparent 16px
+    ),
+    linear-gradient(135deg, rgba(245, 197, 24, 0.10) 0%, rgba(245, 197, 24, 0.04) 100%);
+  border: 1px solid rgba(245, 197, 24, 0.30);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+.detail-ticket-btn::before,
+.detail-ticket-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid rgba(245, 197, 24, 0.20);
+}
+.detail-ticket-btn::before { left: -7px; }
+.detail-ticket-btn::after  { right: -7px; }
+.detail-ticket-btn:hover {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(245, 197, 24, 0.08) 0px, rgba(245, 197, 24, 0.08) 2px,
+      transparent 2px, transparent 16px
+    ),
+    linear-gradient(135deg, rgba(245, 197, 24, 0.18) 0%, rgba(245, 197, 24, 0.08) 100%);
+  border-color: rgba(245, 197, 24, 0.55);
+  box-shadow: 0 0 20px rgba(245, 197, 24, 0.15);
+  transform: translateY(-1px);
+}
+.detail-ticket-btn-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+.detail-ticket-btn-label {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffd86b;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: 'Cinzel', serif;
+  text-align: left;
+}
+.detail-ticket-btn-arrow {
+  font-size: 1rem;
+  color: rgba(245, 197, 24, 0.5);
+  flex-shrink: 0;
 }
 
 /* --- Ticket modal --- */
