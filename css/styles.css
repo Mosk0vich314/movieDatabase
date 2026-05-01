@@ -387,21 +387,51 @@ a:hover { color: var(--accent-hover); }
 .catalogue-controls { margin-bottom: 24px; }
 .catalogue-top-bar {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.catalogue-search-row {
-  display: flex;
+  flex-direction: row;
   gap: 8px;
   align-items: center;
+  margin-bottom: 10px;
 }
-.catalogue-search-row .input-wrap { flex: 1; }
-.catalogue-secondary-row {
+.catalogue-top-bar .input-wrap { flex: 1; min-width: 0; }
+
+/* Controls group — slides away when search is active */
+.catalogue-controls-group {
   display: flex;
   gap: 6px;
   align-items: center;
-  justify-content: flex-end;
+  flex-shrink: 0;
+  max-width: 700px;
+  overflow: hidden;
+  transition: max-width 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease;
+}
+
+/* Expanding search: Cancel button (hidden by default) */
+.search-cancel-btn {
+  display: none;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 8px 0 8px 4px;
+  white-space: nowrap;
+}
+
+/* Active search state: collapse controls, expand search bar, show Cancel */
+.catalogue-top-bar.search-active .catalogue-controls-group {
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.catalogue-top-bar.search-active .search-cancel-btn {
+  display: flex;
+}
+.catalogue-top-bar.search-active .input-wrap .search-input {
+  box-shadow: 0 0 0 2px var(--accent-glow), 0 0 20px rgba(233, 69, 96, 0.1);
+  border-color: var(--accent);
 }
 .filter-toggle-btn {
   display: inline-flex;

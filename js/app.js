@@ -2927,6 +2927,19 @@ const App = (() => {
     document.getElementById('view-library-btn').addEventListener('click', () => setViewMode('library'));
     document.getElementById('catalogue-search').addEventListener('input', loadCatalogue);
 
+    // Expanding search bar — iOS style
+    const catSearchInput = document.getElementById('catalogue-search');
+    const catTopBar = document.querySelector('#view-catalogue .catalogue-top-bar');
+    const catCancelBtn = document.getElementById('catalogue-search-cancel');
+    catSearchInput.addEventListener('focus', () => catTopBar.classList.add('search-active'));
+    catSearchInput.addEventListener('blur', () => catTopBar.classList.remove('search-active'));
+    catSearchInput.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === 'Escape') catSearchInput.blur(); });
+    catCancelBtn.addEventListener('click', () => {
+      catSearchInput.value = '';
+      catSearchInput.blur();
+      loadCatalogue();
+    });
+
     document.getElementById('wl-view-array-btn').addEventListener('click', () => setWatchlistViewMode('array'));
     document.getElementById('wl-view-decades-btn').addEventListener('click', () => setWatchlistViewMode('decades'));
     document.getElementById('wl-view-library-btn').addEventListener('click', () => setWatchlistViewMode('library'));
