@@ -97,15 +97,37 @@ const Stats = (() => {
       'History': 'History', 'Music': 'Music', 'Family': 'Family',
     };
 
-    const genreCounts = {};
-    movies.forEach(m => (m.genres || []).forEach(g => { genreCounts[g] = (genreCounts[g] || 0) + 1; }));
-    const topGenreEntry = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0];
-    const genreWord = topGenreEntry ? (genreAbbrev[topGenreEntry[0]] || topGenreEntry[0]) : 'Cinema';
+    // Weight genre by both frequency AND how highly you rate it, so a genre you love
+    // bubbles above one you merely watch a lot.
+    const genreData = {};
+    movies.forEach(m => {
+      (m.genres || []).forEach(g => {
+        if (!genreData[g]) genreData[g] = { count: 0, ratingSum: 0 };
+        genreData[g].count++;
+        genreData[g].ratingSum += (m.rating || 0);
+      });
+    });
+    const genreScored = Object.entries(genreData)
+      .map(([g, d]) => ({ g, score: (d.ratingSum / d.count) * Math.log2(d.count + 1) }))
+      .sort((a, b) => b.score - a.score);
+    const topGenre = genreScored[0]?.g || null;
+    const genreWord = topGenre ? (genreAbbrev[topGenre] || topGenre) : 'Cinema';
 
     const directorCounts = {};
     movies.forEach(m => (m.directors || []).forEach(d => { directorCounts[d] = (directorCounts[d] || 0) + 1; }));
     const ratio = Object.keys(directorCounts).length / movies.length;
-    const descriptor = ratio < 0.5 ? 'Loyalist' : ratio < 0.8 ? 'Explorer' : 'Pioneer';
+    const avgRating = movies.reduce((s, m) => s + (m.rating || 0), 0) / movies.length;
+
+    // Two axes: director diversity (loyal vs. wide-ranging) and rating generosity
+    // (selective/tough critic vs. enthusiastic). Combined into 6 descriptors.
+    let descriptor;
+    if (ratio < 0.5) {
+      descriptor = avgRating >= 7.5 ? 'Devotee' : 'Loyalist';
+    } else if (ratio < 0.75) {
+      descriptor = avgRating >= 7.5 ? 'Connoisseur' : 'Explorer';
+    } else {
+      descriptor = avgRating >= 7.5 ? 'Omnivore' : 'Pioneer';
+    }
 
     return `${genreWord} ${descriptor}`;
   }
@@ -313,6 +335,8 @@ const Stats = (() => {
 
       ${stats.total === 0 ? '<p class="stats-empty">Add some movies to see your stats!</p>' : `
         ${renderChallenges(stats.challenges)}
+
+        <div id="director-marathons-wrap"></div>
 
         ${renderDecadePassport(stats.decadePassport)}
 

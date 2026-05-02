@@ -2380,7 +2380,7 @@ const App = (() => {
         </span>
         <span class="yir-launch-arrow">&#10095;</span>
       </button>`;
-    container.innerHTML = yirBanner + `<div id="director-marathons-wrap"></div>` + Stats.render(stats);
+    container.innerHTML = yirBanner + Stats.render(stats);
     animateCounters(container);
     loadDirectorMarathons(allMovies);
 
@@ -2456,7 +2456,7 @@ const App = (() => {
     const favorites = findFavoriteDirectors(allMovies);
     if (favorites.length === 0) { wrap.innerHTML = ''; return; }
 
-    const ownedAll = new Set(allMovies.map(m => String(m.tmdbId)));
+    const ownedAll = new Set(allMovies.filter(m => !m.watchlist).map(m => String(m.tmdbId)));
     wrap.innerHTML = `<div class="director-marathons">
       <div class="dm-section-label"><span class="dm-icon">&#127916;</span> Complete the Director</div>
       <div class="dm-section-sub">Films from auteurs you've rated highly</div>
