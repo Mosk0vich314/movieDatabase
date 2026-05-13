@@ -2457,6 +2457,7 @@ const App = (() => {
     if (favorites.length === 0) { wrap.innerHTML = ''; return; }
 
     const ownedAll = new Set(allMovies.filter(m => !m.watchlist).map(m => String(m.tmdbId)));
+    const onWatchlist = new Set(allMovies.filter(m => m.watchlist).map(m => String(m.tmdbId)));
     wrap.innerHTML = `<div class="director-marathons">
       <div class="dm-section-label"><span class="dm-icon">&#127916;</span> Complete the Director</div>
       <div class="dm-section-sub">Films from auteurs you've rated highly</div>
@@ -2486,16 +2487,21 @@ const App = (() => {
         ? `<img src="${filmo.profileUrl}" alt="${UI.escapeHtml(fav.name)}" class="dm-photo">`
         : `<div class="dm-photo dm-photo-placeholder">${UI.escapeHtml(fav.name).split(' ').map(w => w[0]).join('').slice(0, 2)}</div>`;
 
-      const filmsHtml = unwatched.map(f => `
+      const filmsHtml = unwatched.map(f => {
+        const alreadyQueued = onWatchlist.has(String(f.id));
+        const btn = alreadyQueued
+          ? `<button class="dm-add-btn dm-add-btn--added" data-tmdb-id="${f.id}" type="button" disabled>&#10003; Added</button>`
+          : `<button class="dm-add-btn" data-tmdb-id="${f.id}" type="button">+ Watchlist</button>`;
+        return `
         <div class="dm-film" data-tmdb-id="${f.id}">
           ${f.poster
             ? `<img src="${f.poster}" class="dm-film-poster" alt="${UI.escapeHtml(f.title)}" loading="lazy">`
             : `<div class="dm-film-poster dm-film-poster-empty"></div>`}
           <div class="dm-film-title">${UI.escapeHtml(f.title)}</div>
           <div class="dm-film-year">${f.year || ''}</div>
-          <button class="dm-add-btn" data-tmdb-id="${f.id}" type="button">+ Watchlist</button>
-        </div>
-      `).join('');
+          ${btn}
+        </div>`;
+      }).join('');
 
       const dirEl = document.createElement('div');
       dirEl.className = 'dm-director';
