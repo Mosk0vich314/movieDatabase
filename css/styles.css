@@ -4635,12 +4635,48 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
   flex: 1;
   min-width: 0;
 }
+.dm-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
 .dm-name {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--accent);
-  margin-bottom: 4px;
   letter-spacing: -0.01em;
+  flex: 1;
+  min-width: 0;
+}
+.dm-refresh-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.dm-refresh-btn:hover:not(:disabled) {
+  color: var(--accent);
+  background: rgba(255,255,255,0.06);
+}
+.dm-refresh-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+@keyframes dm-spin {
+  to { transform: rotate(360deg); }
+}
+.dm-refresh-btn--spinning {
+  animation: dm-spin 0.7s linear infinite;
 }
 .dm-progress-row {
   display: flex;

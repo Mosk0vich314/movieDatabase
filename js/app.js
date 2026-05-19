@@ -2466,22 +2466,20 @@ const App = (() => {
 
     const list = wrap.querySelector('#dm-list');
     list.innerHTML = '';
-    const top = favorites.slice(0, 4); // limit API calls
 
-    for (const fav of top) {
-      const filmo = await getDirectorFilmography(fav.name);
-      if (!filmo || !filmo.films) continue;
+    // Track which favorites indices are currently occupying a slot
+    const shownSet = new Set();
+
+    function buildDirectorEl(fav, filmo, favIndex) {
       const now = new Date();
       const released = filmo.films.filter(f => f.releaseDate && new Date(f.releaseDate) <= now);
       const total = released.length;
       const owned = released.filter(f => ownedAll.has(String(f.id))).length;
-
       const unwatched = released
         .filter(f => !ownedAll.has(String(f.id)))
         .sort((a, b) => (b.voteAverage * Math.log10(b.voteCount + 10)) - (a.voteAverage * Math.log10(a.voteCount + 10)))
         .slice(0, 12);
-
-      if (unwatched.length === 0) continue;
+      if (unwatched.length === 0) return null;
 
       const photoHtml = filmo.profileUrl
         ? `<img src="${filmo.profileUrl}" alt="${UI.escapeHtml(fav.name)}" class="dm-photo">`
@@ -2505,11 +2503,15 @@ const App = (() => {
 
       const dirEl = document.createElement('div');
       dirEl.className = 'dm-director';
+      dirEl.dataset.favIndex = favIndex;
       dirEl.innerHTML = `
         <div class="dm-header">
           ${photoHtml}
           <div class="dm-meta">
-            <div class="dm-name">${UI.escapeHtml(fav.name)}</div>
+            <div class="dm-name-row">
+              <div class="dm-name">${UI.escapeHtml(fav.name)}</div>
+              <button class="dm-refresh-btn" title="Show another director" type="button">&#8635;</button>
+            </div>
             <div class="dm-progress-row">
               <div class="dm-progress-bar"><div class="dm-progress-fill" style="width:${(owned / Math.max(total, 1)) * 100}%"></div></div>
               <div class="dm-progress-text">${owned}/${total} watched</div>
@@ -2518,8 +2520,10 @@ const App = (() => {
         </div>
         <div class="dm-films-scroll">${filmsHtml}</div>
       `;
-      list.appendChild(dirEl);
+      return dirEl;
+    }
 
+    function attachCardListeners(dirEl) {
       dirEl.querySelectorAll('.dm-add-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
@@ -2529,7 +2533,7 @@ const App = (() => {
           btn.textContent = 'Adding…';
           try {
             await addToWatchlist(id);
-            btn.textContent = '&#10003; Added';
+            btn.textContent = '✓ Added';
             btn.classList.add('dm-add-btn--added');
             const card = btn.closest('.dm-film');
             if (card) setTimeout(() => card.remove(), 500);
@@ -2542,7 +2546,6 @@ const App = (() => {
       dirEl.querySelectorAll('.dm-film').forEach(card => {
         card.addEventListener('click', (e) => {
           if (e.target.closest('.dm-add-btn')) return;
-          // Open Add view pre-loaded from TMDB ID
           const id = parseInt(card.dataset.tmdbId);
           window.location.hash = '#add';
           setTimeout(() => {
@@ -2554,6 +2557,51 @@ const App = (() => {
           }, 80);
         });
       });
+
+      const refreshBtn = dirEl.querySelector('.dm-refresh-btn');
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          haptic(10);
+          const currentIndex = parseInt(dirEl.dataset.favIndex);
+          refreshBtn.classList.add('dm-refresh-btn--spinning');
+          refreshBtn.disabled = true;
+          let nextEl = null;
+          let nextIndex = (currentIndex + 1) % favorites.length;
+          for (let attempts = 0; attempts < favorites.length; attempts++) {
+            if (!shownSet.has(nextIndex)) {
+              const filmo = await getDirectorFilmography(favorites[nextIndex].name);
+              if (filmo && filmo.films) {
+                nextEl = buildDirectorEl(favorites[nextIndex], filmo, nextIndex);
+              }
+              if (nextEl) break;
+            }
+            nextIndex = (nextIndex + 1) % favorites.length;
+          }
+          refreshBtn.classList.remove('dm-refresh-btn--spinning');
+          if (!nextEl) {
+            refreshBtn.disabled = true;
+            refreshBtn.title = 'No more candidates';
+            return;
+          }
+          shownSet.delete(currentIndex);
+          shownSet.add(nextIndex);
+          attachCardListeners(nextEl);
+          dirEl.replaceWith(nextEl);
+        });
+      }
+    }
+
+    let loaded = 0;
+    for (let i = 0; i < favorites.length && loaded < 3; i++) {
+      const filmo = await getDirectorFilmography(favorites[i].name);
+      if (!filmo || !filmo.films) continue;
+      const dirEl = buildDirectorEl(favorites[i], filmo, i);
+      if (!dirEl) continue;
+      shownSet.add(i);
+      attachCardListeners(dirEl);
+      list.appendChild(dirEl);
+      loaded++;
     }
 
     if (!list.children.length) wrap.innerHTML = '';
