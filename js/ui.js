@@ -921,5 +921,54 @@ const UI = (() => {
       </div>`;
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTournamentStart, renderTournamentMatch, renderTournamentResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml, reshuffleDecade };
+  function renderKothMatch(king, challenger, matchNum, total) {
+    const posterKing = king.poster ? `<img src="${king.poster}" alt="" class="tournament-poster">` : '<div class="tournament-no-poster"></div>';
+    const posterC = challenger.poster ? `<img src="${challenger.poster}" alt="" class="tournament-poster">` : '<div class="tournament-no-poster"></div>';
+    const progressPct = total > 0 ? ((matchNum - 1) / total) * 100 : 0;
+    return `
+      <div class="koth-match">
+        <div class="tournament-round-header">
+          <span class="tournament-round-name">&#128081; King of the Hill</span>
+          <span class="tournament-match-count">Challenger ${matchNum} / ${total}</span>
+        </div>
+        <div class="tournament-vs">
+          <div class="tournament-card koth-king" data-id="${king.id}">
+            <div class="koth-role-badge koth-role-king">&#128081; Reigning King</div>
+            <div class="tournament-poster-wrap">${posterKing}</div>
+            <div class="tournament-card-title">${escapeHtml(king.title)}</div>
+            <div class="tournament-card-year">${king.year || ''}</div>
+          </div>
+          <div class="tournament-vs-badge">VS</div>
+          <div class="tournament-card koth-challenger" data-id="${challenger.id}">
+            <div class="koth-role-badge koth-role-challenger">&#9876; Challenger</div>
+            <div class="tournament-poster-wrap">${posterC}</div>
+            <div class="tournament-card-title">${escapeHtml(challenger.title)}</div>
+            <div class="tournament-card-year">${challenger.year || ''}</div>
+          </div>
+        </div>
+        <div class="tournament-progress">
+          <div class="tournament-progress-bar" style="width:${progressPct}%"></div>
+        </div>
+      </div>`;
+  }
+
+  function renderKothResults(king, kingWins, totalMovies) {
+    const poster = king.poster ? `<img src="${king.poster}" alt="">` : '';
+    const streakLine = kingWins >= totalMovies - 1
+      ? `Undefeated — dethroned every challenger`
+      : `Final reign: defeated ${kingWins} challenger${kingWins !== 1 ? 's' : ''} in a row`;
+    return `
+      <div class="tournament-results">
+        <div class="koth-crown-icon">&#128081;</div>
+        <h2 class="tournament-results-title">King of the Hill</h2>
+        <div class="tournament-winner">
+          <div class="tournament-winner-poster">${poster}</div>
+          <div class="tournament-winner-name">${escapeHtml(king.title)}</div>
+          <div class="tournament-winner-label">${streakLine}</div>
+        </div>
+        <button class="btn btn-secondary tournament-go-btn" id="koth-restart-btn">Play Again</button>
+      </div>`;
+  }
+
+  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml, reshuffleDecade };
 })();

@@ -226,7 +226,7 @@ const App = (() => {
     if (view === 'catalogue') loadCatalogue();
     if (view === 'watchlist') loadWatchlist();
     if (view === 'chart') loadChart();
-    if (view !== 'chart') tournament = null;
+    if (view !== 'chart') { tournament = null; koth = null; }
     if (view === 'stats') loadStats();
     if (view === 'inventory') loadInventory();
     if (view === 'add') {
@@ -1028,6 +1028,7 @@ const App = (() => {
   // --- Chart ---
 
   let tournament = null;
+  let koth = null;
 
   async function loadChart() {
     const movies = (await MovieDB.getAllMovies()).filter(m => !m.watchlist && m.rating > 0);
@@ -1036,6 +1037,9 @@ const App = (() => {
     const chartHtml = UI.renderChart(top30);
     const tournamentBtn = allCatalogue.length >= 2
       ? `<button class="btn btn-primary tournament-launch-btn" id="launch-tournament">&#127942; Movie Tournament</button>`
+      : '';
+    const kothBtn = allCatalogue.length >= 2
+      ? `<button class="btn btn-secondary koth-launch-btn" id="launch-koth">&#128081; King of the Hill</button>`
       : '';
     const topListsHtml = `<div class="chart-toplists">
       <div class="chart-toplists-label">Explore top lists</div>
@@ -1057,7 +1061,7 @@ const App = (() => {
         </a>
       </div>
     </div>`;
-    document.getElementById('chart-list').innerHTML = chartHtml + tournamentBtn + topListsHtml;
+    document.getElementById('chart-list').innerHTML = chartHtml + tournamentBtn + kothBtn + topListsHtml;
   }
 
   function shuffle(arr) {
@@ -1082,6 +1086,7 @@ const App = (() => {
     const allCatalogue = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
     if (allCatalogue.length < 2) { UI.showToast('Need at least 2 films!'); return; }
 
+    koth = null;
     const shuffled = shuffle(allCatalogue);
 
     // Simple pairing — no power-of-2 padding needed
@@ -1197,6 +1202,65 @@ const App = (() => {
       tournament.currentMatchIdx++;
       tournament.matchesDone++;
       showNextMatch();
+    }, 650);
+  }
+
+  // --- King of the Hill ---
+
+  async function startKoth() {
+    const allCatalogue = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
+    if (allCatalogue.length < 2) { UI.showToast('Need at least 2 films!'); return; }
+
+    tournament = null;
+    const shuffled = shuffle(allCatalogue);
+    koth = {
+      king: shuffled[0],
+      challengers: shuffled.slice(1),
+      done: 0,
+      total: shuffled.length - 1,
+      picking: false,
+      kingWins: 0,
+    };
+    showNextKothMatch();
+  }
+
+  function showNextKothMatch() {
+    const container = document.getElementById('chart-list');
+    if (koth.done >= koth.total) {
+      container.innerHTML = UI.renderKothResults(koth.king, koth.kingWins, koth.total + 1);
+      koth = null;
+      setTimeout(spawnConfetti, 300);
+      return;
+    }
+    const challenger = koth.challengers[koth.done];
+    container.innerHTML = UI.renderKothMatch(koth.king, challenger, koth.done + 1, koth.total);
+    koth.picking = false;
+  }
+
+  function pickKothWinner(movieId) {
+    if (!koth || koth.picking) return;
+    koth.picking = true;
+
+    const challenger = koth.challengers[koth.done];
+    const isKingWon = koth.king.id === movieId;
+
+    const kingCard = document.querySelector('.tournament-card.koth-king');
+    const challengerCard = document.querySelector('.tournament-card.koth-challenger');
+    const vsBadge = document.querySelector('.tournament-vs-badge');
+
+    if (isKingWon ? kingCard : challengerCard) (isKingWon ? kingCard : challengerCard).classList.add('tournament-pick-winner');
+    if (isKingWon ? challengerCard : kingCard) (isKingWon ? challengerCard : kingCard).classList.add('tournament-pick-loser');
+    if (vsBadge) vsBadge.classList.add('tournament-vs-hide');
+
+    setTimeout(() => {
+      if (isKingWon) {
+        koth.kingWins++;
+      } else {
+        koth.king = challenger;
+        koth.kingWins = 1;
+      }
+      koth.done++;
+      showNextKothMatch();
     }, 650);
   }
 
@@ -2922,15 +2986,24 @@ const App = (() => {
         startTournament();
         return;
       }
-      // Tournament match pick
+      // Tournament / KOTH match pick
       const card = e.target.closest('.tournament-card[data-id]');
       if (card && tournament) {
         pickTournamentWinner(parseInt(card.dataset.id));
         return;
       }
+      if (card && koth) {
+        pickKothWinner(parseInt(card.dataset.id));
+        return;
+      }
       // Tournament restart
       if (e.target.closest('#tournament-restart-btn')) {
         startTournament();
+        return;
+      }
+      // KOTH launch / restart
+      if (e.target.closest('#launch-koth') || e.target.closest('#koth-restart-btn')) {
+        startKoth();
         return;
       }
       // Tournament result row → detail

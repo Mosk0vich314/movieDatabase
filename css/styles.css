@@ -3441,6 +3441,52 @@ input[type="date"].form-input { color-scheme: dark; }
   to   { opacity: 1; transform: translateX(0); }
 }
 
+/* === King of the Hill === */
+.koth-launch-btn {
+  display: block;
+  margin: 8px auto 16px;
+  font-size: 0.92rem;
+  padding: 12px 28px;
+  border-radius: 14px;
+  letter-spacing: 0.04em;
+}
+.koth-match {
+  padding: 16px 0;
+}
+.koth-role-badge {
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border-radius: 20px;
+  margin-bottom: 8px;
+  display: inline-block;
+}
+.koth-role-king {
+  background: rgba(245, 197, 24, 0.15);
+  color: #f5c518;
+  border: 1px solid rgba(245, 197, 24, 0.4);
+}
+.koth-role-challenger {
+  background: rgba(233, 69, 96, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(233, 69, 96, 0.3);
+}
+.tournament-card.koth-king {
+  border-color: rgba(245, 197, 24, 0.6);
+  box-shadow: 0 4px 20px rgba(245, 197, 24, 0.18);
+}
+.tournament-card.koth-king:hover {
+  border-color: #f5c518;
+  box-shadow: 0 8px 32px rgba(245, 197, 24, 0.35);
+}
+.koth-crown-icon {
+  font-size: 3.5rem;
+  margin-bottom: 8px;
+  animation: trophyBounce 1.5s ease-in-out infinite;
+}
+
 
 /* === (heatmap removed) ===
 .heatmap-wrap {
@@ -3964,7 +4010,8 @@ body {
 .rating-badge,
 .toast,
 .empty-state,
-.tournament-launch-btn {
+.tournament-launch-btn,
+.koth-launch-btn {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
