@@ -1212,12 +1212,12 @@ const App = (() => {
     if (allCatalogue.length < 2) { UI.showToast('Need at least 2 films!'); return; }
 
     tournament = null;
-    const shuffled = shuffle(allCatalogue);
+    const pool = shuffle(allCatalogue).slice(0, 20);
     koth = {
-      king: shuffled[0],
-      challengers: shuffled.slice(1),
+      king: pool[0],
+      challengers: pool.slice(1),
       done: 0,
-      total: shuffled.length - 1,
+      total: pool.length - 1,
       picking: false,
       kingWins: 0,
     };
