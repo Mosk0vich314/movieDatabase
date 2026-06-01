@@ -5287,7 +5287,7 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
 .stats-recent-panel { }
 .recent-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
 .recent-stat-card {
@@ -5373,4 +5373,66 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
 .blind-spot-wl-btn {
   font-size: 0.68rem;
   padding: 5px 6px;
+}
+
+/* === Watchlist pinned section === */
+.wl-pinned-section {
+  padding: 12px 16px 4px;
+}
+.wl-pinned-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.wl-pinned-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.wl-pinned-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card-bg);
+  border: 1px solid rgba(233,69,96,0.25);
+  border-radius: var(--radius-lg);
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.wl-pinned-item:hover { border-color: rgba(233,69,96,0.5); }
+.wl-pinned-poster {
+  width: 36px;
+  height: 54px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-input);
+}
+.wl-pinned-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wl-pinned-no-poster { width: 100%; height: 100%; }
+.wl-pinned-info { flex: 1; min-width: 0; }
+.wl-pinned-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wl-pinned-year { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+.wl-pinned-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.wl-pinned-watched {
+  width: auto;
+  margin-top: 0;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  white-space: nowrap;
 }

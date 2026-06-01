@@ -592,10 +592,41 @@ const App = (() => {
 
   async function loadWatchlist() {
     const allMovies = (await MovieDB.getAllMovies()).filter(m => m.watchlist);
-    // Pinned items always float to the top
     allMovies.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
     const container = document.getElementById('watchlist-grid');
+    const pinnedContainer = document.getElementById('watchlist-pinned');
     const empty = document.getElementById('empty-watchlist');
+
+    // Render pinned section
+    const pinned = allMovies.filter(m => m.pinned);
+    if (pinnedContainer) {
+      if (pinned.length > 0) {
+        pinnedContainer.innerHTML = `
+          <div class="wl-pinned-section">
+            <div class="wl-pinned-label">&#128204; Pinned</div>
+            <div class="wl-pinned-list">
+              ${pinned.map(m => {
+                const poster = m.poster
+                  ? `<img src="${UI.escapeHtml(m.poster)}" alt="${UI.escapeHtml(m.title)}" loading="lazy">`
+                  : `<div class="wl-pinned-no-poster"></div>`;
+                return `<div class="wl-pinned-item" data-id="${m.id}">
+                  <div class="wl-pinned-poster">${poster}</div>
+                  <div class="wl-pinned-info">
+                    <div class="wl-pinned-title">${UI.escapeHtml(m.title)}</div>
+                    <div class="wl-pinned-year">${m.year || ''}</div>
+                  </div>
+                  <div class="wl-pinned-actions">
+                    <button class="watchlist-card-btn wl-pinned-watched" data-id="${m.id}">&#10003; Watched</button>
+                    <button class="watchlist-pin-btn pinned" data-id="${m.id}" title="Unpin">&#128204;</button>
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>`;
+      } else {
+        pinnedContainer.innerHTML = '';
+      }
+    }
 
     document.getElementById('wl-view-array-btn').classList.toggle('active', watchlistViewMode === 'array');
     document.getElementById('wl-view-decades-btn').classList.toggle('active', watchlistViewMode === 'decades');
@@ -2931,7 +2962,7 @@ const App = (() => {
       if (result) selectSearchResult(parseInt(result.dataset.tmdbId));
     });
 
-    document.getElementById('watchlist-grid').addEventListener('click', async (e) => {
+    async function handleWatchlistClick(e) {
       const pinBtn = e.target.closest('.watchlist-pin-btn');
       if (pinBtn) {
         e.stopPropagation();
@@ -2950,9 +2981,16 @@ const App = (() => {
         markAsWatched(parseInt(btn.dataset.id));
         return;
       }
+      const pinnedItem = e.target.closest('.wl-pinned-item');
+      if (pinnedItem) {
+        window.location.hash = `#detail/${pinnedItem.dataset.id}`;
+        return;
+      }
       const card = e.target.closest('.movie-card');
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
-    });
+    }
+    document.getElementById('watchlist-pinned').addEventListener('click', handleWatchlistClick);
+    document.getElementById('watchlist-grid').addEventListener('click', handleWatchlistClick);
 
     let sliderWasTen = false;
     let lastTickRating = -1;
