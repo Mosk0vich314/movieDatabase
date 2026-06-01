@@ -12,6 +12,7 @@ const App = (() => {
   let searchMode = 'movie';
   let selectedDirectorName = '';
   let pendingPersonSearch = null;
+  let pendingPersonFilter = '';
   let recentPickIds = [];
   let currentFilmography = null;
   // Pulls suggestions from local storage if they exist
@@ -292,6 +293,7 @@ const App = (() => {
 
     populateGenreFilter(movies);
     populateDirectorFilter(movies);
+    populateTagFilter(movies);
 
     document.getElementById('view-array-btn').classList.toggle('active', viewMode === 'array');
     document.getElementById('view-decades-btn').classList.toggle('active', viewMode === 'decades');
@@ -406,16 +408,67 @@ const App = (() => {
     });
   }
 
+  function populateTagFilter(movies) {
+    const tags = new Set();
+    movies.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
+    const select = document.getElementById('filter-tag');
+    const current = select.value;
+    select.innerHTML = '<option value="">All Tags</option>';
+    [...tags].sort().forEach(t => {
+      select.innerHTML += `<option value="${UI.escapeHtml(t)}"${t === current ? ' selected' : ''}>${UI.escapeHtml(t)}</option>`;
+    });
+  }
+
+  function renderTagChips(tags) {
+    const area = document.getElementById('tag-chip-area');
+    if (!area) return;
+    area.innerHTML = (tags || []).map(t =>
+      `<span class="tag-chip">${UI.escapeHtml(t)}<button type="button" class="tag-chip-remove" data-tag="${UI.escapeHtml(t)}">&times;</button></span>`
+    ).join('');
+  }
+
+  function getFormTags() {
+    const area = document.getElementById('tag-chip-area');
+    if (!area) return [];
+    return Array.from(area.querySelectorAll('.tag-chip')).map(c => {
+      const clone = c.cloneNode(true);
+      clone.querySelector('.tag-chip-remove')?.remove();
+      return clone.textContent.trim();
+    }).filter(Boolean);
+  }
+
+  function filterByPerson(name) {
+    const dirSelect = document.getElementById('filter-director');
+    const dirOption = Array.from(dirSelect.options).find(o => o.value === name);
+    if (dirOption) {
+      dirSelect.value = name;
+      pendingPersonFilter = '';
+    } else {
+      dirSelect.value = '';
+      pendingPersonFilter = name;
+    }
+    document.getElementById('filter-panel').classList.add('open');
+    if (window.location.hash === '#catalogue') {
+      loadCatalogue();
+    } else {
+      window.location.hash = '#catalogue';
+    }
+  }
+
   function applyFilters(movies) {
     const genre = document.getElementById('filter-genre').value;
     const director = document.getElementById('filter-director').value;
     const minRating = parseInt(document.getElementById('filter-rating').value) || 0;
+    const tag = document.getElementById('filter-tag').value;
     const search = document.getElementById('catalogue-search').value.toLowerCase().trim();
 
     return movies.filter(m => {
       if (genre && !(m.genres || []).includes(genre)) return false;
       if (director && !(m.directors || []).includes(director)) return false;
       if (minRating && (m.rating || 0) < minRating) return false;
+      if (tag && !(m.tags || []).includes(tag)) return false;
+      if (pendingPersonFilter && !(m.directors || []).includes(pendingPersonFilter) &&
+          !(m.cast || []).some(c => c.name === pendingPersonFilter)) return false;
       if (search && !m.title.toLowerCase().includes(search)) return false;
       return true;
     });
@@ -539,6 +592,8 @@ const App = (() => {
 
   async function loadWatchlist() {
     const allMovies = (await MovieDB.getAllMovies()).filter(m => m.watchlist);
+    // Pinned items always float to the top
+    allMovies.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
     const container = document.getElementById('watchlist-grid');
     const empty = document.getElementById('empty-watchlist');
 
@@ -931,10 +986,12 @@ const App = (() => {
       selectedRating = editingMovie.rating || 0;
       document.getElementById('form-notes').value = editingMovie.notes || '';
       document.getElementById('form-id').value = editingMovie.id;
+      renderTagChips(editingMovie.tags || []);
     } else {
       selectedRating = 0;
       document.getElementById('form-notes').value = '';
       document.getElementById('form-id').value = '';
+      renderTagChips([]);
     }
     updateRatingDisplay();
   }
@@ -989,6 +1046,7 @@ const App = (() => {
       rtScore: form.dataset.rtScore || '',
       rating: selectedRating,
       notes: document.getElementById('form-notes').value.trim(),
+      tags: getFormTags(),
     };
 
     try {
@@ -2447,6 +2505,7 @@ const App = (() => {
     container.innerHTML = yirBanner + Stats.render(stats);
     animateCounters(container);
     loadDirectorMarathons(allMovies);
+    loadBlindSpots(movies);
 
     const yirBtn = document.getElementById('yir-launch');
     if (yirBtn) {
@@ -2455,6 +2514,54 @@ const App = (() => {
         openYearInReview(allMovies, currentYear);
       });
     }
+  }
+
+  // ---- Blind Spots: acclaimed films in user's top genres not yet in collection ----
+  async function loadBlindSpots(movies) {
+    const container = document.getElementById('stats-container');
+    if (!container) return;
+    const CACHE_KEY = 'blindSpotCache';
+    const ownedTmdbIds = new Set(movies.map(m => String(m.tmdbId)));
+
+    async function fetchAndRender() {
+      try {
+        const genreList = await TMDB.getGenreList();
+        const genreIds = Stats.computeBlindSpotGenreIds(movies, genreList);
+        if (genreIds.length === 0) return;
+        const results = await TMDB.discoverByGenres(genreIds);
+        const filtered = results.filter(r => !ownedTmdbIds.has(String(r.id))).slice(0, 10);
+        if (filtered.length === 0) return;
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), data: filtered })); } catch (_) {}
+        renderBlindSpotsSection(filtered, container);
+      } catch (_) {}
+    }
+
+    try {
+      const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      if (cached && Date.now() - cached.t < 24 * 3600000) {
+        const filtered = cached.data.filter(r => !ownedTmdbIds.has(String(r.id)));
+        if (filtered.length > 0) { renderBlindSpotsSection(filtered, container); return; }
+      }
+    } catch (_) {}
+
+    fetchAndRender();
+  }
+
+  function renderBlindSpotsSection(results, container) {
+    const existing = container.querySelector('#blind-spots-section');
+    if (existing) existing.remove();
+    const html = Stats.renderBlindSpots(results);
+    if (!html) return;
+    container.insertAdjacentHTML('beforeend', html);
+    container.querySelectorAll('.blind-spot-wl-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        btn.disabled = true;
+        btn.textContent = 'Adding…';
+        await addToWatchlist(parseInt(btn.dataset.tmdbId));
+        btn.textContent = 'Added';
+      });
+    });
   }
 
   // ---- Complete the Director: filmography lanes for favorite directors ----
@@ -2824,7 +2931,19 @@ const App = (() => {
       if (result) selectSearchResult(parseInt(result.dataset.tmdbId));
     });
 
-    document.getElementById('watchlist-grid').addEventListener('click', (e) => {
+    document.getElementById('watchlist-grid').addEventListener('click', async (e) => {
+      const pinBtn = e.target.closest('.watchlist-pin-btn');
+      if (pinBtn) {
+        e.stopPropagation();
+        haptic(8);
+        const id = parseInt(pinBtn.dataset.id);
+        const movie = await MovieDB.getMovie(id);
+        if (!movie) return;
+        movie.pinned = !movie.pinned;
+        await MovieDB.updateMovie(movie);
+        loadWatchlist();
+        return;
+      }
       const btn = e.target.closest('.watchlist-card-btn');
       if (btn) {
         e.stopPropagation();
@@ -2876,6 +2995,33 @@ const App = (() => {
         if (mode === 'actor') loadActorFilmography(personId, personName);
         else loadFilmography(personId, personName);
       }
+    });
+
+    // Tag input: add chip on Enter or comma
+    document.getElementById('form-tags-input').addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ',') return;
+      e.preventDefault();
+      const val = e.target.value.replace(/,/g, '').trim();
+      if (!val) return;
+      const existing = getFormTags();
+      if (!existing.includes(val)) renderTagChips([...existing, val]);
+      e.target.value = '';
+    });
+
+    // Tag chip remove buttons
+    document.getElementById('tag-chip-area').addEventListener('click', (e) => {
+      const removeBtn = e.target.closest('.tag-chip-remove');
+      if (!removeBtn) return;
+      const tagToRemove = removeBtn.dataset.tag;
+      renderTagChips(getFormTags().filter(t => t !== tagToRemove));
+    });
+
+    // Director/cast link: filter catalogue by person
+    document.addEventListener('click', (e) => {
+      const dirLink = e.target.closest('.director-link');
+      if (dirLink) { e.stopPropagation(); filterByPerson(dirLink.dataset.director); return; }
+      const castName = e.target.closest('.cast-name-link');
+      if (castName) { e.stopPropagation(); filterByPerson(castName.dataset.personName); return; }
     });
 
     document.getElementById('movie-grid').addEventListener('click', async (e) => {
@@ -3042,7 +3188,8 @@ const App = (() => {
         document.getElementById('filter-genre').value,
         document.getElementById('filter-director').value,
         document.getElementById('filter-rating').value,
-      ].filter(Boolean).length;
+        document.getElementById('filter-tag').value,
+      ].filter(Boolean).length + (pendingPersonFilter ? 1 : 0);
       const badge = document.getElementById('filter-badge');
       const btn = document.getElementById('filter-toggle');
       badge.textContent = active;
@@ -3050,11 +3197,16 @@ const App = (() => {
       btn.classList.toggle('active', active > 0);
     }
 
-    function onFilterChange() { loadCatalogue(); updateFilterBadge(); }
+    function onFilterChange() {
+      pendingPersonFilter = '';
+      loadCatalogue();
+      updateFilterBadge();
+    }
 
     document.getElementById('filter-genre').addEventListener('change', onFilterChange);
     document.getElementById('filter-director').addEventListener('change', onFilterChange);
     document.getElementById('filter-rating').addEventListener('change', onFilterChange);
+    document.getElementById('filter-tag').addEventListener('change', onFilterChange);
     document.getElementById('sort-by').addEventListener('change', onFilterChange);
     document.getElementById('view-array-btn').addEventListener('click', () => setViewMode('array'));
     document.getElementById('view-decades-btn').addEventListener('click', () => setViewMode('decades'));

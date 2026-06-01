@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/logo.jpg" type="image/jpeg">
   <link rel="apple-touch-icon" href="icons/logo.jpg">
-  <link rel="stylesheet" href="css/styles.css?v=2026.05.26.2033">
+  <link rel="stylesheet" href="css/styles.css?v=2026.06.01.1152">
 </head>
 <body>
   <header class="app-header">
@@ -76,6 +76,9 @@
               <option value="3">3+</option>
               <option value="2">2+</option>
               <option value="1">1+</option>
+            </select>
+            <select id="filter-tag" class="filter-select">
+              <option value="">All Tags</option>
             </select>
             <select id="sort-by" class="filter-select">
               <option value="dateAdded-desc">Newest Added</option>
@@ -166,6 +169,11 @@
         <div class="form-group">
           <label for="form-notes">Notes</label>
           <textarea id="form-notes" class="form-input" rows="3" placeholder="Your thoughts…"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Tags</label>
+          <div class="tag-chip-area" id="tag-chip-area"></div>
+          <input type="text" id="form-tags-input" class="form-input" placeholder="Add tag, press Enter…" autocomplete="off">
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Save Movie</button>
@@ -273,11 +281,11 @@
   <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <script src="js/db.js?v=2026.05.26.2033"></script>
-  <script src="js/api.js?v=2026.05.26.2033"></script>
-  <script src="js/ui.js?v=2026.05.26.2033"></script>
-  <script src="js/stats.js?v=2026.05.26.2033"></script>
-  <script src="js/sync.js?v=2026.05.26.2033"></script>
-  <script src="js/app.js?v=2026.05.26.2033"></script>
+  <script src="js/db.js?v=2026.06.01.1152"></script>
+  <script src="js/api.js?v=2026.06.01.1152"></script>
+  <script src="js/ui.js?v=2026.06.01.1152"></script>
+  <script src="js/stats.js?v=2026.06.01.1152"></script>
+  <script src="js/sync.js?v=2026.06.01.1152"></script>
+  <script src="js/app.js?v=2026.06.01.1152"></script>
 </body>
 </html>

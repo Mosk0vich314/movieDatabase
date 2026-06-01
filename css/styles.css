@@ -5200,3 +5200,177 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
           background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+/* === Feature 5: Watchlist pin === */
+.watchlist-card-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.watchlist-card-actions .watchlist-card-btn {
+  flex: 1;
+  margin-top: 0;
+}
+.watchlist-pin-btn {
+  flex-shrink: 0;
+  width: 34px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+}
+.watchlist-pin-btn:hover,
+.watchlist-pin-btn.pinned {
+  opacity: 1;
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(233,69,96,0.08);
+}
+.watchlist-card--pinned {
+  border-color: rgba(233,69,96,0.4) !important;
+  box-shadow: 0 0 0 1px rgba(233,69,96,0.2);
+}
+
+/* === Feature 7: Director/cast clickable links === */
+.director-link {
+  cursor: pointer;
+  border-bottom: 1px dashed rgba(233,69,96,0.4);
+  transition: color 0.15s;
+}
+.director-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.cast-name-link {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.cast-name-link:hover { color: var(--accent); }
+
+/* === Feature 8: Tags === */
+.tag-chip-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+  min-height: 0;
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(124,92,252,0.15);
+  border: 1px solid rgba(124,92,252,0.3);
+  color: var(--accent2);
+  border-radius: 20px;
+  padding: 3px 9px 3px 10px;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+.tag-chip-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0 0 0 2px;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.tag-chip-remove:hover { opacity: 1; }
+
+/* === Feature 6: Activity Snapshot === */
+.stats-recent-panel { }
+.recent-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 10px;
+}
+.recent-stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 10px 12px;
+  text-align: center;
+}
+.recent-stat-value {
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text);
+  margin-bottom: 5px;
+}
+.recent-stat-value.recent-stat-genre {
+  font-size: 0.9rem;
+  padding-top: 8px;
+}
+.recent-stat-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.stats-section-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: -8px 0 12px;
+}
+
+/* === Feature 9: Blind Spots === */
+.blind-spots-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.blind-spots-scroll::-webkit-scrollbar { display: none; }
+.blind-spot-card {
+  flex-shrink: 0;
+  width: 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.blind-spot-poster {
+  width: 110px;
+  height: 165px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--card-bg);
+}
+.blind-spot-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.blind-no-poster {
+  width: 100%;
+  height: 100%;
+  background: var(--card-bg);
+}
+.blind-spot-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.blind-spot-year {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+.blind-spot-wl-btn {
+  font-size: 0.68rem;
+  padding: 5px 6px;
+}

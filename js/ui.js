@@ -44,7 +44,9 @@ const UI = (() => {
 
   function renderDirectorBadge(directors) {
     if (!directors || directors.length === 0) return '';
-    const names = directors.map(d => escapeHtml(d)).join(', ');
+    const names = directors.map(d =>
+      `<span class="director-link" data-director="${escapeHtml(d)}">${escapeHtml(d)}</span>`
+    ).join(', ');
     return `<div class="director-badge"><span class="director-badge-icon">&#127916;</span> ${names}</div>`;
   }
 
@@ -110,15 +112,19 @@ const UI = (() => {
       ? `<p class="movie-card-overview">${escapeHtml(movie.overview.substring(0, 120))}${movie.overview.length > 120 ? '...' : ''}</p>`
       : '';
 
+    const pinnedClass = movie.pinned ? ' watchlist-card--pinned' : '';
     return `
-      <div class="movie-card watchlist-card" data-id="${movie.id}">
+      <div class="movie-card watchlist-card${pinnedClass}" data-id="${movie.id}">
         <div class="movie-card-poster">${poster}</div>
         <div class="movie-card-info">
           <h3 class="movie-card-title">${escapeHtml(movie.title)}</h3>
           <p class="movie-card-year">${movie.year || 'N/A'}</p>
           ${directorLine}
           ${overviewLine}
-          <button class="watchlist-card-btn" data-id="${movie.id}">&#10003; Watched</button>
+          <div class="watchlist-card-actions">
+            <button class="watchlist-card-btn" data-id="${movie.id}">&#10003; Watched</button>
+            <button class="watchlist-pin-btn${movie.pinned ? ' pinned' : ''}" data-id="${movie.id}" title="${movie.pinned ? 'Unpin' : 'Pin to top'}">&#128204;</button>
+          </div>
         </div>
       </div>
     `;
@@ -205,7 +211,7 @@ const UI = (() => {
                 ${c.profileUrl
                   ? `<img src="${c.profileUrl}" class="cast-photo" alt="${escapeHtml(c.name)}" loading="lazy">`
                   : `<div class="cast-photo-placeholder"></div>`}
-                <div class="cast-name">${escapeHtml(c.name)}</div>
+                <div class="cast-name cast-name-link" data-person-name="${escapeHtml(c.name)}">${escapeHtml(c.name)}</div>
                 <div class="cast-char">${escapeHtml(c.character || '')}</div>
               </div>
             `).join('')}

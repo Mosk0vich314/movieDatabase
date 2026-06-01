@@ -182,6 +182,41 @@ const Stats = (() => {
     };
   }
 
+  function computeRecentActivity(movies) {
+    const now = new Date();
+    const dow = now.getDay();
+    const msSinceMonday = (dow === 0 ? 6 : dow - 1) * 86400000;
+    const weekStart = new Date(now.getTime() - msSinceMonday);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekStartStr = weekStart.toISOString().substring(0, 10);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthStartStr = monthStart.toISOString().substring(0, 10);
+
+    const thisWeek  = movies.filter(m => m.dateAdded && m.dateAdded >= weekStartStr);
+    const thisMonth = movies.filter(m => m.dateAdded && m.dateAdded >= monthStartStr);
+
+    const monthRated = thisMonth.filter(m => m.rating > 0);
+    const avgMonth = monthRated.length
+      ? (monthRated.reduce((s, m) => s + m.rating, 0) / monthRated.length).toFixed(1)
+      : null;
+
+    const genreCounts = {};
+    thisMonth.forEach(m => (m.genres || []).forEach(g => { genreCounts[g] = (genreCounts[g] || 0) + 1; }));
+    const topGenre = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+    return { weekCount: thisWeek.length, monthCount: thisMonth.length, monthAvgRating: avgMonth, monthTopGenre: topGenre };
+  }
+
+  function computeBlindSpotGenreIds(movies, genreList) {
+    const genreCounts = {};
+    movies.forEach(m => (m.genres || []).forEach(g => { genreCounts[g] = (genreCounts[g] || 0) + 1; }));
+    const top2Names = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([g]) => g);
+    return top2Names.map(name => {
+      const found = genreList.find(g => g.name === name);
+      return found ? found.id : null;
+    }).filter(Boolean);
+  }
+
   function compute(movies) {
     const total = movies.length;
     const avgRating = total > 0
@@ -222,6 +257,7 @@ const Stats = (() => {
       totalRuntime, streak, rank, milestones, genreBadges, auteurBadges,
       decadePassport: computeDecadePassport(movies),
       challenges: generateChallenges(movies),
+      recent: computeRecentActivity(movies),
     };
   }
 
@@ -278,6 +314,58 @@ const Stats = (() => {
   }
 
 
+  function renderRecentActivity(recent) {
+    if (!recent || (recent.weekCount === 0 && recent.monthCount === 0)) return '';
+    const monthName = new Date().toLocaleString('en-US', { month: 'long' });
+    return `
+      <div class="stats-section stats-recent-panel">
+        <h3>Activity Snapshot</h3>
+        <div class="recent-stats-grid">
+          <div class="recent-stat-card">
+            <div class="recent-stat-value">${recent.weekCount}</div>
+            <div class="recent-stat-label">This week</div>
+          </div>
+          <div class="recent-stat-card">
+            <div class="recent-stat-value">${recent.monthCount}</div>
+            <div class="recent-stat-label">${monthName}</div>
+          </div>
+          ${recent.monthAvgRating ? `
+          <div class="recent-stat-card">
+            <div class="recent-stat-value">${recent.monthAvgRating}</div>
+            <div class="recent-stat-label">Avg rating</div>
+          </div>` : ''}
+          ${recent.monthTopGenre ? `
+          <div class="recent-stat-card">
+            <div class="recent-stat-value recent-stat-genre">${UI.escapeHtml(recent.monthTopGenre)}</div>
+            <div class="recent-stat-label">Top genre</div>
+          </div>` : ''}
+        </div>
+      </div>`;
+  }
+
+  function renderBlindSpots(results) {
+    if (!results || results.length === 0) return '';
+    const items = results.map(r => {
+      const year = r.release_date ? r.release_date.substring(0, 4) : '';
+      const img = r.poster_path
+        ? `<img src="${TMDB.posterUrl(r.poster_path, 'w154')}" alt="${UI.escapeHtml(r.title)}" loading="lazy">`
+        : `<div class="blind-no-poster"></div>`;
+      return `
+        <div class="blind-spot-card">
+          <div class="blind-spot-poster">${img}</div>
+          <div class="blind-spot-title">${UI.escapeHtml(r.title)}</div>
+          <div class="blind-spot-year">${year}</div>
+          <button class="suggestion-wl-btn blind-spot-wl-btn" data-tmdb-id="${r.id}">+ Watchlist</button>
+        </div>`;
+    }).join('');
+    return `
+      <div class="stats-section" id="blind-spots-section">
+        <h3>Blind Spots</h3>
+        <p class="stats-section-sub">Acclaimed films in your favourite genres you haven't seen yet</p>
+        <div class="blind-spots-scroll">${items}</div>
+      </div>`;
+  }
+
   function render(stats) {
     const maxGenre = stats.genresSorted.length > 0 ? stats.genresSorted[0][1] : 1;
     const maxDirector = stats.directorsSorted.length > 0 ? stats.directorsSorted[0][1] : 1;
@@ -299,6 +387,8 @@ const Stats = (() => {
           <div class="rank-next-label">${stats.rank.remaining} more to <strong>${stats.rank.next}</strong></div>
         ` : '<div class="rank-next-label rank-next-label--max">Maximum rank — legendary status achieved</div>'}
       </div>
+
+      ${renderRecentActivity(stats.recent)}
 
       <div class="stats-overview">
         <div class="stat-card">
@@ -437,5 +527,5 @@ const Stats = (() => {
     `;
   }
 
-  return { compute, render, MILESTONE_VALUES };
+  return { compute, render, MILESTONE_VALUES, computeBlindSpotGenreIds, renderBlindSpots };
 })();

@@ -220,6 +220,38 @@ const TMDB = (() => {
     } catch (_) { return []; }
   }
 
+  async function getGenreList() {
+    const key = getApiKey();
+    if (!key) return [];
+    const CACHE_KEY = 'tmdb_genre_list';
+    try {
+      const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      if (cached && Date.now() - cached.t < 7 * 24 * 3600000) return cached.data;
+    } catch (_) {}
+    try {
+      const res = await fetch(`${BASE_URL}/genre/movie/list?api_key=${encodeURIComponent(key)}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      const genres = data.genres || [];
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), data: genres })); } catch (_) {}
+      return genres;
+    } catch (_) { return []; }
+  }
+
+  async function discoverByGenres(genreIds, page = 1) {
+    const key = getApiKey();
+    if (!key || genreIds.length === 0) return [];
+    const url = `${BASE_URL}/discover/movie?api_key=${encodeURIComponent(key)}` +
+      `&with_genres=${genreIds.join(',')}&vote_average.gte=7.5&vote_count.gte=50000` +
+      `&sort_by=vote_count.desc&page=${page}&include_adult=false`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.results || [];
+    } catch (_) { return []; }
+  }
+
   function posterUrl(path, size = 'w342') {
     if (!path) return '';
     return `${IMG_BASE}/${size}${path}`;
@@ -230,5 +262,5 @@ const TMDB = (() => {
     return `${IMG_BASE}/${size}${path}`;
   }
 
-  return { getApiKey, setApiKey, searchMovies, getMovieDetails, searchPerson, searchActor, getPersonMovieCredits, getMovieRecommendations, getMovieVideos, pickBestTrailer, fetchOmdbData, posterUrl, profileUrl };
+  return { getApiKey, setApiKey, searchMovies, getMovieDetails, searchPerson, searchActor, getPersonMovieCredits, getMovieRecommendations, getMovieVideos, pickBestTrailer, fetchOmdbData, getGenreList, discoverByGenres, posterUrl, profileUrl };
 })();
