@@ -1443,6 +1443,18 @@ const App = (() => {
       document.getElementById('detail-mark-watched').addEventListener('click', () => {
         markAsWatched(movie.id);
       });
+      const detailPinBtn = document.getElementById('detail-pin');
+      if (detailPinBtn) {
+        detailPinBtn.addEventListener('click', async () => {
+          haptic(8);
+          movie.pinned = !movie.pinned;
+          await MovieDB.updateMovie(movie);
+          detailPinBtn.classList.toggle('pinned', movie.pinned);
+          detailPinBtn.innerHTML = `&#128204; ${movie.pinned ? 'Unpin' : 'Pin'}`;
+          detailPinBtn.title = movie.pinned ? 'Unpin' : 'Pin to top';
+          UI.showToast(movie.pinned ? 'Pinned to watchlist top' : 'Unpinned');
+        });
+      }
     } else {
       document.getElementById('detail-edit').addEventListener('click', () => {
         editingMovie = movie;

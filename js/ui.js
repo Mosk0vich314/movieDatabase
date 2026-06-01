@@ -292,7 +292,8 @@ const UI = (() => {
           ${movie.rewatches ? `<div class="detail-rewatches">&#8634; Rewatched ${movie.rewatches}×</div>` : ''}
           <div class="detail-actions">
             ${movie.watchlist
-              ? `<button class="btn btn-primary" id="detail-mark-watched">&#10003; Mark as Watched</button>`
+              ? `<button class="btn btn-primary" id="detail-mark-watched">&#10003; Mark as Watched</button>
+                 <button class="btn btn-secondary watchlist-pin-btn${movie.pinned ? ' pinned' : ''}" id="detail-pin" data-id="${movie.id}" title="${movie.pinned ? 'Unpin' : 'Pin to top'}">&#128204; ${movie.pinned ? 'Unpin' : 'Pin'}</button>`
               : `<button class="btn btn-primary" id="detail-edit" data-id="${movie.id}">Edit</button>`
             }
             ${!movie.watchlist ? `<button class="btn btn-secondary" id="detail-rewatch">&#8634; Rewatch</button>` : ''}
