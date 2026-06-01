@@ -630,7 +630,6 @@ const App = (() => {
                     <div class="wl-pinned-year">${m.year || ''}</div>
                   </div>
                   <div class="wl-pinned-actions">
-                    <button class="watchlist-card-btn wl-pinned-watched" data-id="${m.id}">&#10003; Watched</button>
                     <button class="watchlist-pin-btn pinned" data-id="${m.id}" title="Unpin">&#128204;</button>
                   </div>
                 </div>`;
