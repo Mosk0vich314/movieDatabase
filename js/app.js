@@ -14,6 +14,7 @@ const App = (() => {
   let pendingPersonSearch = null;
   let pendingPersonFilter = '';
   let personFilterJump = false;
+  let dirFilterSetByJump = false;
   let recentPickIds = [];
   let currentFilmography = null;
   // Pulls suggestions from local storage if they exist
@@ -226,7 +227,13 @@ const App = (() => {
     showView(view);
 
     if (view === 'catalogue') {
-      if (!personFilterJump) pendingPersonFilter = '';
+      if (!personFilterJump) {
+        pendingPersonFilter = '';
+        if (dirFilterSetByJump) {
+          document.getElementById('filter-director').value = '';
+          dirFilterSetByJump = false;
+        }
+      }
       personFilterJump = false;
       loadCatalogue();
     }
@@ -447,6 +454,7 @@ const App = (() => {
     const dirOption = Array.from(dirSelect.options).find(o => o.value === name);
     if (dirOption) {
       dirSelect.value = name;
+      dirFilterSetByJump = true;
       pendingPersonFilter = '';
     } else {
       dirSelect.value = '';
@@ -3225,6 +3233,18 @@ const App = (() => {
       btn.classList.toggle('open');
     });
 
+    document.getElementById('filter-clear-all').addEventListener('click', () => {
+      pendingPersonFilter = '';
+      dirFilterSetByJump = false;
+      document.getElementById('filter-director').value = '';
+      document.getElementById('filter-genre').value = '';
+      document.getElementById('filter-rating').value = '';
+      document.getElementById('filter-tag').value = '';
+      document.getElementById('filter-panel').classList.remove('open');
+      loadCatalogue();
+      updateFilterBadge();
+    });
+
     const gemsBtn = document.getElementById('gems-toggle');
     if (gemsBtn) {
       gemsBtn.classList.toggle('active', gemsLens);
@@ -3251,10 +3271,13 @@ const App = (() => {
       badge.textContent = active;
       badge.style.display = active > 0 ? 'inline' : 'none';
       btn.classList.toggle('active', active > 0);
+      const clearAllBtn = document.getElementById('filter-clear-all');
+      if (clearAllBtn) clearAllBtn.style.display = active > 0 ? 'inline-flex' : 'none';
     }
 
     function onFilterChange() {
       pendingPersonFilter = '';
+      dirFilterSetByJump = false;
       loadCatalogue();
       updateFilterBadge();
     }

@@ -460,6 +460,23 @@ a:hover { color: var(--accent-hover); }
 }
 .filter-toggle-btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); }
 .filter-toggle-btn.active { border-color: var(--border-accent); color: var(--accent); background: rgba(233,69,96,0.08); }
+.filter-clear-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: rgba(233,69,96,0.12);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background var(--transition);
+  flex-shrink: 0;
+}
+.filter-clear-btn:hover { background: rgba(233,69,96,0.22); }
 .filter-toggle-arrow { font-size: 0.6rem; color: var(--text-muted); transition: transform var(--transition); }
 .filter-toggle-btn.open .filter-toggle-arrow { transform: rotate(180deg); }
 .filter-badge {
