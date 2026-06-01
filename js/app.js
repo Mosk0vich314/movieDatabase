@@ -13,6 +13,7 @@ const App = (() => {
   let selectedDirectorName = '';
   let pendingPersonSearch = null;
   let pendingPersonFilter = '';
+  let personFilterJump = false;
   let recentPickIds = [];
   let currentFilmography = null;
   // Pulls suggestions from local storage if they exist
@@ -224,7 +225,11 @@ const App = (() => {
     const view = viewMap[hash] || 'catalogue';
     showView(view);
 
-    if (view === 'catalogue') loadCatalogue();
+    if (view === 'catalogue') {
+      if (!personFilterJump) pendingPersonFilter = '';
+      personFilterJump = false;
+      loadCatalogue();
+    }
     if (view === 'watchlist') loadWatchlist();
     if (view === 'chart') loadChart();
     if (view !== 'chart') { tournament = null; koth = null; }
@@ -451,6 +456,7 @@ const App = (() => {
     if (window.location.hash === '#catalogue') {
       loadCatalogue();
     } else {
+      personFilterJump = true;
       window.location.hash = '#catalogue';
     }
   }

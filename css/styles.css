@@ -5241,10 +5241,9 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
 /* === Feature 7: Director/cast clickable links === */
 .director-link {
   cursor: pointer;
-  border-bottom: 1px dashed rgba(233,69,96,0.4);
   transition: color 0.15s;
 }
-.director-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.director-link:hover { color: var(--accent); }
 .cast-name-link {
   cursor: pointer;
   transition: color 0.15s;
