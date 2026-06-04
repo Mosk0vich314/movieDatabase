@@ -43,7 +43,7 @@ Each JS file is an IIFE that exposes a single module object:
   - *Director mode*: Search for a director by name → select a person → see their full filmography (sorted newest-first, deduplicated). Films already in the user's DB are greyed out (`.search-result--added`) with an "Added" label instead of the watchlist button. A "← Name" back button returns to the person list. Autocomplete is suppressed in director mode.
 - **Watchlist** (`#watchlist`): Movies saved with `watchlist: true`. Each card has a "✓ Watched" button that pre-fills the add form so the user can rate and move it to the catalogue. Nav tab shows a live count badge. Pinned movies (`pinned: true`) appear in a dedicated `#watchlist-pinned` section rendered inline by `loadWatchlist()` — not via any UI.render function. The pinned section shows only a 📌 unpin button; no "Watched" button (user taps the item to open detail and mark as watched from there).
 - **Stats** (`#stats`): Animated counters, Taste DNA card (top genre + director loyalty ratio), bar charts, top rated list, activity snapshot (this week/month), blind spot recommendations. Includes cloud sync, backup/restore, and danger zone. Stats exclude watchlist movies.
-- **Detail** (`#detail/:id`): Full movie info. Watchlist movies show "Mark as Watched" + Pin/Unpin button instead of "Edit".
+- **Detail** (`#detail/:id`): Full movie info. Watchlist movies show "Mark as Watched" + Pin/Unpin button instead of "Edit". Watchlist movies also show a **Resume point** control (`#detail-resume`) for saving the timecode where the user stopped watching — see Key patterns.
 
 ## Movie data shape
 
@@ -62,6 +62,7 @@ Each JS file is an IIFE that exposes a single module object:
   dateAdded,   // ISO string, set on add
   watchlist,   // true if on watchlist; absent/false for catalogue movies
   pinned,      // true if pinned to top of watchlist; absent/false otherwise
+  resumeSeconds, // watchlist only: total seconds where the user stopped watching (absent if unset)
 }
 ```
 
@@ -79,6 +80,7 @@ Each JS file is an IIFE that exposes a single module object:
 - **Director filmography**: `#search-results` click handler checks `data-person-id` before `data-tmdb-id`, so person rows route to `loadFilmography()` while film rows route to `selectSearchResult()`. Already-added films use `pointer-events: none` via `.search-result--added` so they never fire click events.
 - **Tags**: Stored as `string[]` on each movie. The add/edit form has a chip UI (`#tag-chip-area`, `.tag-chip`) with a text input (`#form-tags-input`) — press Enter or comma to add. `renderTagChips(tags)` renders chips, `getFormTags()` reads them back. `#filter-tag` select in the catalogue filter panel lets users filter by a single tag. `populateTagFilter(movies)` populates it.
 - **Watchlist pin**: `movie.pinned = true` pins a movie. `loadWatchlist()` renders a dedicated `#watchlist-pinned` section above the main grid — inline HTML, not a UI render function. Pinned section shows only the 📌 unpin button. Pin/Unpin is also available on the detail view for watchlist movies.
+- **Resume point**: Watchlist movies can store `resumeSeconds` (total seconds where the user stopped watching). On the detail view, `UI.renderResumeSection(movie)` renders either a "Set resume point" button or a "Stopped at H:MM:SS" display with Edit/Clear; `UI.renderResumeEditor(movie)` renders the inline input. `app.js` swaps the `#detail-resume` container between display/editor states and persists via `MovieDB.updateMovie`. `UI.parseTimecode(str)` parses `"H:MM:SS"`, `"MM:SS"`, or a plain minute number into seconds; `UI.formatTimecode(secs)` is the inverse. A small resume badge also appears on pinned watchlist items.
 - **Activity snapshot & blind spots**: `Stats.computeRecentActivity(movies)` and `Stats.renderRecentActivity(recent)` power the this-week/this-month cards in the stats view. `loadBlindSpots(movies)` in `app.js` fetches acclaimed films in the user's top genres via `TMDB.discoverByGenres` (cached 24 h in localStorage) and renders them as a horizontal scroll.
 - **Font**: Bebas Neue (Google Fonts, imported in CSS) is used for decade labels only. App title uses Montserrat 800.
 

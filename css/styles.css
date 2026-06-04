@@ -2660,6 +2660,73 @@ input[type="date"].form-input { color-scheme: dark; }
   font-weight: 500;
 }
 
+/* === Resume point (watchlist detail) === */
+.detail-resume {
+  margin: 4px 0 12px;
+}
+.resume-set-btn {
+  font-size: 0.82rem;
+  padding: 8px 14px;
+}
+.resume-display {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(233,69,96,0.1);
+  border: 1px solid rgba(233,69,96,0.28);
+  border-radius: 10px;
+}
+.resume-icon { font-size: 0.95rem; line-height: 1; }
+.resume-text { font-size: 0.85rem; color: var(--text); flex: 1 1 auto; }
+.resume-text strong { color: var(--accent); font-weight: 700; }
+.resume-editor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.resume-input {
+  flex: 1 1 130px;
+  min-width: 120px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--bg-elevated, rgba(255,255,255,0.06));
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px;
+}
+.resume-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.resume-mini-btn {
+  margin-left: auto;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.resume-display .resume-mini-btn { margin-left: 0; }
+.resume-save-btn {
+  margin-left: 0;
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.resume-clear-btn { color: var(--text-muted); }
+.wl-pinned-resume {
+  font-size: 0.7rem;
+  color: var(--accent);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
 /* === Random Pick button === */
 .random-pick-btn {
   background: rgba(233,69,96,0.12);

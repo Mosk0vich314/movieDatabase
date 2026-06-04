@@ -628,6 +628,7 @@ const App = (() => {
                   <div class="wl-pinned-info">
                     <div class="wl-pinned-title">${UI.escapeHtml(m.title)}</div>
                     <div class="wl-pinned-year">${m.year || ''}</div>
+                    ${(typeof m.resumeSeconds === 'number' && m.resumeSeconds > 0) ? `<div class="wl-pinned-resume">&#9208; ${UI.formatTimecode(m.resumeSeconds)}</div>` : ''}
                   </div>
                   <div class="wl-pinned-actions">
                     <button class="watchlist-pin-btn pinned" data-id="${m.id}" title="Unpin">&#128204;</button>
@@ -1467,6 +1468,57 @@ const App = (() => {
           detailPinBtn.title = movie.pinned ? 'Unpin' : 'Pin to top';
           UI.showToast(movie.pinned ? 'Pinned to watchlist top' : 'Unpinned');
         });
+      }
+
+      // Resume point: save the timecode where the user stopped watching
+      const resumeContainer = document.getElementById('detail-resume');
+      if (resumeContainer) {
+        const showDisplay = () => {
+          resumeContainer.innerHTML = UI.renderResumeSection(movie);
+          bindDisplay();
+        };
+        const showEditor = () => {
+          resumeContainer.innerHTML = UI.renderResumeEditor(movie);
+          const input = document.getElementById('resume-input');
+          input.focus();
+          input.select();
+          const save = async () => {
+            const secs = UI.parseTimecode(input.value);
+            if (secs === null) {
+              UI.showToast('Enter a time like 1:23:45 or a minute number');
+              return;
+            }
+            if (secs > 0) {
+              movie.resumeSeconds = secs;
+            } else {
+              delete movie.resumeSeconds;
+            }
+            await MovieDB.updateMovie(movie);
+            UI.showToast(secs > 0 ? `Resume point saved at ${UI.formatTimecode(secs)}` : 'Resume point cleared');
+            showDisplay();
+          };
+          document.getElementById('resume-save').addEventListener('click', save);
+          document.getElementById('resume-cancel').addEventListener('click', showDisplay);
+          input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); save(); }
+            else if (e.key === 'Escape') { e.preventDefault(); showDisplay(); }
+          });
+        };
+        const bindDisplay = () => {
+          const setBtn = document.getElementById('resume-set');
+          if (setBtn) setBtn.addEventListener('click', () => { haptic(8); showEditor(); });
+          const editBtn = document.getElementById('resume-edit');
+          if (editBtn) editBtn.addEventListener('click', () => { haptic(8); showEditor(); });
+          const clearBtn = document.getElementById('resume-clear');
+          if (clearBtn) clearBtn.addEventListener('click', async () => {
+            haptic(8);
+            delete movie.resumeSeconds;
+            await MovieDB.updateMovie(movie);
+            UI.showToast('Resume point cleared');
+            showDisplay();
+          });
+        };
+        bindDisplay();
       }
     } else {
       document.getElementById('detail-edit').addEventListener('click', () => {

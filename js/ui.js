@@ -169,6 +169,60 @@ const UI = (() => {
       : row;
   }
 
+  // ---- Resume point (watchlist) ----
+  // Movies store `resumeSeconds` (total seconds) for where the user stopped watching.
+  function formatTimecode(totalSeconds) {
+    const s = Math.max(0, Math.round(totalSeconds || 0));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    const pad = n => String(n).padStart(2, '0');
+    return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+  }
+
+  // Accepts "1:23:45" (h:m:s), "23:45" (m:s) or a plain number of minutes ("83").
+  // Returns total seconds, or null if unparseable.
+  function parseTimecode(str) {
+    if (str === null || str === undefined) return null;
+    str = String(str).trim();
+    if (!str) return null;
+    if (str.includes(':')) {
+      const parts = str.split(':').map(p => p.trim());
+      if (parts.some(p => p === '' || isNaN(Number(p)))) return null;
+      return parts.reduce((acc, p) => acc * 60 + Number(p), 0);
+    }
+    const mins = Number(str);
+    if (isNaN(mins) || mins < 0) return null;
+    return Math.round(mins * 60);
+  }
+
+  function hasResume(movie) {
+    return typeof movie.resumeSeconds === 'number' && movie.resumeSeconds > 0;
+  }
+
+  function renderResumeSection(movie) {
+    if (hasResume(movie)) {
+      return `
+        <div class="resume-display" id="resume-display">
+          <span class="resume-icon">&#9208;</span>
+          <span class="resume-text">Stopped at <strong>${formatTimecode(movie.resumeSeconds)}</strong></span>
+          <button class="resume-mini-btn" id="resume-edit" type="button">Edit</button>
+          <button class="resume-mini-btn resume-clear-btn" id="resume-clear" type="button">Clear</button>
+        </div>`;
+    }
+    return `<button class="btn btn-secondary resume-set-btn" id="resume-set" type="button">&#9201; Set resume point</button>`;
+  }
+
+  function renderResumeEditor(movie) {
+    const val = hasResume(movie) ? formatTimecode(movie.resumeSeconds) : '';
+    return `
+      <div class="resume-editor" id="resume-editor">
+        <input type="text" id="resume-input" class="resume-input" inputmode="numeric" autocomplete="off" placeholder="e.g. 1:23:45 or 83 (min)" value="${escapeHtml(val)}">
+        <button class="resume-mini-btn resume-save-btn" id="resume-save" type="button">Save</button>
+        <button class="resume-mini-btn" id="resume-cancel" type="button">Cancel</button>
+      </div>`;
+  }
+
   function renderMovieDetail(movie, ctx = {}) {
     const poster = movie.poster
       ? `<img src="${movie.poster}" alt="${escapeHtml(movie.title)}" class="detail-poster">`
@@ -290,6 +344,7 @@ const UI = (() => {
           ${extRatingsHtml}
           ${movie.notes ? `<div class="detail-notes"><label>Notes</label><p>${escapeHtml(movie.notes)}</p></div>` : ''}
           ${movie.rewatches ? `<div class="detail-rewatches">&#8634; Rewatched ${movie.rewatches}×</div>` : ''}
+          ${movie.watchlist ? `<div class="detail-resume" id="detail-resume">${renderResumeSection(movie)}</div>` : ''}
           <div class="detail-actions">
             ${movie.watchlist
               ? `<button class="btn btn-primary" id="detail-mark-watched">&#10003; Mark as Watched</button>
@@ -977,5 +1032,5 @@ const UI = (() => {
       </div>`;
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml, reshuffleDecade };
+  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
 })();
