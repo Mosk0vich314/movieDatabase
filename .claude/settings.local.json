@@ -25,7 +25,11 @@
       "Bash(grep:*)",
       "Bash(python:*)",
       "Bash(node -c js/app.js)",
-      "Bash(node -c js/ui.js)"
+      "Bash(node -c js/ui.js)",
+      "Bash(node --check js/app.js)",
+      "Bash(node --check js/ui.js)",
+      "Bash(pkill -f \"http.server 8765\")",
+      "Bash(rm -f /tmp/verify.js)"
     ]
   }
 }

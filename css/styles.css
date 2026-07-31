@@ -657,34 +657,40 @@ a:hover { color: var(--accent-hover); }
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  max-width: 340px;
-  height: 6px;
-  border-radius: 3px;
+  max-width: 440px;
+  height: 12px;
+  border-radius: 6px;
   background: var(--star-empty);
   outline: none;
   cursor: pointer;
+  /* Keep vertical drags on the slider from scrolling the page (mobile) */
+  touch-action: none;
+  margin: 12px 0;
 }
 .rating-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: #fff;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  transition: transform 0.15s;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.05);
+  transition: transform 0.12s;
 }
-.rating-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
+.rating-slider::-webkit-slider-thumb:hover { transform: scale(1.12); }
+.rating-slider::-webkit-slider-thumb:active { transform: scale(1.2); }
 .rating-slider::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: #fff;
   cursor: pointer;
   border: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.05);
+  transition: transform 0.12s;
 }
-.rating-slider::-moz-range-track { height: 6px; border-radius: 3px; background: transparent; }
+.rating-slider::-moz-range-thumb:active { transform: scale(1.2); }
+.rating-slider::-moz-range-track { height: 12px; border-radius: 6px; background: transparent; }
 
 /* === Search Results === */
 .search-results { margin-top: 16px; }
@@ -2957,6 +2963,88 @@ input[type="date"].form-input { color-scheme: dark; }
   cursor: not-allowed;
   box-shadow: none;
   transform: none !important;
+}
+.rp-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.rp-filter-btn {
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+/* === Watchlist active filter bar === */
+.random-pick-btn.has-filter {
+  background: rgba(233,69,96,0.28);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(233,69,96,0.25);
+}
+#watchlist-filter-bar:empty { display: none; }
+.wl-filter-active {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 14px;
+  flex-wrap: wrap;
+}
+.wl-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(233,69,96,0.12);
+  border: 1px solid rgba(233,69,96,0.3);
+  color: var(--accent);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.wl-filter-clear {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-muted);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.wl-filter-clear:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+/* === Decades: show-all toggle === */
+.decade-showall-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+.decade-showall-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.decade-showall-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+.decade-showall-btn.active {
+  background: rgba(233,69,96,0.14);
+  border-color: rgba(233,69,96,0.35);
+  color: var(--accent);
 }
 
 /* === Slot machine highlight === */

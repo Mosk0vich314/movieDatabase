@@ -547,7 +547,9 @@ const UI = (() => {
     </div>`;
   }
 
-  function renderDecadeLanes(movies, dir = 'desc') {
+  const DECADE_LANE_LIMIT = 10;
+
+  function renderDecadeLanes(movies, dir = 'desc', showAll = false) {
     const groups = {};
     movies.forEach(m => {
       const yr = parseInt(m.year);
@@ -563,8 +565,16 @@ const UI = (() => {
       return dir === 'asc' ? parseInt(a) - parseInt(b) : parseInt(b) - parseInt(a);
     });
 
-    return `<div class="decade-lanes">${keys.map(k => {
-      const sorted = [...groups[k]].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 10);
+    const limit = showAll ? Infinity : DECADE_LANE_LIMIT;
+    const anyTruncated = keys.some(k => groups[k].length > DECADE_LANE_LIMIT);
+    const toggleBar = anyTruncated ? `<div class="decade-showall-bar">
+      <button class="decade-showall-btn${showAll ? ' active' : ''}" type="button">
+        ${showAll ? '&#9776; Show top 10 per decade' : '&#9638; Show all films'}
+      </button>
+    </div>` : '';
+
+    return `<div class="decade-lanes">${toggleBar}${keys.map(k => {
+      const sorted = [...groups[k]].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, limit);
       const total = sorted.length;
       const withSizes = sorted.map((m, rank) => ({ m, sz: mosaicSizeByRank(rank, total) }));
       const seed = getDecadeSeed(k);

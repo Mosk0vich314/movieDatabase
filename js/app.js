@@ -17,6 +17,10 @@ const App = (() => {
   let dirFilterSetByJump = false;
   let recentPickIds = [];
   let currentFilmography = null;
+  // Persistent watchlist filter — shared by the "Roll" sheet and the live watchlist view
+  let watchlistFilter = { genres: new Set(), maxDuration: 0 };
+  // Decades view: show all films per decade vs. top 10 (persisted)
+  let decadeShowAll = localStorage.getItem('decadeShowAll') === '1';
   // Pulls suggestions from local storage if they exist
   let pendingSuggestions = JSON.parse(localStorage.getItem('savedSuggestions') || 'null');
 
@@ -364,7 +368,7 @@ const App = (() => {
       });
     } else {
       // decades (default)
-      grid.innerHTML = UI.renderDecadeLanes(filtered, 'desc');
+      grid.innerHTML = UI.renderDecadeLanes(filtered, 'desc', decadeShowAll);
     }
 
     // Gems lens: highlight matching cards, dim others — no filtering
@@ -604,6 +608,40 @@ const App = (() => {
     loadWatchlist();
   }
 
+  function watchlistFilterActive() {
+    return watchlistFilter.genres.size > 0 || watchlistFilter.maxDuration > 0;
+  }
+
+  function applyWatchlistFilter(movies) {
+    if (!watchlistFilterActive()) return movies;
+    return movies.filter(m => {
+      if (watchlistFilter.genres.size > 0) {
+        const mg = m.genres || [];
+        if (!mg.some(g => watchlistFilter.genres.has(g))) return false;
+      }
+      if (watchlistFilter.maxDuration > 0) {
+        if (!m.runtime || m.runtime > watchlistFilter.maxDuration) return false;
+      }
+      return true;
+    });
+  }
+
+  function renderWatchlistFilterBar() {
+    const bar = document.getElementById('watchlist-filter-bar');
+    if (!bar) return;
+    if (!watchlistFilterActive()) { bar.innerHTML = ''; return; }
+    const label = buildRollLabel({ selectedGenres: watchlistFilter.genres, maxDuration: watchlistFilter.maxDuration });
+    bar.innerHTML = `<div class="wl-filter-active">
+      <span class="wl-filter-chip">&#127922; ${UI.escapeHtml(label)}</span>
+      <button class="wl-filter-clear" id="wl-filter-clear" type="button">Clear &times;</button>
+    </div>`;
+    bar.querySelector('#wl-filter-clear').addEventListener('click', () => {
+      watchlistFilter.genres = new Set();
+      watchlistFilter.maxDuration = 0;
+      loadWatchlist();
+    });
+  }
+
   async function loadWatchlist() {
     const allMovies = (await MovieDB.getAllMovies()).filter(m => m.watchlist);
     allMovies.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
@@ -611,8 +649,13 @@ const App = (() => {
     const pinnedContainer = document.getElementById('watchlist-pinned');
     const empty = document.getElementById('empty-watchlist');
 
-    // Render pinned section
-    const pinned = allMovies.filter(m => m.pinned);
+    renderWatchlistFilterBar();
+    document.getElementById('wl-random-pick').classList.toggle('has-filter', watchlistFilterActive());
+
+    const filtered = applyWatchlistFilter(allMovies);
+
+    // Render pinned section (respects the active filter)
+    const pinned = filtered.filter(m => m.pinned);
     if (pinnedContainer) {
       if (pinned.length > 0) {
         pinnedContainer.innerHTML = `
@@ -654,17 +697,19 @@ const App = (() => {
     empty.style.display = 'none';
 
     const q = (document.getElementById('watchlist-search').value || '').toLowerCase().trim();
-    const movies = q ? allMovies.filter(m => m.title.toLowerCase().includes(q)) : allMovies;
+    const movies = q ? filtered.filter(m => m.title.toLowerCase().includes(q)) : filtered;
 
     if (movies.length === 0) {
-      container.innerHTML = '<p class="stats-empty">No matches.</p>';
+      container.innerHTML = watchlistFilterActive()
+        ? '<p class="stats-empty">No films match the current filter.</p>'
+        : '<p class="stats-empty">No matches.</p>';
       return;
     }
 
     if (watchlistViewMode === 'array') {
       container.innerHTML = UI.renderPosterGrid(movies);
     } else if (watchlistViewMode === 'decades') {
-      container.innerHTML = UI.renderDecadeLanes(movies, 'desc');
+      container.innerHTML = UI.renderDecadeLanes(movies, 'desc', decadeShowAll);
     } else {
       container.innerHTML = UI.renderBlurayShelf(movies);
       lazyLoadCasePosters(container);
@@ -678,10 +723,24 @@ const App = (() => {
     }
   }
 
+  // Returns an existing movie (catalogue or watchlist) with the same TMDB id, or null.
+  async function findByTmdbId(tmdbId) {
+    if (!tmdbId) return null;
+    const all = await MovieDB.getAllMovies();
+    return all.find(m => String(m.tmdbId) === String(tmdbId)) || null;
+  }
+
   async function addToWatchlist(tmdbId) {
     haptic(12);
     if (!TMDB.getApiKey()) {
       UI.showToast('No TMDB API key configured.');
+      return;
+    }
+    const existing = await findByTmdbId(tmdbId);
+    if (existing) {
+      UI.showToast(existing.watchlist
+        ? `"${existing.title}" is already on your watchlist`
+        : `"${existing.title}" is already in your catalogue`);
       return;
     }
     try {
@@ -1104,6 +1163,16 @@ const App = (() => {
         await MovieDB.updateMovie(movie);
         UI.showToast('Movie updated!');
       } else {
+        // Block adding a film that's already catalogued/queued — jump to the existing entry instead
+        const existing = await findByTmdbId(movie.tmdbId);
+        if (existing) {
+          editingMovie = null;
+          UI.showToast(existing.watchlist
+            ? `"${existing.title}" is already on your watchlist`
+            : `"${existing.title}" is already in your catalogue`);
+          window.location.hash = `#detail/${existing.id}`;
+          return;
+        }
         await MovieDB.addMovie(movie);
         UI.showToast('Movie added!');
       }
@@ -2249,13 +2318,14 @@ const App = (() => {
     const maxRun = hasRuntimes ? Math.ceil(Math.max(...knownRuntimes) / 5) * 5 : 240;
     const showSlider = hasRuntimes && maxRun - minRun >= 15;
 
-    const state = { selectedGenres: new Set(), maxDuration: 0 };
+    const state = { selectedGenres: new Set(watchlistFilter.genres), maxDuration: watchlistFilter.maxDuration };
 
     const escape = UI.escapeHtml;
     const genreChipsHtml = genres.map(([g, c]) => {
       const accent = UI.getGenreAccent(g);
       const style = accent ? ` style="--g:${accent}"` : '';
-      return `<button class="rp-chip rp-genre-chip" data-genre="${escape(g)}"${style}>${escape(g)}<span class="rp-chip-count">${c}</span></button>`;
+      const active = state.selectedGenres.has(g) ? ' rp-chip--active' : '';
+      return `<button class="rp-chip rp-genre-chip${active}" data-genre="${escape(g)}"${style}>${escape(g)}<span class="rp-chip-count">${c}</span></button>`;
     }).join('');
 
     const overlay = document.createElement('div');
@@ -2277,7 +2347,7 @@ const App = (() => {
             <span class="rp-section-label">Max length</span>
             <span class="rp-duration-value" id="rp-duration-value">Any length</span>
           </div>
-          <input type="range" class="rp-slider" id="rp-duration-slider" min="${minRun}" max="${maxRun}" step="5" value="${maxRun}">
+          <input type="range" class="rp-slider" id="rp-duration-slider" min="${minRun}" max="${maxRun}" step="5" value="${state.maxDuration > 0 ? state.maxDuration : maxRun}">
           <div class="rp-slider-range">
             <span>${fmtDur(minRun)}</span>
             <span>${fmtDur(maxRun)}</span>
@@ -2285,7 +2355,10 @@ const App = (() => {
         </div>` : ''}
         <div class="rp-footer">
           <div class="rp-count" id="rp-count">${allMovies.length} films match</div>
-          <button class="btn btn-primary rp-roll-btn" id="rp-roll-btn">Roll &#127922;</button>
+          <div class="rp-actions">
+            <button class="btn btn-secondary rp-filter-btn" id="rp-filter-btn">Filter list</button>
+            <button class="btn btn-primary rp-roll-btn" id="rp-roll-btn">Roll &#127922;</button>
+          </div>
         </div>
       </div>
     `;
@@ -2355,6 +2428,16 @@ const App = (() => {
       slider.addEventListener('input', () => { syncSlider(); updateCount(); });
       syncSlider();
     }
+
+    // Reflect any pre-populated filter (carried over from the live watchlist view)
+    updateCount();
+
+    overlay.querySelector('#rp-filter-btn').addEventListener('click', () => {
+      watchlistFilter.genres = new Set(state.selectedGenres);
+      watchlistFilter.maxDuration = state.maxDuration;
+      close();
+      loadWatchlist();
+    });
 
     overlay.querySelector('#rp-roll-btn').addEventListener('click', () => {
       const pool = computePool();
@@ -3140,6 +3223,15 @@ const App = (() => {
     });
 
     document.getElementById('movie-grid').addEventListener('click', async (e) => {
+      const showAllBtn = e.target.closest('.decade-showall-btn');
+      if (showAllBtn) {
+        e.stopPropagation();
+        decadeShowAll = !decadeShowAll;
+        localStorage.setItem('decadeShowAll', decadeShowAll ? '1' : '0');
+        loadCatalogue();
+        return;
+      }
+
       const reshuffleBtn = e.target.closest('.decade-reshuffle-btn');
       if (reshuffleBtn) {
         e.stopPropagation();
@@ -3369,7 +3461,15 @@ const App = (() => {
       loadWatchlist();
     });
     document.getElementById('watchlist-grid').addEventListener('click', (e) => {
-      const card = e.target.closest('.film-card, .poster-card');
+      const showAllBtn = e.target.closest('.decade-showall-btn');
+      if (showAllBtn) {
+        e.stopPropagation();
+        decadeShowAll = !decadeShowAll;
+        localStorage.setItem('decadeShowAll', decadeShowAll ? '1' : '0');
+        loadWatchlist();
+        return;
+      }
+      const card = e.target.closest('.film-card, .poster-card, .mosaic-item');
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
     });
     document.getElementById('catalogue-search-clear').addEventListener('click', () => {
