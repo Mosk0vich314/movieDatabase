@@ -272,7 +272,7 @@ const UI = (() => {
       <div class="dt-stage${movie.backdrop ? '' : ' dt-stage--blank'}" style="--genre-accent:${pal.accent}">
         ${heroHtml}
         <div class="dt-band">
-          <h1 class="dt-title">${escapeHtml(movie.title)}</h1>
+          <h1 class="dt-title${movie.title.length > 26 ? ' dt-title--long' : ''}">${escapeHtml(movie.title)}</h1>
           ${bandTags ? `<div class="dt-band-meta">${bandTags}</div>` : ''}
         </div>
         ${backBtn}

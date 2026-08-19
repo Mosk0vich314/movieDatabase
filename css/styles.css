@@ -5641,11 +5641,13 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
 }
 .dt .detail-backdrop-overlay {
   background:
+    /* Only enough ink at the top to hold the Back / Trailer buttons — the
+       still itself should stay legible now that the band sits low. */
     linear-gradient(180deg,
-      rgba(6, 6, 10, 0.88) 0%,
-      rgba(6, 6, 10, 0.34) 40%,
-      rgba(6, 6, 10, 0.12) 62%,
-      rgba(6, 6, 10, 0.62) 100%),
+      rgba(6, 6, 10, 0.74) 0%,
+      rgba(6, 6, 10, 0.22) 34%,
+      rgba(6, 6, 10, 0.04) 58%,
+      rgba(6, 6, 10, 0.45) 100%),
     radial-gradient(ellipse 130% 90% at 50% 0%, transparent 45%, rgba(6, 6, 10, 0.5));
 }
 /* The letterbox vignette is redundant under the title band */
@@ -5665,7 +5667,11 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
 .dt-band {
   position: absolute;
   z-index: 3;
-  top: clamp(54px, 13vw, 78px);
+  /* Struck across the lower third, not the middle: the still stays readable
+     above it and the torn chevron point still shows below. Bottom-anchored so
+     a two-line title grows upward instead of swallowing the notch. */
+  top: auto;
+  bottom: 10%;
   left: -14px;
   right: -14px;
   padding: 12px 30px 15px;
@@ -5703,6 +5709,12 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
   color: var(--dt-red);
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85), 0 0 30px rgba(207, 47, 40, 0.22);
   overflow-wrap: break-word;
+}
+/* Long titles are set smaller so the band never grows tall enough to
+   swallow the still behind it. */
+.dt-title--long {
+  font-size: clamp(1.5rem, 7.2vw, 3rem);
+  letter-spacing: 0.01em;
 }
 .dt-band-meta {
   display: flex;
