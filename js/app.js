@@ -2801,7 +2801,17 @@ const App = (() => {
         </span>
         <span class="yir-launch-arrow">&#10095;</span>
       </button>`;
-    container.innerHTML = yirBanner + Stats.render(stats);
+    const ratedCount = movies.filter(m => (m.rating || 0) > 0).length;
+    const posterBanner = ratedCount < 3 ? '' : `
+      <button class="yir-launch-btn poster-launch-btn" id="poster-launch" type="button">
+        <span class="yir-launch-icon">&#127917;</span>
+        <span class="yir-launch-text">
+          <span class="yir-launch-title">Top 10 poster set</span>
+          <span class="yir-launch-sub">A countdown of your highest-rated films, one poster each</span>
+        </span>
+        <span class="yir-launch-arrow">&#10095;</span>
+      </button>`;
+    container.innerHTML = yirBanner + posterBanner + Stats.render(stats);
     animateCounters(container);
     loadDirectorMarathons(allMovies);
     loadBlindSpots(movies);
@@ -2811,6 +2821,14 @@ const App = (() => {
       yirBtn.addEventListener('click', () => {
         haptic(15);
         openYearInReview(allMovies, currentYear);
+      });
+    }
+
+    const posterBtn = document.getElementById('poster-launch');
+    if (posterBtn) {
+      posterBtn.addEventListener('click', () => {
+        haptic(15);
+        Posters.openTop10(movies);
       });
     }
   }
