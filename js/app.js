@@ -17,6 +17,10 @@ const App = (() => {
   let dirFilterSetByJump = false;
   let recentPickIds = [];
   let currentFilmography = null;
+  // Search preview (#preview/:tmdbId) state
+  let previewBackHash = '#add';
+  let pendingFormTmdbId = null;
+  let lastHash = '';
   // Persistent watchlist filter — shared by the "Roll" sheet and the live watchlist view
   let watchlistFilter = { genres: new Set(), maxDuration: 0 };
   // Decades view: show all films per decade vs. top 10 (persisted)
@@ -211,6 +215,9 @@ const App = (() => {
   }
 
   function navigate(hash) {
+    const prevHash = lastHash;
+    lastHash = hash;
+
     const viewMap = {
       '#catalogue': 'catalogue',
       '#add': 'add',
@@ -224,6 +231,13 @@ const App = (() => {
       const id = parseInt(hash.split('/')[1], 10);
       showView('detail');
       loadMovieDetail(id);
+      return;
+    }
+
+    if (hash.startsWith('#preview/')) {
+      const tmdbId = parseInt(hash.split('/')[1], 10);
+      showView('detail');
+      loadMoviePreview(tmdbId);
       return;
     }
 
@@ -247,7 +261,13 @@ const App = (() => {
     if (view === 'stats') loadStats();
     if (view === 'inventory') loadInventory();
     if (view === 'add') {
-      resetAddView();
+      // Returning from a preview — keep the search results the user was browsing.
+      if (!prevHash.startsWith('#preview/')) resetAddView();
+      if (pendingFormTmdbId) {
+        const tmdbId = pendingFormTmdbId;
+        pendingFormTmdbId = null;
+        selectSearchResult(tmdbId);
+      }
       if (pendingPersonSearch) {
         const { mode, query } = pendingPersonSearch;
         pendingPersonSearch = null;
@@ -872,7 +892,7 @@ const App = (() => {
     const tmdbUrlMatch = query.match(/themoviedb\.org\/movie\/(\d+)/);
     const directId = tmdbUrlMatch ? parseInt(tmdbUrlMatch[1]) : null;
     if (directId) {
-      selectSearchResult(directId);
+      openPreview(directId);
       return;
     }
 
@@ -1438,6 +1458,99 @@ const App = (() => {
 
   // --- Detail ---
 
+  // Opens the full page for a film that isn't saved yet. `backHash` is where
+  // the Back button returns to.
+  function openPreview(tmdbId, backHash = '#add') {
+    previewBackHash = backHash;
+    window.location.hash = `#preview/${tmdbId}`;
+  }
+
+  // Same page as a saved film, built straight from TMDB, with add actions.
+  async function loadMoviePreview(tmdbId) {
+    const container = document.getElementById('movie-detail');
+    if (!TMDB.getApiKey()) {
+      UI.showToast('No TMDB API key configured.');
+      window.location.hash = previewBackHash;
+      return;
+    }
+
+    // Already in the collection — show the real thing instead.
+    const existing = await findByTmdbId(tmdbId);
+    if (existing) {
+      window.location.hash = `#detail/${existing.id}`;
+      return;
+    }
+
+    container.innerHTML = '<p class="no-results">Loading…</p>';
+
+    let details;
+    try {
+      details = await TMDB.getMovieDetails(tmdbId);
+    } catch (err) {
+      UI.showToast(err.message);
+      window.location.hash = previewBackHash;
+      return;
+    }
+
+    const omdb = details.imdb_id ? await TMDB.fetchOmdbData(details.imdb_id).catch(() => null) : null;
+
+    const movie = {
+      tmdbId: details.id,
+      title: details.title,
+      year: details.release_date ? details.release_date.substring(0, 4) : '',
+      genres: (details.genres || []).map(g => g.name),
+      directors: (details.credits?.crew || []).filter(c => c.job === 'Director').map(c => c.name),
+      poster: TMDB.posterUrl(details.poster_path),
+      backdrop: details.backdrop_path ? TMDB.posterUrl(details.backdrop_path, 'w1280') : '',
+      overview: details.overview || '',
+      cast: (details.credits?.cast || []).slice(0, 6).map(c => ({
+        name: c.name,
+        character: c.character,
+        profileUrl: c.profile_path ? TMDB.posterUrl(c.profile_path, 'w185') : '',
+      })),
+      runtime: details.runtime || 0,
+      voteAverage: details.vote_average || 0,
+      voteCount: details.vote_count || 0,
+      imdbId: details.imdb_id || '',
+      imdbRating: omdb?.imdbRating || 0,
+      imdbVotes: omdb?.imdbVotes || '',
+      rtScore: omdb?.rtScore || '',
+    };
+
+    // The route can change while TMDB is answering — don't paint over the new view.
+    if (!window.location.hash.startsWith(`#preview/${tmdbId}`)) return;
+
+    const allMovies = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
+    container.innerHTML = UI.renderMovieDetail(movie, { allMovies, preview: true });
+
+    setupTrailerButton(movie);
+    setupPosterDrag(movie);
+
+    document.getElementById('detail-back').addEventListener('click', () => {
+      window.location.hash = previewBackHash;
+    });
+
+    document.querySelectorAll('.mlt-item[data-id]').forEach(item => {
+      item.addEventListener('click', () => {
+        window.location.hash = `#detail/${item.dataset.id}`;
+      });
+    });
+
+    document.getElementById('preview-watchlist').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      await addToWatchlist(tmdbId);
+      window.location.hash = previewBackHash;
+    });
+
+    document.getElementById('preview-rate').addEventListener('click', () => {
+      haptic(8);
+      pendingFormTmdbId = tmdbId;
+      editingMovie = null;
+      window.location.hash = '#add';
+    });
+  }
+
   async function loadMovieDetail(id) {
     const [movie, allMovies] = await Promise.all([MovieDB.getMovie(id), MovieDB.getAllMovies()]);
     if (!movie) {
@@ -1505,19 +1618,8 @@ const App = (() => {
         rewatchBtn.addEventListener('click', async () => {
           movie.rewatches = (movie.rewatches || 0) + 1;
           await MovieDB.updateMovie(movie);
-          UI.showToast(`&#8634; Rewatch #${movie.rewatches} logged!`);
-          const rewatchDisplay = document.querySelector('.detail-rewatches');
-          if (rewatchDisplay) {
-            rewatchDisplay.innerHTML = `&#8634; Rewatched ${movie.rewatches}&#215;`;
-          } else {
-            const actionsEl = document.querySelector('.detail-actions');
-            if (actionsEl) {
-              const div = document.createElement('div');
-              div.className = 'detail-rewatches';
-              div.innerHTML = `&#8634; Rewatched ${movie.rewatches}&#215;`;
-              actionsEl.before(div);
-            }
-          }
+          UI.showToast(`↺ Rewatch #${movie.rewatches} logged!`);
+          loadMovieDetail(movie.id);
         });
       }
     }
@@ -1629,7 +1731,11 @@ const App = (() => {
       }
     });
 
-    // Drag-to-reveal people overlay
+    setupPosterDrag(movie);
+  }
+
+  // Drag the poster sideways to reveal director/cast bubbles.
+  function setupPosterDrag(movie) {
     const dragEl = document.getElementById('detail-poster-drag');
     if (dragEl) {
       const directorPhotos = {};
@@ -1693,10 +1799,13 @@ const App = (() => {
         return Math.max(0, window.innerWidth - rect.left - 20);
       }
 
+      // The poster sits slightly tilted on the page — carry that through the drag.
+      const TILT = 'rotate(-1.8deg)';
+
       function springBack(dx) {
         dragEl.style.willChange = '';
         dragEl.style.transition = 'transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)';
-        dragEl.style.transform = 'translateX(0)';
+        dragEl.style.transform = `translateX(0) ${TILT}`;
         if (dx >= THRESHOLD) {
           dragEl.addEventListener('transitionend', function handler() {
             dragEl.removeEventListener('transitionend', handler);
@@ -1732,7 +1841,7 @@ const App = (() => {
         }
         e.preventDefault();
         const clamped = Math.max(0, Math.min(dx, maxDx));
-        dragEl.style.transform = `translateX(${clamped}px)`;
+        dragEl.style.transform = `translateX(${clamped}px) ${TILT}`;
       }, { passive: false });
 
       dragEl.addEventListener('touchend', e => {
@@ -2291,8 +2400,7 @@ const App = (() => {
     sugWrap.querySelectorAll('.suggestion-item').forEach(item => {
       item.addEventListener('click', e => {
         if (e.target.classList.contains('suggestion-wl-btn')) return;
-        selectSearchResult(parseInt(item.dataset.tmdbId));
-        showView('add');
+        openPreview(parseInt(item.dataset.tmdbId), '#catalogue');
       });
     });
   }
@@ -2744,6 +2852,12 @@ const App = (() => {
     const html = Stats.renderBlindSpots(results);
     if (!html) return;
     container.insertAdjacentHTML('beforeend', html);
+    container.querySelectorAll('.blind-spot-card[data-tmdb-id]').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.blind-spot-wl-btn')) return;
+        openPreview(parseInt(card.dataset.tmdbId), '#stats');
+      });
+    });
     container.querySelectorAll('.blind-spot-wl-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -2908,15 +3022,7 @@ const App = (() => {
       dirEl.querySelectorAll('.dm-film').forEach(card => {
         card.addEventListener('click', (e) => {
           if (e.target.closest('.dm-add-btn')) return;
-          const id = parseInt(card.dataset.tmdbId);
-          window.location.hash = '#add';
-          setTimeout(() => {
-            const input = document.getElementById('tmdb-search');
-            if (input) {
-              input.value = `https://www.themoviedb.org/movie/${id}`;
-              document.getElementById('tmdb-search-btn').click();
-            }
-          }, 80);
+          openPreview(parseInt(card.dataset.tmdbId), window.location.hash || '#catalogue');
         });
       });
 
@@ -3051,7 +3157,7 @@ const App = (() => {
         if (acFocusIdx >= 0 && acResults[acFocusIdx]) {
           const r = acResults[acFocusIdx];
           closeAutocomplete();
-          selectSearchResult(r.id);
+          openPreview(r.id);
         } else if (searchMode === 'director') {
           searchDirector();
         } else if (searchMode === 'actor') {
@@ -3075,7 +3181,7 @@ const App = (() => {
       const item = e.target.closest('.search-autocomplete-item');
       if (!item) return;
       const r = acResults[parseInt(item.dataset.idx)];
-      if (r) { closeAutocomplete(); selectSearchResult(r.id); }
+      if (r) { closeAutocomplete(); openPreview(r.id); }
     });
 
     document.getElementById('search-mode-toggle').addEventListener('click', (e) => {
@@ -3119,7 +3225,7 @@ const App = (() => {
         return;
       }
       const result = e.target.closest('.search-result[data-tmdb-id]');
-      if (result) selectSearchResult(parseInt(result.dataset.tmdbId));
+      if (result) openPreview(parseInt(result.dataset.tmdbId));
     });
 
     async function handleWatchlistClick(e) {

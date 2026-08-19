@@ -351,7 +351,7 @@ const Stats = (() => {
         ? `<img src="${TMDB.posterUrl(r.poster_path, 'w154')}" alt="${UI.escapeHtml(r.title)}" loading="lazy">`
         : `<div class="blind-no-poster"></div>`;
       return `
-        <div class="blind-spot-card">
+        <div class="blind-spot-card" data-tmdb-id="${r.id}">
           <div class="blind-spot-poster">${img}</div>
           <div class="blind-spot-title">${UI.escapeHtml(r.title)}</div>
           <div class="blind-spot-year">${year}</div>

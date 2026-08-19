@@ -29,7 +29,14 @@
       "Bash(node --check js/app.js)",
       "Bash(node --check js/ui.js)",
       "Bash(pkill -f \"http.server 8765\")",
-      "Bash(rm -f /tmp/verify.js)"
+      "Bash(rm -f /tmp/verify.js)",
+      "Bash(node -e ' *)",
+      "Bash(cd *)",
+      "Bash(node /c/Users/andre/AppData/Local/Temp/claude/C--Users-andre-Documents-GitHub-movieDatabase/7d5e758d-40cd-448e-89ba-86fa547c997f/scratchpad/render.js catalogue)",
+      "Bash(node /c/Users/andre/AppData/Local/Temp/claude/C--Users-andre-Documents-GitHub-movieDatabase/7d5e758d-40cd-448e-89ba-86fa547c997f/scratchpad/render.js preview)",
+      "Bash(taskkill //F //IM python.exe //FI \"WINDOWTITLE eq *\")",
+      "Bash(curl -s -o /dev/null -w \"server:%{http_code}\\\\n\" --max-time 2 http://localhost:8765/index.html)",
+      "PowerShell(Get-NetTCPConnection *)"
     ]
   }
 }

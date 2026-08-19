@@ -223,7 +223,26 @@ const UI = (() => {
       </div>`;
   }
 
+  // A section with a red slab heading. Returns '' when there is nothing to show.
+  function dtSection(label, inner, extraClass = '') {
+    if (!inner) return '';
+    return `<section class="dt-sec ${extraClass}">
+      <h2 class="dt-sec-head">${label}</h2>
+      ${inner}
+    </section>`;
+  }
+
+  function formatRuntime(mins) {
+    if (!mins) return '';
+    return mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
+  }
+
+  // `ctx.preview` renders a film that is not in the database yet — the same page,
+  // with add actions instead of edit/delete ones.
   function renderMovieDetail(movie, ctx = {}) {
+    const preview = !!ctx.preview;
+    const owned = !preview && !movie.watchlist;
+
     const poster = movie.poster
       ? `<img src="${movie.poster}" alt="${escapeHtml(movie.title)}" class="detail-poster">`
       : `<div class="no-poster-lg">${escapeHtml(movie.title)}</div>`;
@@ -236,29 +255,32 @@ const UI = (() => {
 
     const pal = getGenrePalette(movie.genres);
     const backBtn = `<button class="btn-back" id="detail-back"><span class="btn-back-arrow">&#8249;</span> Back</button>`;
-    const hasHero = !!movie.backdrop;
-    const heroTitleHtml = hasHero
-      ? `<div class="detail-hero-meta">
-          <h1 class="detail-hero-title">${escapeHtml(movie.title)}</h1>
-          ${movie.year ? `<div class="detail-hero-year">${movie.year}</div>` : ''}
-        </div>`
-      : '';
-    const backdropHtml = hasHero
-      ? `<div class="detail-backdrop-wrap" style="--genre-accent:${pal.accent}">
+
+    // --- Hero: torn photo panel with the title band struck across it ---
+    const heroHtml = movie.backdrop
+      ? `<div class="detail-backdrop-wrap">
           <img src="${movie.backdrop}" class="detail-backdrop-img" alt="">
           <div class="detail-backdrop-overlay"></div>
-          ${heroTitleHtml}
-          ${backBtn}
         </div>`
-      : `<div class="detail-header-fallback">${backBtn}</div>`;
+      : `<div class="detail-backdrop-wrap dt-hero--blank"></div>`;
 
-    const runtimeHtml = movie.runtime
-      ? `<div class="detail-runtime">&#9201; ${movie.runtime >= 60 ? `${Math.floor(movie.runtime / 60)}h ${movie.runtime % 60}m` : `${movie.runtime}m`}</div>`
-      : '';
+    const runtimeText = formatRuntime(movie.runtime);
+    const bandTags = [movie.year, runtimeText].filter(Boolean)
+      .map(t => `<span class="dt-band-tag">${escapeHtml(String(t))}</span>`).join('');
+
+    const stageHtml = `
+      <div class="dt-stage${movie.backdrop ? '' : ' dt-stage--blank'}" style="--genre-accent:${pal.accent}">
+        ${heroHtml}
+        <div class="dt-band">
+          <h1 class="dt-title">${escapeHtml(movie.title)}</h1>
+          ${bandTags ? `<div class="dt-band-meta">${bandTags}</div>` : ''}
+        </div>
+        ${backBtn}
+      </div>`;
 
     const castHtml = (movie.cast && movie.cast.length > 0)
       ? `<div class="detail-cast">
-          <div class="cast-label">Cast</div>
+          <h2 class="cast-label dt-sec-head">Cast</h2>
           <div class="cast-scroll">
             ${movie.cast.map(c => `
               <div class="cast-member">
@@ -278,9 +300,14 @@ const UI = (() => {
       ? `<div class="detail-poster-drag" id="detail-poster-drag">${poster}</div>`
       : `<div class="detail-poster-wrap">${poster}</div>`;
 
-    // Date added
-    const dateAddedHtml = movie.dateAdded
-      ? `<div class="detail-date-added">Added ${new Date(movie.dateAdded).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</div>`
+    // Specs line under the director credit — year and runtime already sit in the band
+    const specs = [];
+    if (!preview && movie.dateAdded) {
+      specs.push(`Added ${new Date(movie.dateAdded).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`);
+    }
+    if (movie.rewatches) specs.push(`Rewatched ${movie.rewatches}&#215;`);
+    const specsHtml = specs.length
+      ? `<div class="dt-specs">${specs.map(s => `<span class="dt-spec">${s}</span>`).join('')}</div>`
       : '';
 
     // Context chips from collection
@@ -293,10 +320,10 @@ const UI = (() => {
       if (dir) {
         const others = ctx.allMovies.filter(m => m.id !== movie.id && (m.directors || []).includes(dir));
         if (others.length >= 1) {
-          const total = others.length + (movie.watchlist ? 0 : 1);
-          chips.push(movie.watchlist
-            ? `${others.length} other ${dir} film${others.length > 1 ? 's' : ''} in collection`
-            : `Your ${ordinal(total)} ${dir} film`);
+          const total = others.length + (owned ? 1 : 0);
+          chips.push(owned
+            ? `Your ${ordinal(total)} ${dir} film`
+            : `${others.length} other ${dir} film${others.length > 1 ? 's' : ''} in collection`);
         }
       }
 
@@ -314,7 +341,7 @@ const UI = (() => {
       // Year peers
       if (movie.year) {
         const sameYear = ctx.allMovies.filter(m => m.id !== movie.id && m.year === movie.year).length;
-        if (sameYear >= 2) chips.push(`${sameYear + (movie.watchlist ? 0 : 1)} films from ${movie.year}`);
+        if (sameYear >= 2) chips.push(`${sameYear + (owned ? 1 : 0)} films from ${movie.year}`);
       }
     }
 
@@ -322,43 +349,50 @@ const UI = (() => {
       ? `<div class="detail-context">${chips.map(c => `<span class="detail-chip">${c}</span>`).join('')}</div>`
       : '';
 
-    // External ratings
-    const extRatingsHtml = buildExtBadgesHtml(movie, true);
+    const actionsHtml = preview
+      ? `<div class="detail-actions dt-actions dt-actions--preview">
+          <button class="btn btn-primary" id="preview-watchlist" type="button">&#43; Add to watchlist</button>
+          <button class="btn btn-secondary" id="preview-rate" type="button">Rate &amp; save</button>
+        </div>`
+      : `<div class="detail-actions dt-actions">
+          ${movie.watchlist
+            ? `<button class="btn btn-primary" id="detail-mark-watched">&#10003; Mark as Watched</button>
+               <button class="btn btn-secondary watchlist-pin-btn${movie.pinned ? ' pinned' : ''}" id="detail-pin" data-id="${movie.id}" title="${movie.pinned ? 'Unpin' : 'Pin to top'}">&#128204; ${movie.pinned ? 'Unpin' : 'Pin'}</button>`
+            : `<button class="btn btn-primary" id="detail-edit" data-id="${movie.id}">Edit</button>
+               <button class="btn btn-secondary" id="detail-rewatch">&#8634; Rewatch</button>`
+          }
+          <button class="btn btn-danger" id="detail-delete" data-id="${movie.id}">Delete</button>
+        </div>`;
+
+    const ticketHtml = owned && (movie.rating || 0) > 0
+      ? `<div class="detail-ticket-strip"><button class="detail-ticket-btn" id="detail-ticket" type="button"><span class="detail-ticket-btn-icon">&#127903;</span><span class="detail-ticket-btn-label">Generate Ticket Stub</span><span class="detail-ticket-btn-arrow">&#8599;</span></button></div>`
+      : '';
 
     return `
-      ${backdropHtml}
-      <div class="detail-content">
-        ${posterSlideHtml}
-        <div class="detail-info">
-          ${hasHero ? '' : `<h2>${escapeHtml(movie.title)} <span class="detail-year">(${movie.year || 'N/A'})</span></h2>`}
-          ${runtimeHtml}
-          ${dateAddedHtml}
-          <div class="detail-genres">${genres}</div>
-          <div class="detail-directors">${renderDirectorBadge(movie.directors)}</div>
-          ${contextHtml}
-          ${movie.overview ? `<p class="detail-overview">${escapeHtml(movie.overview)}</p>` : ''}
-          <div class="detail-rating">
-            <label>Your Rating:</label>
-            ${renderRatingBadge(movie.rating)}
+      <div class="dt${preview ? ' dt--preview' : ''}">
+        ${stageHtml}
+        <div class="dt-body">
+          <div class="dt-lede">
+            ${posterSlideHtml}
+            <div class="dt-facts">
+              <div class="detail-directors">${renderDirectorBadge(movie.directors)}</div>
+              ${specsHtml}
+              <div class="detail-genres">${genres}</div>
+              ${contextHtml}
+            </div>
           </div>
-          ${extRatingsHtml}
-          ${movie.notes ? `<div class="detail-notes"><label>Notes</label><p>${escapeHtml(movie.notes)}</p></div>` : ''}
-          ${movie.rewatches ? `<div class="detail-rewatches">&#8634; Rewatched ${movie.rewatches}×</div>` : ''}
-          ${movie.watchlist ? `<div class="detail-resume" id="detail-resume">${renderResumeSection(movie)}</div>` : ''}
-          <div class="detail-actions">
-            ${movie.watchlist
-              ? `<button class="btn btn-primary" id="detail-mark-watched">&#10003; Mark as Watched</button>
-                 <button class="btn btn-secondary watchlist-pin-btn${movie.pinned ? ' pinned' : ''}" id="detail-pin" data-id="${movie.id}" title="${movie.pinned ? 'Unpin' : 'Pin to top'}">&#128204; ${movie.pinned ? 'Unpin' : 'Pin'}</button>`
-              : `<button class="btn btn-primary" id="detail-edit" data-id="${movie.id}">Edit</button>`
-            }
-            ${!movie.watchlist ? `<button class="btn btn-secondary" id="detail-rewatch">&#8634; Rewatch</button>` : ''}
-            <button class="btn btn-danger" id="detail-delete" data-id="${movie.id}">Delete</button>
-          </div>
-          ${!movie.watchlist && (movie.rating || 0) > 0 ? `<div class="detail-ticket-strip"><button class="detail-ticket-btn" id="detail-ticket" type="button"><span class="detail-ticket-btn-icon">&#127903;</span><span class="detail-ticket-btn-label">Generate Ticket Stub</span><span class="detail-ticket-btn-arrow">&#8599;</span></button></div>` : ''}
+          ${preview ? actionsHtml : ''}
+          ${dtSection('Synopsis', movie.overview ? `<p class="detail-overview">${escapeHtml(movie.overview)}</p>` : '')}
+          ${dtSection('Elsewhere', buildExtBadgesHtml(movie, false))}
+          ${dtSection('Your rating', (movie.rating || 0) > 0 ? `<div class="detail-rating">${renderRatingBadge(movie.rating)}</div>` : '')}
+          ${dtSection('Your notes', movie.notes ? `<p class="detail-notes-body">${escapeHtml(movie.notes)}</p>` : '')}
+          ${!preview && movie.watchlist ? `<div class="detail-resume" id="detail-resume">${renderResumeSection(movie)}</div>` : ''}
+          ${preview ? '' : actionsHtml}
+          ${ticketHtml}
         </div>
+        ${castHtml}
+        ${renderMoreLikeThis(movie, ctx)}
       </div>
-      ${castHtml}
-      ${renderMoreLikeThis(movie, ctx)}
     `;
   }
 
@@ -394,7 +428,7 @@ const UI = (() => {
     }).join('');
 
     return `<div class="detail-mlt">
-      <div class="cast-label">More Like This</div>
+      <h2 class="cast-label dt-sec-head">More like this</h2>
       <div class="mlt-scroll">${items}</div>
     </div>`;
   }

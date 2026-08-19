@@ -1,3 +1,7 @@
+/* === Fonts ===
+   Must stay at the top of the file — @import is only honoured before other rules. */
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Cinzel:wght@400;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap');
+
 /* === Variables === */
 :root {
   --bg: #0a0a14;
@@ -23,9 +27,6 @@
   --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   --font-display: 'Cinzel', 'Times New Roman', serif;
 }
-
-/* === Fonts === */
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cinzel:wght@400;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap');
 
 /* === Reset === */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -5606,4 +5607,282 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
   padding: 6px 10px;
   font-size: 0.72rem;
   white-space: nowrap;
+}
+
+/* ============================================================
+   Detail page — film-society flyer
+   A struck title band across a torn photo panel, red slab
+   section marks, justified body copy. Used for saved films and
+   for search previews (.dt--preview) alike.
+   ============================================================ */
+.dt {
+  --dt-red: #cf2f28;
+  --dt-red-dim: rgba(207, 47, 40, 0.42);
+  --dt-bone: #ddd7c9;
+  --dt-bone-dim: #918a7c;
+}
+
+/* --- Stage: photo panel + title band --- */
+.dt-stage {
+  position: relative;
+  margin: 0 -16px 30px;
+  isolation: isolate;
+  /* The band is wider than the stage so it bleeds off both edges — clip it here
+     rather than letting it push the page sideways. */
+  overflow: hidden;
+}
+.dt .detail-backdrop-wrap {
+  margin: 0;
+  height: clamp(268px, 56vw, 400px);
+  clip-path: polygon(0 0, 100% 0, 100% 84%, 50% 100%, 0 84%);
+}
+.dt .detail-backdrop-img {
+  object-position: center 28%;
+}
+.dt .detail-backdrop-overlay {
+  background:
+    linear-gradient(180deg,
+      rgba(6, 6, 10, 0.88) 0%,
+      rgba(6, 6, 10, 0.34) 40%,
+      rgba(6, 6, 10, 0.12) 62%,
+      rgba(6, 6, 10, 0.62) 100%),
+    radial-gradient(ellipse 130% 90% at 50% 0%, transparent 45%, rgba(6, 6, 10, 0.5));
+}
+/* The letterbox vignette is redundant under the title band */
+.dt .detail-backdrop-wrap::before { content: none; }
+
+/* Film with no backdrop: an inked panel tinted by its lead genre */
+.dt-stage--blank .detail-backdrop-wrap {
+  height: clamp(214px, 44vw, 280px);
+  animation: none;
+  background-color: #08080c;
+  background-image:
+    radial-gradient(ellipse 90% 70% at 50% 100%,
+      color-mix(in srgb, var(--genre-accent, #cf2f28) 26%, transparent), transparent 70%),
+    linear-gradient(180deg, #0d0d13, #06060a);
+}
+
+.dt-band {
+  position: absolute;
+  z-index: 3;
+  top: clamp(54px, 13vw, 78px);
+  left: -14px;
+  right: -14px;
+  padding: 12px 30px 15px;
+  background: linear-gradient(177deg, #101016 0%, #08080c 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.9);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.62);
+  transform: rotate(-3.4deg);
+  animation: dtStamp 0.42s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+/* Ink speckle — the band should read as printed, not rendered */
+.dt-band::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 140px 140px;
+}
+@keyframes dtStamp {
+  from { opacity: 0; transform: rotate(-3.4deg) scale(1.05); }
+  to   { opacity: 1; transform: rotate(-3.4deg) scale(1); }
+}
+
+.dt-title {
+  margin: 0;
+  font-family: 'Anton', 'Bebas Neue', Impact, 'Haettenschweiler', sans-serif;
+  font-weight: 400;
+  font-size: clamp(2.05rem, 10.5vw, 4.4rem);
+  line-height: 0.9;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+  color: var(--dt-red);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85), 0 0 30px rgba(207, 47, 40, 0.22);
+  overflow-wrap: break-word;
+}
+.dt-band-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+}
+.dt-band-tag {
+  font-family: 'Anton', 'Bebas Neue', sans-serif;
+  font-size: 0.76rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--dt-bone-dim);
+}
+.dt-stage > .btn-back { z-index: 4; }
+.dt .detail-backdrop-wrap > .trailer-play-btn {
+  bottom: auto;
+  top: 14px;
+  right: 14px;
+}
+
+/* --- Lede: taped poster + credits --- */
+.dt-lede {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 26px;
+}
+.dt .detail-poster-drag,
+.dt .detail-poster-wrap {
+  position: relative;
+  flex: 0 0 clamp(108px, 30vw, 158px);
+  border-radius: 2px;
+  transform: rotate(-1.8deg);
+}
+.dt .detail-poster {
+  width: 100%;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.75);
+}
+/* Strip of tape holding the poster to the page */
+.dt .detail-poster-drag::after,
+.dt .detail-poster-wrap::after {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 54px;
+  height: 18px;
+  transform: translateX(-50%) rotate(2.6deg);
+  background: rgba(224, 216, 198, 0.14);
+  border-left: 1px solid rgba(224, 216, 198, 0.16);
+  border-right: 1px solid rgba(224, 216, 198, 0.16);
+  pointer-events: none;
+}
+.dt .no-poster-lg {
+  border-radius: 2px;
+  max-width: none;
+}
+.dt-facts {
+  flex: 1;
+  min-width: 0;
+  padding-top: 4px;
+}
+.dt .detail-directors { margin-bottom: 10px; }
+.dt-specs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-bottom: 12px;
+}
+.dt-spec {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--dt-bone-dim);
+}
+.dt-spec + .dt-spec::before {
+  content: '/';
+  margin-right: 10px;
+  color: var(--dt-red-dim);
+}
+.dt .detail-genres { margin-bottom: 12px; }
+.dt .detail-context { margin-bottom: 0; }
+
+/* --- Sections --- */
+.dt-sec { margin-bottom: 26px; }
+.dt .dt-sec-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+  font-family: 'Anton', 'Bebas Neue', Impact, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dt-red);
+}
+.dt .dt-sec-head::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--dt-red-dim), transparent);
+}
+.dt .detail-overview,
+.dt .detail-notes-body {
+  margin: 0;
+  /* Plain copy on the page — the section mark does the framing, not a card */
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  font-size: 0.95rem;
+  line-height: 1.72;
+  color: var(--dt-bone);
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+.dt .detail-notes-body {
+  padding-left: 14px;
+  border-left: 2px solid var(--dt-red-dim);
+  font-style: italic;
+  color: var(--text);
+  text-align: left;
+}
+.dt .detail-rating { margin: 0; }
+.dt .detail-rating .rating-badge {
+  font-size: 1.15rem;
+  padding: 7px 16px;
+}
+.dt .detail-cast,
+.dt .detail-mlt {
+  margin-top: 0;
+  margin-bottom: 26px;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* --- Actions --- */
+.dt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 26px;
+}
+/* Preview decisions stay reachable no matter how far down the page you are */
+.dt--preview { padding-bottom: 84px; }
+.dt-actions--preview {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: max(14px, calc(env(safe-area-inset-bottom, 0px) + 10px));
+  z-index: 60;
+  max-width: 700px;
+  margin: 0 auto;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(207, 47, 40, 0.22);
+  border-radius: 14px;
+  background: rgba(8, 8, 12, 0.78);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.dt-actions--preview .btn {
+  flex: 1 1 140px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+@media (min-width: 720px) {
+  .dt-lede { gap: 28px; }
+  .dt-body { max-width: 780px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dt-band { animation: none; }
+  .dt .detail-backdrop-img { animation: none; transform: none; }
 }
