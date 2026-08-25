@@ -1221,8 +1221,13 @@ const App = (() => {
 
   let tournament = null;
   let koth = null;
+  let chartTab = localStorage.getItem('chartTab') === 'top10' ? 'top10' : 'ranked';
 
-  async function loadChart() {
+  function loadChart() {
+    setChartTab(chartTab, true);
+  }
+
+  async function loadRankedChart() {
     const movies = (await MovieDB.getAllMovies()).filter(m => !m.watchlist && m.rating > 0);
     const top30 = [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 30);
     const allCatalogue = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
@@ -1254,6 +1259,129 @@ const App = (() => {
       </div>
     </div>`;
     document.getElementById('chart-list').innerHTML = chartHtml + tournamentBtn + kothBtn + topListsHtml;
+  }
+
+  // --- Chart sub-tabs ---
+
+  function setChartTab(tab, force) {
+    chartTab = tab === 'top10' ? 'top10' : 'ranked';
+    localStorage.setItem('chartTab', chartTab);
+    document.querySelectorAll('#chart-tabs .chart-tab').forEach(b =>
+      b.classList.toggle('active', b.dataset.tab === chartTab));
+    document.getElementById('chart-list').style.display = chartTab === 'ranked' ? '' : 'none';
+    document.getElementById('chart-top10').style.display = chartTab === 'top10' ? '' : 'none';
+
+    if (chartTab === 'top10') { loadTop10(); return; }
+    // A tournament in progress lives inside #chart-list — flipping back to the
+    // ranked tab must not wipe it, so only re-render when nothing is running.
+    if (force || (!tournament && !koth)) loadRankedChart();
+  }
+
+  // --- My Top 10 (hand-ranked) ---
+  // The chart above ranks by the score the user gave; two 9s never settle which
+  // film is actually better, so this list is ordered by hand and kept in
+  // localStorage as an array of movie ids, #1 first.
+
+  const TOP10_KEY = 'manualTop10';
+  let top10Movies = [];  // resolved, in rank order — what the poster prints
+
+  function readTop10Ids() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(TOP10_KEY) || '[]');
+      return Array.isArray(raw) ? raw.map(Number).filter(n => !isNaN(n)) : [];
+    } catch (_) { return []; }
+  }
+
+  function writeTop10Ids(ids) {
+    localStorage.setItem(TOP10_KEY, JSON.stringify(ids.slice(0, 10)));
+  }
+
+  async function loadTop10() {
+    const byId = new Map((await MovieDB.getAllMovies()).map(m => [m.id, m]));
+    const ids = readTop10Ids();
+    const kept = ids.filter(id => byId.has(id));
+    if (kept.length !== ids.length) writeTop10Ids(kept); // a film was deleted
+    top10Movies = kept.map(id => byId.get(id));
+    document.getElementById('chart-top10').innerHTML = UI.renderTop10Builder(top10Movies);
+  }
+
+  function saveTop10(ids) {
+    writeTop10Ids(ids);
+    loadTop10();
+  }
+
+  function moveTop10(slot, dir) {
+    const ids = readTop10Ids();
+    const j = slot + dir;
+    if (j < 0 || j >= ids.length) return;
+    [ids[slot], ids[j]] = [ids[j], ids[slot]];
+    haptic(8);
+    saveTop10(ids);
+  }
+
+  function removeTop10(slot) {
+    const ids = readTop10Ids();
+    if (slot < 0 || slot >= ids.length) return;
+    ids.splice(slot, 1);
+    haptic(8);
+    saveTop10(ids);
+  }
+
+  async function openTop10Picker(slot) {
+    if (document.getElementById('t10-picker')) return;
+    const all = (await MovieDB.getAllMovies())
+      .filter(m => !m.watchlist)
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0) ||
+        (a.title || '').localeCompare(b.title || ''));
+    if (!all.length) { UI.showToast('Add some films first.'); return; }
+
+    const chosen = readTop10Ids();
+    // The list stays dense, so a tap on any empty slot lands at the next free rank.
+    const target = Math.min(slot, chosen.length);
+    const el = document.createElement('div');
+    el.id = 't10-picker';
+    el.className = 't10-picker';
+    el.innerHTML = UI.renderTop10Picker(target, all, chosen);
+    document.body.appendChild(el);
+
+    const close = () => el.remove();
+    el.querySelector('.t10-picker-backdrop').addEventListener('click', close);
+    el.querySelector('.t10-picker-close').addEventListener('click', close);
+
+    const search = el.querySelector('#t10-picker-search');
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      const shown = q
+        ? all.filter(m => (m.title || '').toLowerCase().includes(q) ||
+            (m.directors || []).some(d => (d || '').toLowerCase().includes(q)))
+        : all;
+      el.querySelector('#t10-picker-list').innerHTML = UI.renderTop10PickerRows(shown, chosen);
+    });
+
+    el.querySelector('#t10-picker-list').addEventListener('click', (e) => {
+      const row = e.target.closest('.t10-pick[data-id]');
+      if (!row) return;
+      const id = parseInt(row.dataset.id, 10);
+      const ids = readTop10Ids();
+      if (ids.includes(id) || ids.length >= 10) { close(); return; }
+      ids.splice(Math.min(slot, ids.length), 0, id);
+      haptic(12);
+      close();
+      saveTop10(ids);
+    });
+  }
+
+  async function fillTop10FromRatings() {
+    if (readTop10Ids().length &&
+        !confirm('Replace your list with your ten highest-rated films?')) return;
+    const top = (await MovieDB.getAllMovies())
+      .filter(m => !m.watchlist && (m.rating || 0) > 0)
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0) ||
+        new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0))
+      .slice(0, 10);
+    if (!top.length) { UI.showToast('Rate some films first.'); return; }
+    haptic(12);
+    saveTop10(top.map(m => m.id));
   }
 
   function shuffle(arr) {
@@ -3455,6 +3583,31 @@ const App = (() => {
       // Normal movie card clicking
       const card = e.target.closest('.movie-card, .film-card, .poster-card, .mosaic-item');
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
+    });
+
+    document.getElementById('chart-tabs').addEventListener('click', (e) => {
+      const tab = e.target.closest('.chart-tab');
+      if (tab) { haptic(8); setChartTab(tab.dataset.tab); }
+    });
+
+    document.getElementById('chart-top10').addEventListener('click', (e) => {
+      const act = e.target.closest('[data-act]');
+      if (act) {
+        const slot = parseInt(act.dataset.slot, 10);
+        if (act.dataset.act === 'pick') openTop10Picker(slot);
+        else if (act.dataset.act === 'up') moveTop10(slot, -1);
+        else if (act.dataset.act === 'down') moveTop10(slot, 1);
+        else if (act.dataset.act === 'remove') removeTop10(slot);
+        return;
+      }
+      if (e.target.closest('#t10-poster')) { haptic(15); Posters.openBoard(top10Movies); return; }
+      if (e.target.closest('#t10-fill')) { fillTop10FromRatings(); return; }
+      if (e.target.closest('#t10-clear')) {
+        if (confirm('Clear your top 10?')) { writeTop10Ids([]); loadTop10(); }
+        return;
+      }
+      const row = e.target.closest('.t10-row[data-id]');
+      if (row) window.location.hash = `#detail/${row.dataset.id}`;
     });
 
     document.getElementById('chart-list').addEventListener('click', (e) => {

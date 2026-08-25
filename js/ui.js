@@ -879,6 +879,92 @@ const UI = (() => {
       <div class="top-list">${items}</div>`;
   }
 
+  // --- Hand-ranked Top 10 (Chart > My Top 10) ---
+  // The chart above is ranked by the number the user gave a film; this one is
+  // ranked by hand, because a 9 and a 9 don't settle which is actually better.
+
+  function renderTop10Builder(entries) {
+    const rows = [];
+    for (let i = 0; i < 10; i++) {
+      const m = entries[i];
+      if (!m) {
+        rows.push(`
+          <button class="t10-row t10-row--empty" type="button" data-act="pick" data-slot="${i}">
+            <span class="t10-rank">${i + 1}</span>
+            <span class="t10-empty-label">Pick a film</span>
+          </button>`);
+        continue;
+      }
+      const art = m.poster
+        ? `<img src="${m.poster}" alt="">`
+        : '<span class="t10-noart">&#9634;</span>';
+      const dir = (m.directors || [])[0];
+      rows.push(`
+        <div class="t10-row" data-slot="${i}" data-id="${m.id}">
+          <span class="t10-rank">${i + 1}</span>
+          <span class="t10-art">${art}</span>
+          <span class="t10-info">
+            <span class="t10-title">${escapeHtml(m.title)}</span>
+            <span class="t10-meta">${m.year || 'N/A'}${dir ? ' &middot; ' + escapeHtml(dir) : ''}</span>
+          </span>
+          <span class="t10-tools">
+            <button class="t10-btn" type="button" data-act="up" data-slot="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">&#9650;</button>
+            <button class="t10-btn" type="button" data-act="down" data-slot="${i}" ${i === entries.length - 1 ? 'disabled' : ''} aria-label="Move down">&#9660;</button>
+            <button class="t10-btn t10-btn--x" type="button" data-act="remove" data-slot="${i}" aria-label="Remove">&times;</button>
+          </span>
+        </div>`);
+    }
+
+    const filled = entries.length;
+    return `
+      <div class="chart-header">
+        <div class="chart-header-title">My Top 10</div>
+        <div class="chart-header-sub">Ranked by hand, not by score</div>
+      </div>
+      <div class="t10-list">${rows.join('')}</div>
+      <div class="t10-actions">
+        <button class="btn btn-primary" type="button" id="t10-poster" ${filled < 3 ? 'disabled' : ''}>&#127917; Make the poster</button>
+        <button class="btn btn-secondary" type="button" id="t10-fill">Fill from ratings</button>
+        ${filled ? '<button class="btn btn-secondary" type="button" id="t10-clear">Clear</button>' : ''}
+      </div>
+      <p class="t10-hint">${filled < 3
+        ? 'Add at least three films to print the poster.'
+        : 'One poster, all ' + filled + ' films, in this order.'}</p>`;
+  }
+
+  function renderTop10PickerRows(movies, chosenIds) {
+    if (!movies.length) return '<p class="no-results">No films match.</p>';
+    return movies.map(m => {
+      const taken = chosenIds.includes(m.id);
+      const art = m.poster ? `<img src="${m.poster}" alt="">` : '';
+      const dir = (m.directors || [])[0];
+      return `
+        <button class="t10-pick" type="button" data-id="${m.id}" ${taken ? 'disabled' : ''}>
+          <span class="t10-pick-art">${art}</span>
+          <span class="t10-pick-info">
+            <span class="t10-pick-title">${escapeHtml(m.title)}</span>
+            <span class="t10-pick-meta">${m.year || 'N/A'}${dir ? ' &middot; ' + escapeHtml(dir) : ''}</span>
+          </span>
+          <span class="t10-pick-tag">${taken ? 'In list' : (m.rating ? formatRating(m.rating) : '')}</span>
+        </button>`;
+    }).join('');
+  }
+
+  function renderTop10Picker(slot, movies, chosenIds) {
+    return `
+      <div class="t10-picker-backdrop"></div>
+      <div class="t10-picker-panel">
+        <div class="t10-picker-head">
+          <span class="t10-picker-title">Choose #${slot + 1}</span>
+          <button class="t10-picker-close" type="button" aria-label="Close">&times;</button>
+        </div>
+        <div class="input-wrap">
+          <input type="text" id="t10-picker-search" class="search-input" placeholder="Search your catalogue…" autocomplete="off">
+        </div>
+        <div class="t10-picker-list" id="t10-picker-list">${renderTop10PickerRows(movies, chosenIds)}</div>
+      </div>`;
+  }
+
   function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text || '';
@@ -1076,5 +1162,5 @@ const UI = (() => {
       </div>`;
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
+  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTop10Builder, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
 })();

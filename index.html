@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/logo.jpg" type="image/jpeg">
   <link rel="apple-touch-icon" href="icons/logo.jpg">
-  <link rel="stylesheet" href="css/styles.css?v=2026.08.20.0045">
+  <link rel="stylesheet" href="css/styles.css?v=2026.08.25.1724">
 </head>
 <body>
   <header class="app-header">
@@ -264,7 +264,12 @@
 
     <!-- Chart View -->
     <section id="view-chart" class="view" style="display:none;">
+      <div class="chart-tabs" id="chart-tabs">
+        <button class="chart-tab active" data-tab="ranked" type="button">Ranked</button>
+        <button class="chart-tab" data-tab="top10" type="button">My Top 10</button>
+      </div>
       <div id="chart-list"></div>
+      <div id="chart-top10" style="display:none;"></div>
     </section>
 
     <!-- Inventory View -->
@@ -284,12 +289,12 @@
   <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <script src="js/db.js?v=2026.08.20.0045"></script>
-  <script src="js/api.js?v=2026.08.20.0045"></script>
-  <script src="js/ui.js?v=2026.08.20.0045"></script>
-  <script src="js/stats.js?v=2026.08.20.0045"></script>
-  <script src="js/sync.js?v=2026.08.20.0045"></script>
-  <script src="js/posters.js?v=2026.08.20.0045"></script>
-  <script src="js/app.js?v=2026.08.20.0045"></script>
+  <script src="js/db.js?v=2026.08.25.1724"></script>
+  <script src="js/api.js?v=2026.08.25.1724"></script>
+  <script src="js/ui.js?v=2026.08.25.1724"></script>
+  <script src="js/stats.js?v=2026.08.25.1724"></script>
+  <script src="js/sync.js?v=2026.08.25.1724"></script>
+  <script src="js/posters.js?v=2026.08.25.1724"></script>
+  <script src="js/app.js?v=2026.08.25.1724"></script>
 </body>
 </html>

@@ -443,5 +443,286 @@ const Posters = (() => {
     });
   }
 
-  return { generate, openTop10, pickTop };
+  // ============================================================
+  //  The board — one print carrying the whole hand-ranked list
+  // ============================================================
+  const BW = 1080, BH = 1920;
+
+  async function tryImage(src) {
+    if (!src) return null;
+    try { return await loadImage(src); } catch (_) { return null; }
+  }
+
+  // Shrink until the line fits, but never past the floor — a title that still
+  // doesn't fit there is wrapped or clipped instead of set microscopically.
+  function fitLine(ctx, text, maxW, startSize, spRatio, weight = 800, minSize = 18) {
+    for (let size = startSize; size >= minSize; size -= 2) {
+      ctx.font = `${weight} ${size}px ${FACE}`;
+      if (spacedWidth(ctx, text, size * spRatio) <= maxW) return { size, sp: size * spRatio };
+    }
+    ctx.font = `${weight} ${minSize}px ${FACE}`;
+    return { size: minSize, sp: minSize * spRatio, over: true };
+  }
+
+  // Break into at most `maxLines`; whatever is left over lands clipped on the last.
+  function wrapSpaced(ctx, text, maxW, sp, maxLines) {
+    const lines = [];
+    let cur = '';
+    for (const word of text.split(/\s+/)) {
+      const test = cur ? `${cur} ${word}` : word;
+      if (!cur || spacedWidth(ctx, test, sp) <= maxW) cur = test;
+      else { lines.push(cur); cur = word; }
+    }
+    lines.push(cur);
+    if (lines.length <= maxLines) return lines;
+    const kept = lines.slice(0, maxLines - 1);
+    kept.push(clipToWidth(ctx, lines.slice(maxLines - 1).join(' '), maxW, sp));
+    return kept;
+  }
+
+  function clipToWidth(ctx, text, maxW, sp) {
+    if (spacedWidth(ctx, text, sp) <= maxW) return text;
+    let cut = text;
+    while (cut.length > 1 && spacedWidth(ctx, cut + '…', sp) > maxW) cut = cut.slice(0, -1);
+    return cut + '…';
+  }
+
+  async function generateBoard(entries) {
+    const list = entries.slice(0, 10);
+    const heroSrc = hiRes(list[0].backdrop || list[0].poster || '');
+    const heroImg = await tryImage(heroSrc);
+    const arts = await Promise.all(list.map(m => tryImage(m.poster || m.backdrop || '')));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = BW; canvas.height = BH;
+    const ctx = canvas.getContext('2d');
+    const pal = heroImg ? samplePalette(heroImg) : fallbackPalette();
+
+    const M = 78;
+    // A short list would leave the page half empty, so the slack goes to the
+    // still: fewer films, bigger hero, same balance.
+    const baseHero = 620;
+    const avail0 = BH - 100 - (baseHero + 34);
+    const rowH = Math.min(150, avail0 / list.length);
+    const used = rowH * list.length;
+    const heroH = Math.round(baseHero + Math.min(340, Math.max(0, avail0 - used) * 0.62));
+
+    // Ground
+    const ground = ctx.createLinearGradient(0, 0, 0, BH);
+    ground.addColorStop(0, css(pal.groundHi));
+    ground.addColorStop(1, css(pal.ground));
+    ctx.fillStyle = ground;
+    ctx.fillRect(0, 0, BW, BH);
+
+    // Hero still, melting into the ground so the list reads on top of colour
+    if (heroImg) {
+      const g = pal.ground.map(c => c | 0).join(',');
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, BW, heroH);
+      ctx.clip();
+      drawCover(ctx, heroImg, 0, 0, BW, heroH, 0.38);
+      const fade = ctx.createLinearGradient(0, 0, 0, heroH);
+      fade.addColorStop(0, 'rgba(0, 0, 0, 0.42)');
+      fade.addColorStop(0.32, 'rgba(0, 0, 0, 0.16)');
+      fade.addColorStop(0.72, `rgba(${g}, 0.72)`);
+      fade.addColorStop(1, `rgba(${g}, 1)`);
+      ctx.fillStyle = fade;
+      ctx.fillRect(0, 0, BW, heroH);
+      ctx.restore();
+    }
+
+    // Masthead
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    const headline = `MY TOP ${list.length}`;
+    const hFit = fitLine(ctx, headline, BW - M * 2, 138, 0.02);
+    const titleBase = heroH - 104;
+
+    ctx.font = `600 24px ${FACE}`;
+    ctx.fillStyle = css(pal.accent);
+    spacedText(ctx, 'MOVIE CATALOGUE', M, titleBase - hFit.size - 30, 24 * 0.32);
+
+    ctx.font = `800 ${hFit.size}px ${FACE}`;
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 22;
+    spacedText(ctx, headline, M, titleBase, hFit.sp);
+    ctx.shadowBlur = 0;
+
+    const stamp = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
+    ctx.font = `600 22px ${FACE}`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    spacedText(ctx, `RANKED BY HAND · ${stamp}`, M, heroH - 46, 22 * 0.26);
+
+    // The list
+    const top = heroH + 34;
+    const blockTop = top + (BH - 100 - top - used) / 2;
+    const thumbH = Math.round(rowH - 24);
+    const thumbW = Math.round(thumbH * 2 / 3);
+    const rankRight = M + 66;
+    const thumbX = M + 92;
+    const textX = thumbX + thumbW + 26;
+    const textW = BW - M - textX;
+
+    for (let i = 0; i < list.length; i++) {
+      const m = list[i];
+      const y0 = blockTop + i * rowH;
+      const cy = y0 + rowH / 2;
+
+      // Rank
+      ctx.font = `800 ${Math.round(rowH * 0.46)}px ${FACE}`;
+      ctx.fillStyle = css(pal.accent);
+      ctx.textAlign = 'right';
+      ctx.fillText(String(i + 1), rankRight, cy + rowH * 0.16);
+      ctx.textAlign = 'left';
+
+      // Poster chip
+      const ty = Math.round(cy - thumbH / 2);
+      const art = arts[i];
+      if (art) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(thumbX, ty, thumbW, thumbH);
+        ctx.clip();
+        drawCover(ctx, art, thumbX, ty, thumbW, thumbH, 0.5);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.fillRect(thumbX, ty, thumbW, thumbH);
+      }
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(thumbX + 0.5, ty + 0.5, thumbW - 1, thumbH - 1);
+
+      // Title + credits. A long title runs to a second line rather than
+      // shrinking until it can't be read next to the short ones.
+      const title = (m.title || '').toUpperCase();
+      const tMax = Math.min(42, Math.round(rowH * 0.36));
+      const tFit = fitLine(ctx, title, textW, tMax, 0.05, 800, Math.round(tMax * 0.64));
+      ctx.font = `800 ${tFit.size}px ${FACE}`;
+      ctx.fillStyle = '#f2f4f8';
+      const lines = tFit.over ? wrapSpaced(ctx, title, textW, tFit.sp, 2) : [title];
+      let lineY = lines.length > 1 ? cy - tFit.size * 0.9 : cy - 4;
+      for (const line of lines) {
+        spacedText(ctx, line, textX, lineY, tFit.sp);
+        lineY += tFit.size * 1.1;
+      }
+
+      const meta = [m.year, (m.directors || [])[0]].filter(Boolean).join('   ·   ').toUpperCase();
+      if (meta) {
+        ctx.font = `600 21px ${FACE}`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.48)';
+        spacedText(ctx, clipToWidth(ctx, meta, textW, 21 * 0.22), textX,
+          lines.length > 1 ? cy + rowH * 0.3 : cy + 28, 21 * 0.22);
+      }
+
+      if (i < list.length - 1) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.fillRect(M, Math.round(y0 + rowH) - 1, BW - M * 2, 1);
+      }
+    }
+
+    // Grain and vignette over the whole print
+    ctx.save();
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = grainPattern(ctx);
+    ctx.fillRect(0, 0, BW, BH);
+    ctx.restore();
+
+    const vig = ctx.createRadialGradient(BW / 2, BH * 0.45, BW * 0.25, BW / 2, BH * 0.5, BH * 0.75);
+    vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vig.addColorStop(1, 'rgba(0, 0, 0, 0.42)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, BW, BH);
+
+    return canvas;
+  }
+
+  async function openBoard(entries) {
+    if (document.getElementById('poster-deck')) return;
+    const list = (entries || []).slice(0, 10);
+    if (list.length < 3) {
+      if (typeof UI !== 'undefined') UI.showToast('Pick at least 3 films first.');
+      return;
+    }
+
+    const deck = document.createElement('div');
+    deck.id = 'poster-deck';
+    deck.className = 'poster-deck';
+    deck.innerHTML = `
+      <div class="pd-backdrop"></div>
+      <div class="pd-content">
+        <button class="pd-close" aria-label="Close">&times;</button>
+        <div class="pd-stage">
+          <div class="pd-loading">
+            <div class="pd-loading-label">Printing your top ${list.length}</div>
+            <div class="pd-loading-track"><div class="pd-loading-fill"></div></div>
+          </div>
+        </div>
+        <div class="pd-actions">
+          <button class="btn btn-primary pd-share" type="button" disabled>Share</button>
+          <button class="btn btn-secondary pd-save" type="button" disabled>&#11015; Save</button>
+        </div>
+      </div>`;
+    document.body.appendChild(deck);
+
+    let closed = false;
+    let url = null;
+    const close = () => {
+      closed = true;
+      if (url) URL.revokeObjectURL(url);
+      deck.classList.add('poster-deck--out');
+      setTimeout(() => deck.remove(), 200);
+    };
+    deck.querySelector('.pd-close').addEventListener('click', close);
+    deck.querySelector('.pd-backdrop').addEventListener('click', close);
+    document.addEventListener('keydown', function onEsc(e) {
+      if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
+    });
+
+    const fill = deck.querySelector('.pd-loading-fill');
+    if (fill) fill.style.width = '15%';
+    await ensureFonts();
+    await ensureBackdrop(list[0]); // the hero still sets the whole palette
+    if (closed) return;
+    if (fill) fill.style.width = '45%';
+
+    const canvas = await generateBoard(list);
+    if (closed) return;
+    if (fill) fill.style.width = '85%';
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    if (closed) return;
+    url = URL.createObjectURL(blob);
+
+    deck.querySelector('.pd-stage').innerHTML =
+      `<div class="pd-slide"><img src="${url}" alt="My top ${list.length}"></div>`;
+
+    const name = `my-top-${list.length}.png`;
+    const saveBtn = deck.querySelector('.pd-save');
+    const shareBtn = deck.querySelector('.pd-share');
+    saveBtn.disabled = shareBtn.disabled = false;
+
+    const save = () => {
+      const link = document.createElement('a');
+      link.download = name;
+      link.href = url;
+      link.click();
+    };
+    saveBtn.addEventListener('click', () => { buzz(10); save(); });
+    shareBtn.addEventListener('click', async () => {
+      buzz(10);
+      const files = [new File([blob], name, { type: 'image/png' })];
+      try {
+        if (navigator.canShare && navigator.canShare({ files })) {
+          await navigator.share({ files, title: `My top ${list.length}` });
+          return;
+        }
+        save();
+      } catch (_) { /* dismissed */ }
+    });
+  }
+
+  return { generate, openTop10, pickTop, generateBoard, openBoard };
 })();
