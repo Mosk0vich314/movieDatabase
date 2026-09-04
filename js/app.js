@@ -155,6 +155,8 @@ const App = (() => {
       setupEventListeners();
       setupImageLoader();
       setupHaptics();
+      UI.applyRatingScaleClass();
+      syncRatingScaleUI();
       UI.initCustomSelects();
       navigate(window.location.hash || '#catalogue');
       updateWatchlistBadge();
@@ -1120,6 +1122,36 @@ const App = (() => {
     updateRatingDisplay();
   }
 
+  // Repaints everything that carries the rating scale in its own markup:
+  // the toggle button, the rating filter's option labels and the slider step.
+  // The scale is display-only — ratings stay 1-10 in the database.
+  function syncRatingScaleUI() {
+    const five = UI.isFiveStar();
+
+    const btn = document.getElementById('scale-toggle');
+    if (btn) {
+      btn.textContent = five ? '★' : '10';
+      btn.classList.toggle('active', five);
+      btn.title = five ? 'Rating scale: 5 stars — tap for /10' : 'Rating scale: out of 10 — tap for stars';
+    }
+
+    const ratingFilter = document.getElementById('filter-rating');
+    if (ratingFilter) {
+      const current = ratingFilter.value;
+      // Rebuilding the options (rather than retitling them) is what the custom
+      // select's MutationObserver watches for, so the styled list relabels too.
+      ratingFilter.innerHTML = '<option value="">All Ratings</option>' +
+        [9, 8, 7, 6, 5, 4, 3, 2, 1]
+          .map(r => `<option value="${r}">${UI.ratingThresholdLabel(r)}+</option>`)
+          .join('');
+      ratingFilter.value = current;
+    }
+
+    document.querySelectorAll('.rating-slider').forEach(sl => {
+      sl.step = five ? '1' : '0.1';
+    });
+  }
+
   function updateRatingDisplay() {
     const slider = document.getElementById('rating-slider');
     const valueEl = document.getElementById('rating-display-value');
@@ -1130,7 +1162,7 @@ const App = (() => {
       const color = UI.ratingColor(selectedRating);
       valueEl.textContent = UI.formatRating(selectedRating);
       valueEl.style.color = color;
-      maxEl.textContent = '/10';
+      maxEl.textContent = UI.isFiveStar() ? '' : '/10';
       slider.value = selectedRating;
       clearBtn.style.display = '';
       const pct = ((selectedRating - 1) / 9) * 100;
@@ -2157,7 +2189,7 @@ const App = (() => {
     yCursor += 32;
     ctx.font = '900 86px "Cinzel", serif';
     ctx.fillStyle = '#c0392b';
-    ctx.fillText(UI.formatRating(movie.rating || 0) + '/10', tx, yCursor);
+    ctx.fillText(UI.ratingText(movie.rating || 0), tx, yCursor);
 
     // Date watched (bottom)
     const dateStr = movie.dateAdded
@@ -2273,7 +2305,7 @@ const App = (() => {
           await navigator.share({
             files: [new File([blob], `ticket-${movie.title}.png`, { type: 'image/png' })],
             title: `Ticket Stub — ${movie.title}`,
-            text: `Just watched ${movie.title} (${movie.year}) — ${UI.formatRating(movie.rating)}/10`,
+            text: `Just watched ${movie.title} (${movie.year}) — ${UI.ratingText(movie.rating)}`,
           });
         } else {
           dlBtn.click();
@@ -2380,7 +2412,7 @@ const App = (() => {
     if (s.best) {
       slides.push({
         title: s.best.title,
-        subtitle: `your highest rated · ${UI.formatRating(s.best.rating)}/10`,
+        subtitle: `your highest rated · ${UI.ratingText(s.best.rating)}`,
         kind: 'movie',
         movie: s.best,
       });
@@ -2878,9 +2910,9 @@ const App = (() => {
           <div class="inv-meta">${escape(movie.year || '')}${movie.directors && movie.directors.length ? ' &middot; ' + escape(movie.directors[0]) : ''}</div>
           <div class="inv-rating">
             <span class="inv-rating-value" style="color:${valColor}">${valDisplay}</span>
-            <span class="inv-rating-max">/10</span>
+            ${UI.isFiveStar() ? '' : '<span class="inv-rating-max">/10</span>'}
           </div>
-          <input type="range" class="inv-slider rating-slider" min="1" max="10" step="0.1" value="${sliderVal}" data-id="${movie.id}">
+          <input type="range" class="inv-slider rating-slider" min="1" max="10" step="${UI.isFiveStar() ? 1 : 0.1}" value="${sliderVal}" data-id="${movie.id}">
           ${r > 0 ? `<button class="btn-link inv-clear" data-id="${movie.id}">Clear rating</button>` : ''}
         </div>
       </div>
@@ -3407,14 +3439,16 @@ const App = (() => {
     let sliderWasTen = false;
     let lastTickRating = -1;
     document.getElementById('rating-slider').addEventListener('input', (e) => {
-      const v = parseFloat(parseFloat(e.target.value).toFixed(1));
+      const raw = parseFloat(e.target.value);
+      const v = UI.isFiveStar() ? Math.round(raw) : parseFloat(raw.toFixed(1));
       const tick = Math.round(v);
       if (tick !== lastTickRating) { haptic(5); lastTickRating = tick; }
       selectedRating = v;
       updateRatingDisplay();
     });
     document.getElementById('rating-slider').addEventListener('change', (e) => {
-      const val = parseFloat(parseFloat(e.target.value).toFixed(1));
+      const raw = parseFloat(e.target.value);
+      const val = UI.isFiveStar() ? Math.round(raw) : parseFloat(raw.toFixed(1));
       if (val === 10 && !sliderWasTen) { spawnStarBurst(document.getElementById('rating-display-value')); haptic([20, 40, 60]); }
       sliderWasTen = val === 10;
     });
@@ -3676,6 +3710,19 @@ const App = (() => {
         loadCatalogue();
         if (gemsLens) UI.showToast('✦ Gems highlighted — your discoveries the world hasn’t found yet');
         else UI.showToast('Gem highlights off');
+      });
+    }
+
+    const scaleBtn = document.getElementById('scale-toggle');
+    if (scaleBtn) {
+      scaleBtn.addEventListener('click', () => {
+        const next = UI.isFiveStar() ? 'ten' : 'five';
+        UI.setRatingScale(next);
+        haptic(8);
+        syncRatingScaleUI();
+        updateRatingDisplay();
+        loadCatalogue();
+        UI.showToast(next === 'five' ? 'Ratings shown as ★ out of 5' : 'Ratings shown out of 10');
       });
     }
 

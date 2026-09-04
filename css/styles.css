@@ -6239,3 +6239,38 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
   font-weight: 800;
   color: var(--text-muted);
 }
+
+/* === 5-star rating scale (display only) ===
+   Ratings stay 1-10 in the database; `body.scale-five` only changes how they
+   print. Star strings are wider than a number, so the type tightens to fit the
+   badges and overlays the numeric scale was sized for. */
+.scale-toggle-btn {
+  padding: 9px 12px;
+  min-width: 40px;
+  justify-content: center;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.scale-toggle-btn.active {
+  background: linear-gradient(180deg, rgba(245, 197, 24, 0.18), rgba(245, 197, 24, 0.06));
+  border-color: rgba(245, 197, 24, 0.55);
+  color: #ffd86b;
+  text-shadow: 0 0 6px rgba(245, 197, 24, 0.6);
+}
+
+.rating-badge--stars {
+  font-family: 'Cinzel', 'Times New Roman', serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.01em;
+  padding: 0 8px;
+}
+.scale-five .film-card-rating,
+.scale-five .mosaic-rating,
+.scale-five .mlt-rating { font-size: 0.55rem; letter-spacing: -0.01em; }
+.scale-five .np-rating { font-size: 0.8rem; }
+.scale-five .top-rating { font-size: 0.78rem; letter-spacing: -0.01em; }
+.scale-five .rating-display-value { font-size: 1.55rem; letter-spacing: 0.06em; }
+.scale-five .inv-rating-value { font-size: 0.95rem; letter-spacing: 0.03em; }
+.scale-five .bar-label--stars { font-size: 0.72rem; letter-spacing: -0.02em; }
+.scale-five .dt .detail-rating .rating-badge { font-size: 1rem; padding: 7px 14px; }
+.stat-label-scale { opacity: 0.55; }

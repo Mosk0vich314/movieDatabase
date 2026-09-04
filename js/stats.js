@@ -331,7 +331,7 @@ const Stats = (() => {
           </div>
           ${recent.monthAvgRating ? `
           <div class="recent-stat-card">
-            <div class="recent-stat-value">${recent.monthAvgRating}</div>
+            <div class="recent-stat-value">${UI.isFiveStar() ? (recent.monthAvgRating / 2).toFixed(1) : recent.monthAvgRating}</div>
             <div class="recent-stat-label">Avg rating</div>
           </div>` : ''}
           ${recent.monthTopGenre ? `
@@ -396,8 +396,8 @@ const Stats = (() => {
           <div class="stat-label">Films Watched</div>
         </div>
         <div class="stat-card">
-          <div class="stat-number" data-count="${stats.avgRating}">0</div>
-          <div class="stat-label">Avg Rating</div>
+          <div class="stat-number" data-count="${stats.total > 0 && UI.isFiveStar() ? (stats.avgRating / 2).toFixed(1) : stats.avgRating}">0</div>
+          <div class="stat-label">Avg Rating${UI.isFiveStar() ? ' <span class="stat-label-scale">/5</span>' : ''}</div>
         </div>
         <div class="stat-card">
           <div class="stat-number stat-number--sm">${fmtRuntime(stats.totalRuntime)}</div>
@@ -511,9 +511,10 @@ const Stats = (() => {
             ${stats.ratingDist.map((count, i) => {
               const r = i + 1;
               const color = UI.ratingColor(r);
+              const label = UI.isFiveStar() ? UI.formatStars(r) : r;
               return `
               <div class="bar-row">
-                <span class="bar-label" style="color:${color};font-weight:700">${r}</span>
+                <span class="bar-label${UI.isFiveStar() ? ' bar-label--stars' : ''}" style="color:${color};font-weight:700">${label}</span>
                 <div class="bar-track">
                   <div class="bar-fill" style="width: ${stats.total > 0 ? (count / stats.total) * 100 : 0}%;background:${color}"></div>
                 </div>

@@ -31,15 +31,61 @@ const UI = (() => {
     return '219,35,96';
   }
 
-  function formatRating(r) {
+  // ---- Rating scale (display only) ----
+  // Ratings are always stored 1-10. The scale switch only changes how they are
+  // printed: '10' keeps the number, '5' prints Letterboxd-style half stars
+  // (1-10 maps exactly onto the ten half-star steps of a 5-star scale).
+  let ratingScale = 'ten';
+  try { ratingScale = localStorage.getItem('ratingScale') === 'five' ? 'five' : 'ten'; } catch (e) { /* private mode */ }
+
+  function getRatingScale() { return ratingScale; }
+  function isFiveStar() { return ratingScale === 'five'; }
+
+  function setRatingScale(scale) {
+    ratingScale = scale === 'five' ? 'five' : 'ten';
+    try { localStorage.setItem('ratingScale', ratingScale); } catch (e) { /* private mode */ }
+    applyRatingScaleClass();
+    return ratingScale;
+  }
+
+  function applyRatingScaleClass() {
+    document.body.classList.toggle('scale-five', ratingScale === 'five');
+  }
+
+  // 1-10 -> '★★★½'. Each whole point is half a star.
+  function formatStars(r) {
+    const halves = Math.max(1, Math.min(10, Math.round(r)));
+    return '★'.repeat(Math.floor(halves / 2)) + (halves % 2 ? '½' : '');
+  }
+
+  // Always numeric — for outside scores (TMDb, IMDb) that live on their own scale.
+  function formatScore(r) {
     if (!r) return '-';
     const s = r.toFixed(1);
     return s.endsWith('.0') ? s.slice(0, -2) : s;
   }
 
+  // The user's own rating, in whichever scale is switched on.
+  function formatRating(r) {
+    if (!r) return '-';
+    return isFiveStar() ? formatStars(r) : formatScore(r);
+  }
+
+  // Same, but for prose/canvas where the scale needs spelling out ('8/10').
+  function ratingText(r) {
+    if (!r) return '-';
+    return isFiveStar() ? formatStars(r) : formatScore(r) + '/10';
+  }
+
+  // A '7+' style filter/bucket label in the active scale.
+  function ratingThresholdLabel(r) {
+    return isFiveStar() ? formatStars(r) : String(r);
+  }
+
   function renderRatingBadge(rating) {
     if (!rating) return '<span class="rating-badge rating-na">-</span>';
-    return `<span class="rating-badge" style="background:${ratingColor(rating)}">${formatRating(rating)}</span>`;
+    const starCls = isFiveStar() ? ' rating-badge--stars' : '';
+    return `<span class="rating-badge${starCls}" style="background:${ratingColor(rating)}">${formatRating(rating)}</span>`;
   }
 
   function renderDirectorBadge(directors) {
@@ -137,7 +183,7 @@ const UI = (() => {
       const vc = movie.voteCount ? (movie.voteCount >= 1000 ? `${(movie.voteCount / 1000).toFixed(1)}k` : String(movie.voteCount)) : '';
       badges.push(`<a href="https://www.themoviedb.org/movie/${movie.tmdbId}" target="_blank" rel="noopener" class="ext-badge ext-badge--tmdb" title="TMDb">
         <span class="ext-badge-logo">TMDb</span>
-        <span class="ext-badge-score">${formatRating(movie.voteAverage)}</span>
+        <span class="ext-badge-score">${formatScore(movie.voteAverage)}</span>
         ${vc ? `<span class="ext-badge-votes">${vc}</span>` : ''}
       </a>`);
     }
@@ -334,7 +380,9 @@ const UI = (() => {
         const diff = movie.rating - avg;
         if (Math.abs(diff) >= 0.5) {
           const sign = diff > 0 ? '+' : '';
-          chips.push(`${sign}${diff.toFixed(1)} vs your avg`);
+          // In star mode the gap is quoted in stars, not rating points.
+          const shown = isFiveStar() ? (diff / 2).toFixed(1) : diff.toFixed(1);
+          chips.push(`${sign}${shown} vs your avg`);
         }
       }
 
@@ -637,7 +685,9 @@ const UI = (() => {
   }
 
   function renderRatingLanes(movies, dir = 'desc') {
-    const labels = { 5: '9-10', 4: '7-8', 3: '5-6', 2: '3-4', 1: '1-2', 0: 'Unrated' };
+    const labels = isFiveStar()
+      ? { 5: formatStars(10), 4: formatStars(8), 3: formatStars(6), 2: formatStars(4), 1: formatStars(2), 0: 'Unrated' }
+      : { 5: '9-10', 4: '7-8', 3: '5-6', 2: '3-4', 1: '1-2', 0: 'Unrated' };
     const groups = { 5: [], 4: [], 3: [], 2: [], 1: [], 0: [] };
     movies.forEach(m => {
       const r = m.rating >= 1 && m.rating <= 10 ? Math.ceil(m.rating / 2) : 0;
@@ -1162,5 +1212,5 @@ const UI = (() => {
       </div>`;
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTop10Builder, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
+  return { showToast, ratingColor, ratingColorRGB, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTop10Builder, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
 })();
