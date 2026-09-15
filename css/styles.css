@@ -1971,6 +1971,124 @@ a:hover { color: var(--accent-hover); }
   text-transform: uppercase;
   margin-top: 4px;
 }
+/* === Five Star Club (chart, star scale) ===
+   The 5-star scale has no order left at the top — every favourite prints the
+   same ★★★★★ — so that tier is presented as a hall of fame, not a ranking. */
+.fs-head {
+  padding: 22px 0 14px;
+  border-bottom: 1px solid rgba(245, 197, 24, 0.18);
+  margin-bottom: 12px;
+}
+.fs-head-stars {
+  font-size: 0.95rem;
+  letter-spacing: 0.3em;
+  color: var(--star);
+  text-shadow: 0 0 14px rgba(245, 197, 24, 0.45);
+}
+.fs-head-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.2rem;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  margin-top: 6px;
+  color: #fff;
+  text-shadow: 0 0 18px rgba(245, 197, 24, 0.3);
+}
+.fs-head-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-top: 5px;
+}
+
+.fs-list { display: flex; flex-direction: column; gap: 8px; }
+.fs-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid rgba(245, 197, 24, 0.16);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+/* The film's own still, bled in from the right behind the type */
+.fs-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--fs-bg, none) center / cover no-repeat;
+  opacity: 0.26;
+  -webkit-mask-image: linear-gradient(to left, black 0%, transparent 62%);
+  mask-image: linear-gradient(to left, black 0%, transparent 62%);
+  pointer-events: none;
+}
+/* Gold rail down the edge — the plaque */
+.fs-card::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--star), rgba(245, 197, 24, 0.12));
+}
+.fs-card > * { position: relative; z-index: 1; }
+.fs-card:hover {
+  transform: translateX(4px);
+  border-color: rgba(245, 197, 24, 0.45);
+  box-shadow: 0 0 22px rgba(245, 197, 24, 0.12);
+}
+.fs-card-poster {
+  flex-shrink: 0;
+  width: 46px;
+  height: 68px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(245, 197, 24, 0.3);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5);
+  background: var(--bg-input);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fs-card-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fs-card-noimg { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; color: var(--text-muted); }
+.fs-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.fs-card-title {
+  font-family: 'Anton', 'Bebas Neue', sans-serif;
+  font-size: 1.02rem;
+  letter-spacing: 0.02em;
+  line-height: 1.12;
+  text-transform: uppercase;
+  color: #fff;
+}
+.fs-card-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fs-card-stars {
+  flex-shrink: 0;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  color: var(--star);
+  text-shadow: 0 0 10px rgba(245, 197, 24, 0.5);
+}
+.fs-empty { padding: 44px 0; text-align: center; }
+.fs-empty-stars {
+  font-size: 1.7rem;
+  letter-spacing: 0.3em;
+  color: var(--star-empty);
+  margin-bottom: 12px;
+}
+
 /* === Chart Top-Lists Links === */
 #view-chart {
   display: flex;
@@ -4178,6 +4296,10 @@ body {
 .movie-card-year,
 .movie-card-director,
 .chart-header-title,
+.fs-head-title,
+.fs-card-title,
+.fs-card-meta,
+.fs-card-stars,
 .chart-toplist-btn,
 .genre-tag,
 .rating-badge,

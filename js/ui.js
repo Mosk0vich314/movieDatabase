@@ -929,6 +929,45 @@ const UI = (() => {
       <div class="top-list">${items}</div>`;
   }
 
+  // --- Five Star Club (Chart > ranked tab, star scale) ---
+  // On the 5-star scale the top of the range is a plateau, not a ranking: every
+  // film the user loved prints the same ★★★★★, so numbering them would invent
+  // an order the ratings never gave. Show the plateau as a hall of fame
+  // instead, newest induction first.
+  function renderFiveStarClub(movies) {
+    if (movies.length === 0) {
+      return `
+        <div class="fs-empty">
+          <div class="fs-empty-stars">★★★★★</div>
+          <p class="no-results">No five-star films yet. Rate one ★★★★★ and it gets a plaque here.</p>
+        </div>`;
+    }
+    const rows = movies.map(m => {
+      const poster = m.poster
+        ? `<img src="${m.poster}" alt="${escapeHtml(m.title)}" loading="lazy">`
+        : `<span class="fs-card-noimg">${escapeHtml((m.title || '?').charAt(0))}</span>`;
+      const meta = [m.year, (m.directors || []).slice(0, 2).join(', ')].filter(Boolean).join(' · ');
+      const bg = m.backdrop || m.poster;
+      return `
+        <div class="fs-card" data-id="${m.id}"${bg ? ` style="--fs-bg:url('${bg}')"` : ''}>
+          <span class="fs-card-poster">${poster}</span>
+          <span class="fs-card-body">
+            <span class="fs-card-title">${escapeHtml(m.title)}</span>
+            ${meta ? `<span class="fs-card-meta">${escapeHtml(meta)}</span>` : ''}
+          </span>
+          <span class="fs-card-stars">★★★★★</span>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="fs-head">
+        <div class="fs-head-stars">★★★★★</div>
+        <div class="fs-head-title">The Five Star Club</div>
+        <div class="fs-head-sub">${movies.length} film${movies.length === 1 ? '' : 's'} · newest first</div>
+      </div>
+      <div class="fs-list">${rows}</div>`;
+  }
+
   // --- Hand-ranked Top 10 (Chart > My Top 10) ---
   // The chart above is ranked by the number the user gave a film; this one is
   // ranked by hand, because a 9 and a 9 don't settle which is actually better.
@@ -1212,5 +1251,5 @@ const UI = (() => {
       </div>`;
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderTop10Builder, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
+  return { showToast, ratingColor, ratingColorRGB, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderFiveStarClub, renderTop10Builder, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
 })();

@@ -1135,6 +1135,9 @@ const App = (() => {
       btn.title = five ? 'Rating scale: 5 stars — tap for /10' : 'Rating scale: out of 10 — tap for stars';
     }
 
+    const rankedTab = document.querySelector('#chart-tabs .chart-tab[data-tab="ranked"]');
+    if (rankedTab) rankedTab.textContent = five ? 'Five Star' : 'Ranked';
+
     const ratingFilter = document.getElementById('filter-rating');
     if (ratingFilter) {
       const current = ratingFilter.value;
@@ -1260,10 +1263,18 @@ const App = (() => {
   }
 
   async function loadRankedChart() {
-    const movies = (await MovieDB.getAllMovies()).filter(m => !m.watchlist && m.rating > 0);
-    const top30 = [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 30);
     const allCatalogue = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
-    const chartHtml = UI.renderChart(top30);
+    const movies = allCatalogue.filter(m => m.rating > 0);
+    // On the star scale a numbered chart is a lie: everything the user loved
+    // prints ★★★★★, so the top of the list would be ordered by nothing at all.
+    // Show the five-star films as an unranked club instead; the tournament and
+    // the hand-ranked Top 10 are what settle an order.
+    const chartHtml = UI.isFiveStar()
+      ? UI.renderFiveStarClub(
+          movies
+            .filter(m => Math.round(m.rating) === 10)  // same rounding formatStars uses
+            .sort((a, b) => String(b.dateAdded || '').localeCompare(String(a.dateAdded || ''))))
+      : UI.renderChart([...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 30));
     const tournamentBtn = allCatalogue.length >= 2
       ? `<button class="btn btn-primary tournament-launch-btn" id="launch-tournament">&#127942; Movie Tournament</button>`
       : '';
@@ -3676,7 +3687,7 @@ const App = (() => {
         window.location.hash = `#detail/${trRow.dataset.id}`;
         return;
       }
-      const item = e.target.closest('.top-item[data-id]');
+      const item = e.target.closest('.top-item[data-id], .fs-card[data-id]');
       if (item) window.location.hash = `#detail/${item.dataset.id}`;
     });
 
