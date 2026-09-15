@@ -2973,12 +2973,18 @@ const App = (() => {
         <span class="yir-launch-arrow">&#10095;</span>
       </button>`;
     const ratedCount = movies.filter(m => (m.rating || 0) > 0).length;
-    const posterBanner = ratedCount < 3 ? '' : `
+    // The deck prints the hand-ranked Top 10 when there is one — say so, so the
+    // button and the posters that come out of it agree.
+    const handRanked = Posters.manualTop10(movies).length;
+    const posterSub = handRanked >= 3
+      ? `A countdown of your hand-ranked top ${Math.min(handRanked, 10)}, one poster each`
+      : 'A countdown of your highest-rated films, one poster each';
+    const posterBanner = ratedCount < 3 && handRanked < 3 ? '' : `
       <button class="yir-launch-btn poster-launch-btn" id="poster-launch" type="button">
         <span class="yir-launch-icon">&#127917;</span>
         <span class="yir-launch-text">
           <span class="yir-launch-title">Top 10 poster set</span>
-          <span class="yir-launch-sub">A countdown of your highest-rated films, one poster each</span>
+          <span class="yir-launch-sub">${posterSub}</span>
         </span>
         <span class="yir-launch-arrow">&#10095;</span>
       </button>`;

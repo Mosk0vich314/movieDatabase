@@ -287,12 +287,33 @@ const Posters = (() => {
   }
 
   // ---- Deck ----
+
+  // The hand-ranked Top 10 (Chart > My Top 10), resolved against the films it
+  // was handed, #1 first. Key duplicated from app.js rather than imported —
+  // this module stays standalone.
+  function manualTop10(movies) {
+    let ids = [];
+    try {
+      const raw = JSON.parse(localStorage.getItem('manualTop10') || '[]');
+      if (Array.isArray(raw)) ids = raw.map(Number).filter(n => !isNaN(n));
+    } catch (_) { return []; }
+    const byId = new Map(movies.map(m => [m.id, m]));
+    return ids.map(id => byId.get(id)).filter(Boolean);
+  }
+
+  // Sorting by score only settles an order while the scores disagree — a wall
+  // of 10s (or of ★★★★★) leaves the top of the deck arranged by nothing. So a
+  // hand-ranked list wins whenever the user has built one long enough to print.
   function pickTop(movies, count = 10) {
-    return movies
-      .filter(m => !m.watchlist && (m.rating || 0) > 0)
-      .sort((a, b) => (b.rating || 0) - (a.rating || 0) ||
-        new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0))
-      .slice(0, count)
+    const manual = manualTop10(movies).slice(0, count);
+    const ranked = manual.length >= 3
+      ? manual
+      : movies
+          .filter(m => !m.watchlist && (m.rating || 0) > 0)
+          .sort((a, b) => (b.rating || 0) - (a.rating || 0) ||
+            new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0))
+          .slice(0, count);
+    return ranked
       .map((movie, i) => ({ movie, rank: i + 1 }))
       .reverse(); // count down to #1, the way a carousel reads
   }
@@ -724,5 +745,5 @@ const Posters = (() => {
     });
   }
 
-  return { generate, openTop10, pickTop, generateBoard, openBoard };
+  return { generate, openTop10, pickTop, manualTop10, generateBoard, openBoard };
 })();
