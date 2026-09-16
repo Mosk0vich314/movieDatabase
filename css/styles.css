@@ -1971,6 +1971,60 @@ a:hover { color: var(--accent-hover); }
   text-transform: uppercase;
   margin-top: 4px;
 }
+/* === Rank by duel (Chart > My Top 10) === */
+.duel-intro {
+  text-align: center;
+  padding: 30px 18px 10px;
+}
+.duel-intro-count {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 4.2rem;
+  line-height: 0.9;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.duel-intro-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.duel-intro-tier {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 16px;
+}
+.duel-intro-note {
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: 34em;
+  margin: 10px auto 0;
+}
+.duel-intro-note strong { color: var(--text); font-weight: 700; }
+.duel-intro-warn {
+  font-size: 0.74rem;
+  color: var(--accent);
+  margin-top: 12px;
+}
+.duel-intro .t10-actions { margin-top: 22px; }
+
+.duel-match { padding-top: 10px; }
+.duel-progress-label {
+  text-align: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+.duel-match .t10-actions { margin-top: 18px; justify-content: center; }
+.duel-match .t10-actions .btn { flex: 0 1 auto; }
+
 /* === Five Star Club (chart, star scale) ===
    The 5-star scale has no order left at the top — every favourite prints the
    same ★★★★★ — so that tier is presented as a hall of fame, not a ranking. */

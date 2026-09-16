@@ -1013,12 +1013,73 @@ const UI = (() => {
       <div class="t10-list">${rows.join('')}</div>
       <div class="t10-actions">
         <button class="btn btn-primary" type="button" id="t10-poster" ${filled < 3 ? 'disabled' : ''}>&#127917; Make the poster</button>
+        <button class="btn btn-secondary" type="button" id="t10-duel">&#9876; Rank by duel</button>
         <button class="btn btn-secondary" type="button" id="t10-fill">Fill from ratings</button>
         ${filled ? '<button class="btn btn-secondary" type="button" id="t10-clear">Clear</button>' : ''}
       </div>
       <p class="t10-hint">${filled < 3
         ? 'Add at least three films to print the poster.'
         : 'One poster, all ' + filled + ' films, in this order.'}</p>`;
+  }
+
+  // --- Rank by duel (Chart > My Top 10) ---
+  // Two films, one question, repeated: the only way to order a wall of films
+  // that all carry the same rating. See the duel notes in app.js for why it
+  // takes ~3 questions a film rather than comparing every pair.
+
+  function renderDuelIntro(count, est, tierLine, replaces) {
+    return `
+      <div class="chart-header">
+        <div class="chart-header-title">Rank by Duel</div>
+        <div class="chart-header-sub">Two films, one question, repeated</div>
+      </div>
+      <div class="duel-intro">
+        <div class="duel-intro-count">${count}</div>
+        <div class="duel-intro-label">contenders</div>
+        <p class="duel-intro-tier">${escapeHtml(tierLine)}</p>
+        <p class="duel-intro-note">
+          You&rsquo;ll see two at a time and pick the one you rank higher.
+          Roughly <strong>${est}</strong> duels &mdash; each answer settles a film&rsquo;s place against
+          the whole list, so it&rsquo;s far fewer than every pairing. Stop whenever you like
+          &mdash; you keep the best of the films you&rsquo;ve been shown so far.
+        </p>
+        ${replaces ? '<p class="duel-intro-warn">This replaces the list you have now.</p>' : ''}
+        <div class="t10-actions">
+          <button class="btn btn-primary" type="button" id="duel-start">Start duelling</button>
+          <button class="btn btn-secondary" type="button" id="duel-cancel">Back</button>
+        </div>
+      </div>`;
+  }
+
+  function renderDuelMatch(left, right, done, est, placed, total) {
+    const card = (m) => `
+      <div class="tournament-card" data-id="${m.id}">
+        <div class="tournament-poster-wrap">${m.poster
+          ? `<img src="${m.poster}" alt="" class="tournament-poster">`
+          : '<div class="tournament-no-poster"></div>'}</div>
+        <div class="tournament-card-title">${escapeHtml(m.title)}</div>
+        <div class="tournament-card-year">${m.year || ''}</div>
+      </div>`;
+    const pct = est > 0 ? Math.min(100, (done / est) * 100) : 0;
+    return `
+      <div class="tournament-match duel-match">
+        <div class="tournament-round-header">
+          <span class="tournament-round-name">&#9876; Which is better?</span>
+          <span class="tournament-match-count">Duel ${done + 1}</span>
+        </div>
+        <div class="tournament-vs">
+          ${card(left)}
+          <div class="tournament-vs-badge">VS</div>
+          ${card(right)}
+        </div>
+        <div class="tournament-progress">
+          <div class="tournament-progress-bar" style="width:${pct}%"></div>
+        </div>
+        <p class="duel-progress-label">${placed} of ${total} films placed</p>
+        <div class="t10-actions">
+          <button class="btn btn-secondary" type="button" id="duel-finish">Finish now</button>
+        </div>
+      </div>`;
   }
 
   function renderTop10PickerRows(movies, chosenIds) {
@@ -1251,5 +1312,5 @@ const UI = (() => {
       </div>`;
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderFiveStarClub, renderTop10Builder, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
+  return { showToast, ratingColor, ratingColorRGB, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderFiveStarClub, renderTop10Builder, renderDuelIntro, renderDuelMatch, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
 })();
