@@ -1,4 +1,4 @@
-const CACHE_NAME = 'movie-catalogue-v2026.09.18.2136';
+const CACHE_NAME = 'movie-catalogue-v2026.09.18.2246';
 const ASSETS = [
   './',
   './index.html',

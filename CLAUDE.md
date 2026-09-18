@@ -104,13 +104,29 @@ Each JS file is an IIFE that exposes a single module object:
 `styles.css` ends with a design-system block that the rest of the file defers to. Two rules decide the look:
 
 1. **Controls are pills, surfaces are rounded rectangles.** Buttons, toggles, chips and inputs take `--r-pill`; cards and panels take `--r-lg`.
-2. **Colour is information, split by function not by rarity.** Violet (`--accent`) = **things you tap** — button fills, active tabs, links, focus rings. Yellow (`--gold`) = **things the app says** — display headings and section marks (`.decade-label`, `.dt-sec-head`, `.chart-header-title`, `.stats-section-title`, the eyebrow labels), the Stats numerals, the app-title sheen, and the honours it already carried (Tonight's Screening border, the launch banners, the #1 rank, 9+ ratings). Everything else is neutral. Yellow never lands on a control — that is what keeps "interactive" legible at a glance — and never on body copy; it is a display-size colour only. Chart rank numerals stay neutral apart from #1: gold on both the rank and the rating puts two competing golds in one row.
+2. **Colour is information, and there is one accent.** Amber (`--accent` #fbb809) carries both the actions and the headings; **form** tells them apart — a *filled* amber pill is an action, amber *type* is a heading. There is no second accent: `--gold` is an alias of `--accent`, and honours are signalled by weight and by the bone card stock instead of by another hue.
+
+   Two rules, both measured, both hard:
+   - **Never white on amber** (1.76:1). Type on an amber fill uses `--ink` #0a0a12 (11.2:1).
+   - **Never amber on bone** (1.57:1). Amber that has to sit on `--bone` #eff2fb uses `--amber-deep` #8f5e00 (5.0:1).
+
+   The palette is sampled from the reference the user supplied: ground #050611, amber #fbb809, pill fill #fab823, card stock #eff2fb.
 
 - **Tokens**: type (`--fs-*`, two font tokens), shape (`--r-xs/sm/md/lg/pill`), space (`--s-1`…`--s-6`), elevation (`--e-1/2/3`), surfaces (`--surface-1/2/3`) and colour. Use a token, never a raw value — the file had 30 border-radii, 56 font sizes and 77 shadows before this was imposed.
 - **Palette is swappable from `:root` alone.** ~200 rules use `rgba(...)` with alpha, so the hues are exposed as channel tokens (`--accent-rgb`, `--gold-rgb`, `--bg-rgb`) and those rules read the channels. Changing the scheme means editing the palette block, not hunting hex codes.
 - **Two violets on purpose**: `--accent` (#c084fc) for text, borders and links; `--accent-fill` (#7e22ce) for button backgrounds. One purple cannot clear AA both as text on charcoal and as a fill under white labels.
 - **Buttons resolve to five recipes** (primary, secondary, danger, icon, quiet) plus one segmented-control recipe. ~67 legacy class names map onto them; do not invent a sixth look.
 - **Rating ramp** (`UI.ratingColor`) runs yellow → neutral lavender → dusty rose, not green → red: a green/red ramp was a third colour family. `UI.ratingInk()` picks dark or light ink per band; every band clears AA.
+
+## Film decor
+
+Three motifs, each on the one surface where it *means* something — never sprinkled. Adding a fourth needs the same justification.
+
+- **Perforations** (`.decade-header::after`) — the catalogue is a strip of decades, so each decade header sits on sprocket holes. The holes are punched with `mask-image`, not painted over with the background colour: painting renders one solid bar.
+- **The ticket** (`.tonight-screening`) — Tonight's Screening *is* a ticket, so it prints like one: bone card stock, ink type, `--amber-deep` label, and a dashed tear line carried by `.ts-actions`' `border-top`. The tear line lives on the actions row on purpose — an absolutely-positioned one crossed the showtime text, and stub notches were clipped by the card's own `overflow: hidden`.
+- **Letterboxing** (`.dt-stage::before/::after`) — the detail hero is a frame, so it gets black bars. Registration corners were tried and cut: they fight the chevron `clip-path` on `.detail-backdrop-wrap` and only one corner ever shows.
+
+`GENRE_PALETTE` in `ui.js` is **one warm ramp** (ember → brass → bone), not eighteen hues. It was a crimson/teal/cobalt/violet rainbow, which is three colour families fighting the theme; genres still read as distinct without leaving black/amber/bone.
 
 ## Invariants worth not breaking
 

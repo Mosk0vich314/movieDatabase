@@ -775,30 +775,35 @@ const UI = (() => {
     })));
   }
 
+  // Genres used to be an 18-hue rainbow (crimson, teal, violet, cobalt…),
+  // which is three colour families fighting the house style. Same job —
+  // telling genres apart — done inside the theme: one warm ramp from
+  // ember through brass to bone, so a shelf of spines still reads as
+  // varied without leaving black/amber/bone.
   const GENRE_PALETTE = {
-    'Action':          { bg: '#200a0a', accent: '#cc2200' },
-    'Adventure':       { bg: '#0a1a08', accent: '#2c9020' },
-    'Animation':       { bg: '#1a1500', accent: '#c8a800' },
-    'Comedy':          { bg: '#1a1200', accent: '#c09000' },
-    'Crime':           { bg: '#0a0a1f', accent: '#3840cc' },
-    'Documentary':     { bg: '#001814', accent: '#00a090' },
-    'Drama':           { bg: '#120018', accent: '#9030b0' },
-    'Family':          { bg: '#181000', accent: '#c06828' },
-    'Fantasy':         { bg: '#0e0a22', accent: '#6030d0' },
-    'History':         { bg: '#1a1200', accent: '#a87810' },
-    'Horror':          { bg: '#200000', accent: '#cc0000' },
-    'Music':           { bg: '#000f1a', accent: '#0090c8' },
-    'Mystery':         { bg: '#001018', accent: '#1050a8' },
-    'Romance':         { bg: '#1e0010', accent: '#c00060' },
-    'Science Fiction': { bg: '#001820', accent: '#00a8cc' },
-    'Thriller':        { bg: '#0c0a18', accent: '#283898' },
-    'War':             { bg: '#14100a', accent: '#787040' },
-    'Western':         { bg: '#1e1000', accent: '#a06820' },
+    'Action':          { bg: '#1c0f03', accent: '#e06a10' },
+    'Adventure':       { bg: '#1a1305', accent: '#d9a21f' },
+    'Animation':       { bg: '#1b1607', accent: '#f0c64a' },
+    'Comedy':          { bg: '#1d1804', accent: '#fbb809' },
+    'Crime':           { bg: '#140d06', accent: '#a8702a' },
+    'Documentary':     { bg: '#15120c', accent: '#b9a279' },
+    'Drama':           { bg: '#1a1408', accent: '#e8b33c' },
+    'Family':          { bg: '#1c1608', accent: '#f2c85e' },
+    'Fantasy':         { bg: '#171006', accent: '#c98a22' },
+    'History':         { bg: '#161208', accent: '#a98c46' },
+    'Horror':          { bg: '#160802', accent: '#c14a08' },
+    'Music':           { bg: '#1b1709', accent: '#e4c266' },
+    'Mystery':         { bg: '#120e07', accent: '#94733a' },
+    'Romance':         { bg: '#1d1309', accent: '#efa24e' },
+    'Science Fiction': { bg: '#141309', accent: '#cfc07a' },
+    'Thriller':        { bg: '#130c04', accent: '#b5761c' },
+    'War':             { bg: '#141008', accent: '#8f7c4a' },
+    'Western':         { bg: '#1c1305', accent: '#d08b28' },
   };
 
   function getGenrePalette(genres) {
     const g = genres && genres[0];
-    return GENRE_PALETTE[g] || { bg: '#0d1520', accent: '#304468' };
+    return GENRE_PALETTE[g] || { bg: '#16130b', accent: '#b9a279' };
   }
 
   function getGenreAccent(genre) {

@@ -7207,134 +7207,262 @@ body::after { display: none; }              /* film grain: one blend layer gone 
   letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-dim);
 }
 
+
 /* ════════════════════════════════════════════════════════════════════
-   PALETTE  ·  charcoal + violet + acid yellow
-   Every colour in the app resolves to these. The rgb() channel tokens
-   exist because ~200 rules use rgba(...) with alpha — they read the
-   channels from here rather than hardcoding the hue.
+   THEME  ·  BLACK · AMBER · BONE
+   Palette sampled from the reference: ground #050611, amber #fbb809,
+   pill #fab823, card stock #eff2fb. One accent, not two — form tells
+   you what is interactive (a filled amber pill is an action; amber
+   type is a heading), so colour is free to just be the house style.
+
+   Two hard rules, both measured:
+     · never white on amber       (1.76 — use --ink, 11.2)
+     · never amber on bone stock  (1.57 — use --amber-deep, 5.0)
    ════════════════════════════════════════════════════════════════════ */
+
 :root {
-  --font-display: 'Staatliches', 'Arial Narrow', Impact, sans-serif;
-  --font-text: 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  --bg: #050611;
+  --bg-rgb: 5, 6, 17;
+  --surface-1: #0b0c16;
+  --surface-2: #121219;
+  --surface-3: #1a1b24;
+  --bg-card: #121219;
+  --bg-card-solid: #121219;
+  --bg-input: #0b0c16;
+  --bg-glass: #121219;
 
-  --bg: #131316;
-  --bg-rgb: 19, 19, 22;
-  --surface-1: #18181d;
-  --surface-2: #1c1c22;
-  --surface-3: #26262e;
-  --bg-card: #1c1c22;
-  --bg-card-solid: #1c1c22;
-  --bg-input: #18181d;
-  --bg-glass: #1c1c22;
+  --accent: #fbb809;
+  --accent-rgb: 251, 184, 9;
+  --accent-fill: #fab823;         /* the pill fill from the reference */
+  --accent-hover: #fdc63a;
+  --accent2: #fbb809;
+  --accent2-rgb: 251, 184, 9;
+  --accent-soft: rgba(251, 184, 9, 0.12);
+  --accent-line: rgba(251, 184, 9, 0.38);
+  --accent-glow: rgba(251, 184, 9, 0.26);
 
-  --accent: #c084fc;              /* text, borders, links  */
-  --accent-rgb: 192, 132, 252;
-  --accent-fill: #7e22ce;         /* button fills — deeper, so white labels clear AA */
-  --accent-hover: #d8b4fe;
-  --accent2: #c084fc;
-  --accent2-rgb: 192, 132, 252;
-  --accent-soft: rgba(192, 132, 252, 0.14);
-  --accent-line: rgba(192, 132, 252, 0.42);
-  --accent-glow: rgba(192, 132, 252, 0.30);
+  /* gold and accent are now the same hue — honours are carried by
+     weight and by the bone stock instead of by a second colour. */
+  --gold: #fbb809;
+  --gold-rgb: 251, 184, 9;
+  --gold-soft: rgba(251, 184, 9, 0.10);
+  --gold-line: rgba(251, 184, 9, 0.38);
+  --star: #fbb809;
 
-  --gold: #ffd60a;                /* honours only */
-  --gold-rgb: 255, 214, 10;
-  --gold-soft: rgba(255, 214, 10, 0.10);
-  --gold-line: rgba(255, 214, 10, 0.38);
-  --star: #ffd60a;
+  --ink: #0a0a12;                 /* type that sits ON amber or bone */
+  --amber-deep: #8f5e00;          /* amber that has to work on bone   */
+  --bone: #eff2fb;
+  --bone-dim: #4a4754;
 
-  --text: #efeff4;
-  --text-muted: #a0a0ae;
-  --text-dim: #a0a0ae;
-  --text-faint: #6e6e7c;
-  --line: rgba(255, 255, 255, 0.07);
-  --line-strong: rgba(255, 255, 255, 0.14);
-  --border: rgba(255, 255, 255, 0.07);
-  --border-accent: rgba(192, 132, 252, 0.28);
-  --star-empty: #2a2a33;
+  --text: #eceaf2;
+  --text-muted: #9a96a8;
+  --text-dim: #9a96a8;
+  --text-faint: #6a6676;
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.13);
+  --border: rgba(255, 255, 255, 0.06);
+  --border-accent: rgba(251, 184, 9, 0.28);
+  --star-empty: #23232c;
+
+  --r-lg: 22px;                   /* the reference is rounder than we were */
 }
 
 body {
   background: var(--bg);
   background-image:
-    radial-gradient(ellipse 70% 40% at 20% 0%, rgba(var(--accent-rgb), 0.10), transparent),
-    radial-gradient(ellipse 50% 60% at 85% 20%, rgba(var(--gold-rgb), 0.05), transparent);
+    radial-gradient(ellipse 70% 40% at 20% 0%, rgba(var(--accent-rgb), 0.07), transparent),
+    radial-gradient(ellipse 50% 60% at 85% 18%, rgba(var(--accent-rgb), 0.04), transparent);
   background-attachment: fixed;
 }
 
-/* Button fills use the deeper violet; the brighter one is for text/borders.
-   A single purple cannot do both jobs and still clear contrast. */
+/* --- Amber fills take ink, never white --- */
 .btn-primary, .rp-roll-btn, .tournament-go-btn, .ts-actions .ts-watched,
 .view-toggle-btn.active, .smt-btn.active, .chart-tab.active, .nav-badge {
   background: var(--accent-fill);
   border-color: var(--accent-fill);
-  color: #fff;
+  color: var(--ink);
 }
 .btn-primary:hover, .rp-roll-btn:hover, .tournament-go-btn:hover,
-.ts-actions .ts-watched:hover { background: #9333ea; border-color: #9333ea; }
+.ts-actions .ts-watched:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.nav-link.active { color: var(--accent); }
 
-/* Staatliches is condensed, so it sets narrower than Anton at the same size.
-   Nudge the display sizes and open the tracking a little to compensate. */
-.app-title { font-size: 2rem; letter-spacing: 0.10em; }
-.dt-title { letter-spacing: 0.03em; }
-.decade-label { letter-spacing: 0.04em; }
-.ts-title, .np-title { font-size: 2rem; letter-spacing: 0.03em; }
-.dt-sec-head, .cast-label { letter-spacing: 0.06em; }
-.stat-value, .stat-number, .top-rank, .t10-rank { letter-spacing: 0.02em; }
-
-/* Justified text on a ~340px column opens rivers of white space between
-   words. Left-aligned reads better at phone width. */
-.dt-overview, .detail-overview, .form-overview { text-align: left; }
-
-/* ════════════════════════════════════════════════════════════════════
-   YELLOW AS THE EDITORIAL VOICE
-   Gold started out rarity-only (honours), so most screens showed none
-   of it. Re-split by FUNCTION rather than by rarity:
-     violet = things you tap      (buttons, tabs, links, focus rings)
-     yellow = things the app says (display headings, marks, its numbers)
-   Yellow appears only at display sizes on dark — #ffd60a on #131316 is
-   13.1:1 — and never on body copy or on a control.
-   ════════════════════════════════════════════════════════════════════ */
-
-/* --- Display headings, every view --- */
-.decade-label,
-.dt .dt-sec-head,
-.dt-sec-head,
-.cast-label,
-.fs-head,
-.chart-header-title,
-.stats-section-title,
-.detail-ext-ratings-label,
-.np-label,
-.inventory-title { color: var(--gold); }
-
+/* --- Amber carries the headings too (one accent, two forms) --- */
+.decade-label, .dt .dt-sec-head, .dt-sec-head, .cast-label, .fs-head,
+.chart-header-title, .stats-section-title, .detail-ext-ratings-label,
+.np-label, .inventory-title,
+.stat-value, .stat-number, .stat-number--sm, .activity-value,
+.settings-stat-value, .taste-dna-value { color: var(--accent); }
 .stats-section-title.danger-title { color: #ff7a9c; }
-
-/* the rule trailing a section mark takes the same hue */
-.dt .dt-sec-head::after,
-.dt-sec-head::after {
-  background: linear-gradient(90deg, rgba(var(--gold-rgb), 0.55), transparent);
-}
 .chart-header-sub { color: var(--text-dim); }
-
-/* --- Stats: the numbers are the content here, so they carry it --- */
-.stat-value, .stat-number, .stat-number--sm,
-.activity-value, .settings-stat-value, .taste-dna-value { color: var(--gold); }
-
-/* Chart ranks stay neutral on purpose: the rating is the data worth
-   finding, and two golds in one row cancel each other out. */
 .top-rank, .t10-rank { color: var(--text-dim); }
-.top-item:first-child .top-rank, .t10-row:first-child .t10-rank { color: var(--gold); }
-
-/* --- App title: a warm sheen in the new palette --- */
+.top-item:first-child .top-rank, .t10-row:first-child .t10-rank { color: var(--accent); }
+.dt .dt-sec-head::after, .dt-sec-head::after {
+  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.55), transparent);
+}
 @supports ((background-clip: text) or (-webkit-background-clip: text)) {
   .app-title {
     background-image: linear-gradient(100deg,
-      #d5d1bf 0%, #d5d1bf 36%, #fff6cf 45%, var(--gold) 50%, #fff6cf 55%, #d5d1bf 64%, #d5d1bf 100%);
+      #c9a65e 0%, #c9a65e 34%, #ffe9a8 44%, var(--accent) 50%, #ffe9a8 56%, #c9a65e 66%, #c9a65e 100%);
   }
 }
 
-/* --- A trace on the structure --- */
-.decade-header { border-bottom: 1px solid rgba(var(--gold-rgb), 0.20); padding-bottom: var(--s-2); }
-.stats-manage hr { border-top-color: rgba(var(--gold-rgb), 0.16); }
-.tonight-screening { border-color: rgba(var(--gold-rgb), 0.55); }
+/* ── FILM DECOR ─────────────────────────────────────────────────────
+   Three motifs, each on the one surface where it means something,
+   rather than sprinkled everywhere.
+   ─────────────────────────────────────────────────────────────────── */
+
+/* 1 · PERFORATIONS — the catalogue is a strip of decades, so each
+      decade header sits on sprocket holes. */
+.decade-header {
+  position: relative;
+  border-bottom: none;
+  padding-bottom: var(--s-3);
+}
+.decade-header::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 10px;
+  background-image:
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.22), rgba(var(--accent-rgb), 0.06)),
+    repeating-linear-gradient(90deg,
+      transparent 0 7px, var(--bg) 7px 15px);
+  -webkit-mask-image: linear-gradient(90deg, #000 0 70%, transparent 100%);
+          mask-image: linear-gradient(90deg, #000 0 70%, transparent 100%);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* 2 · THE TICKET — Tonight's Screening is a ticket, so it is printed
+      on card stock: bone, black type, amber rule, torn perforated edge. */
+.tonight-screening {
+  position: relative;
+  background: var(--bone);
+  border: none;
+  border-radius: var(--r-lg);
+  box-shadow: var(--e-2);
+  overflow: hidden;
+  isolation: isolate;
+}
+.tonight-screening .ts-backdrop { opacity: 0.10; filter: grayscale(1) contrast(1.2); }
+.tonight-screening .ts-overlay { background: linear-gradient(180deg, rgba(239,242,251,0.82), rgba(239,242,251,0.94)); }
+.tonight-screening .ts-label { color: var(--amber-deep); }
+.tonight-screening .ts-title { color: var(--ink); }
+.tonight-screening .ts-year,
+.tonight-screening .ts-director,
+.tonight-screening .ts-countdown { color: var(--bone-dim); }
+.tonight-screening .ts-showtime { color: var(--ink); font-weight: 700; }
+/* the tear line */
+.tonight-screening::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 74px;
+  height: 2px;
+  background-image: repeating-linear-gradient(90deg,
+    var(--bone-dim) 0 5px, transparent 5px 11px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+/* the two stub notches that bite into the card */
+.tonight-screening::after {
+  content: '';
+  position: absolute;
+  left: -9px; right: -9px; bottom: 62px;
+  height: 18px;
+  background:
+    radial-gradient(circle 9px at 0 50%, var(--bg) 98%, transparent 100%),
+    radial-gradient(circle 9px at 100% 50%, var(--bg) 98%, transparent 100%);
+  background-repeat: no-repeat;
+  background-size: 50% 100%, 50% 100%;
+  background-position: left center, right center;
+  pointer-events: none;
+}
+.tonight-screening .ts-actions { position: relative; z-index: 2; }
+.tonight-screening .ts-reroll { border-color: rgba(10,10,18,0.22); color: var(--ink); }
+.tonight-screening .ts-reroll:hover { background: rgba(10,10,18,0.06); }
+
+/* 3 · THE FRAME — the detail hero is a frame, so it gets letterbox
+      bars and registration corners. */
+.dt-stage { position: relative; }
+.dt-stage::before,
+.dt-stage::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 14px;
+  background: #000;
+  z-index: 3;
+  pointer-events: none;
+}
+.dt-stage::before { top: 0; }
+.dt-stage::after { bottom: 0; }
+.detail-backdrop-wrap { position: relative; }
+.detail-backdrop-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 20px 12px;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--accent), var(--accent)) left 0 top 0 / 14px 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) left 0 top 0 / 2px 14px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right 0 top 0 / 14px 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right 0 top 0 / 2px 14px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) left 0 bottom 0 / 14px 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) left 0 bottom 0 / 2px 14px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right 0 bottom 0 / 14px 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right 0 bottom 0 / 2px 14px no-repeat;
+  opacity: 0.55;
+}
+
+/* --- Film decor, corrected ---------------------------------------- */
+
+/* Perforations: punch the holes with a mask instead of painting over
+   them, otherwise the strip renders as one solid bar. */
+.decade-header::after {
+  height: 10px;
+  background-image: none;
+  background: rgba(var(--accent-rgb), 0.32);
+  border-radius: 2px;
+  -webkit-mask-image:
+    repeating-linear-gradient(90deg, #000 0 10px, transparent 10px 18px),
+    linear-gradient(90deg, #000 0 72%, transparent 100%);
+  -webkit-mask-composite: source-in;
+          mask-image:
+    repeating-linear-gradient(90deg, #000 0 10px, transparent 10px 18px),
+    linear-gradient(90deg, #000 0 72%, transparent 100%);
+          mask-composite: intersect;
+}
+
+/* The tear line belongs to the stub, so let the actions row carry it —
+   it then sits in the right place whatever the card's height. The
+   absolutely-positioned version crossed the showtime text, and the
+   notches were clipped by the card's own overflow:hidden. */
+.tonight-screening::before,
+.tonight-screening::after { content: none; }
+.tonight-screening .ts-actions {
+  border-top: 2px dashed rgba(10, 10, 18, 0.22);
+  padding-top: var(--s-4);
+  margin-top: var(--s-4);
+}
+/* card stock takes no drop shadows on its type */
+.tonight-screening .ts-title,
+.tonight-screening .ts-year,
+.tonight-screening .ts-director,
+.tonight-screening .ts-showtime,
+.tonight-screening .ts-countdown,
+.tonight-screening .ts-label { text-shadow: none; }
+
+/* Registration corners fought the chevron clip-path on the backdrop and
+   only ever showed one corner. The letterbox bars already say "frame",
+   so the corners go rather than get forced. */
+.detail-backdrop-wrap::after { content: none; }
+
+/* (re-stating: removing the old palette blocks took this with it) */
+.dt-overview, .detail-overview, .form-overview { text-align: left; }
+
+/* The justify rule is `.dt .detail-overview` (0,2,0) — match it. */
+.dt .detail-overview, .dt .detail-notes-body { text-align: left; }
+
+/* The chart heading is a display string like the others. */
+.chart-header-title { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.02em; }
