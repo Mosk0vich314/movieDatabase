@@ -7466,3 +7466,109 @@ body {
 
 /* The chart heading is a display string like the others. */
 .chart-header-title { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.02em; }
+
+/* ── Tonight's Screening, revised ────────────────────────────────────
+   The bone card stock was the only light surface anywhere in the app,
+   so it read as a mistake rather than as a system — and with no artwork
+   it was a big empty slab next to a Just Added card that leads with its
+   backdrop. Back to a dark card, with the film's poster anchoring the
+   right edge. The ticket idea survives in the perforated tear line.
+   ─────────────────────────────────────────────────────────────────── */
+.tonight-screening {
+  background: var(--surface-2);
+  border: 1px solid var(--accent-line);
+  box-shadow: var(--e-2);
+}
+.tonight-screening .ts-backdrop {
+  opacity: 0.30;
+  filter: grayscale(0.35) contrast(1.05);
+}
+.tonight-screening .ts-overlay {
+  background: linear-gradient(90deg,
+    rgba(5, 6, 17, 0.94) 0%, rgba(5, 6, 17, 0.88) 42%, rgba(5, 6, 17, 0.62) 100%);
+}
+/* type goes back to the dark-surface colours */
+.tonight-screening .ts-label { color: var(--accent); }
+.tonight-screening .ts-title { color: var(--text); }
+.tonight-screening .ts-year,
+.tonight-screening .ts-director,
+.tonight-screening .ts-countdown { color: var(--text-dim); }
+.tonight-screening .ts-showtime { color: var(--text); font-weight: 700; }
+
+/* the poster: full-bleed on the right, 2:3, faded into the card */
+.ts-poster {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 128px;
+  z-index: 1;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 34%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 34%);
+}
+.ts-poster img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center 22%;
+  display: block;
+}
+/* keep the text clear of it */
+.tonight-screening .ts-content { padding-right: 140px; }
+.tonight-screening .ts-title {
+  font-size: 1.5rem;
+  line-height: 1.04;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* tear line reads on dark now */
+.tonight-screening .ts-actions {
+  border-top: 2px dashed rgba(var(--accent-rgb), 0.28);
+  padding-top: var(--s-3);
+  margin-top: var(--s-3);
+}
+.tonight-screening .ts-reroll {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+.tonight-screening .ts-reroll:hover { background: rgba(255,255,255,0.06); }
+
+/* The card was a fixed 200px from before it had a tear line, an actions
+   row and a poster gutter; the title was being clipped and the showtime
+   wrapped. Let it size to its content and give the text column room. */
+.tonight-screening {
+  height: auto;
+  min-height: 210px;
+}
+.ts-poster { width: 112px; }
+.tonight-screening .ts-content {
+  padding: var(--s-4) var(--s-4) var(--s-4) var(--s-4);
+  padding-right: 122px;
+  justify-content: center;
+  gap: 2px;
+}
+.tonight-screening .ts-title {
+  font-size: 1.45rem;
+  line-height: 1.18;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin-bottom: 2px;
+}
+.tonight-screening .ts-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-size: var(--fs-sm);
+}
+.tonight-screening .ts-showtime { white-space: nowrap; }
+.tonight-screening .ts-countdown { white-space: nowrap; }
+
+/* a touch more poster visible, and the countdown stays on the showtime line */
+.ts-poster {
+  width: 122px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 26%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 26%);
+}
+.tonight-screening .ts-content { padding-right: 130px; }
+.tonight-screening .ts-meta { font-size: var(--fs-xs); }

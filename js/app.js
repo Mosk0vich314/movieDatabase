@@ -77,7 +77,10 @@ const App = (() => {
     if (!wrap) return;
     const movie = await pickTonightsScreening(false);
     if (!movie) { wrap.innerHTML = ''; return; }
-    const backdrop = movie.backdrop || movie.poster || '';
+    // NB: both go through UI.imgSrc() — these come from the DB, which can be
+    // filled by an imported backup. See the URL-sanitising invariant.
+    const backdrop = UI.imgSrc(movie.backdrop || movie.poster || '');
+    const poster = UI.imgSrc(movie.poster || movie.backdrop || '');
     const dirLine = (movie.directors || []).length > 0
       ? `<div class="ts-director">${UI.escapeHtml(movie.directors[0])}</div>` : '';
     const yearLine = movie.year ? `<span class="ts-year">${movie.year}</span>` : '';
@@ -86,6 +89,7 @@ const App = (() => {
       <div class="tonight-screening" data-id="${movie.id}">
         ${backdrop ? `<img src="${backdrop}" class="ts-backdrop" alt="">` : ''}
         <div class="ts-overlay"></div>
+        ${poster ? `<div class="ts-poster"><img src="${poster}" alt="" loading="lazy"></div>` : ''}
         <div class="ts-content">
           <div class="ts-label">
             <span class="ts-bulb"></span> TONIGHT'S SCREENING <span class="ts-bulb"></span>
