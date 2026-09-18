@@ -1,0 +1,4 @@
+
+# Files Claude delivers into the chat get saved here by the desktop app.
+# They are session artefacts, not part of the app.
+Claude outputs/

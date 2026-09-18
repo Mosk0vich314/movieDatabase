@@ -41,25 +41,25 @@ const UI = (() => {
   }
 
   function ratingColor(r) {
-    if (r >= 9) return '#21d07a';
-    if (r >= 7) return '#6bbd40';
-    if (r >= 5) return '#ccb833';
-    if (r >= 3) return '#d97c2e';
-    return '#db2360';
+    if (r >= 9) return '#f5c518';
+    if (r >= 7) return '#d9a92f';
+    if (r >= 5) return '#6f6889';
+    if (r >= 3) return '#5c5570';
+    return '#8e4f68';
   }
 
   // Ink that stays legible on top of ratingColor(). The four light bands take
   // dark ink (6.4:1 - 9.8:1); only the low-end red is dark enough for white (4.8:1).
   function ratingInk(r) {
-    return r >= 3 ? '#0a0a14' : '#ffffff';
+    return r >= 7 ? '#141118' : '#ffffff';
   }
 
   function ratingColorRGB(r) {
-    if (r >= 9) return '33,208,122';
-    if (r >= 7) return '107,189,64';
-    if (r >= 5) return '204,184,51';
-    if (r >= 3) return '217,124,46';
-    return '219,35,96';
+    if (r >= 9) return '245,197,24';
+    if (r >= 7) return '217,169,47';
+    if (r >= 5) return '111,104,137';
+    if (r >= 3) return '92,85,112';
+    return '142,79,104';
   }
 
   // ---- Rating scale (display only) ----
