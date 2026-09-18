@@ -6450,3 +6450,28 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
 .scale-five .bar-label--stars { font-size: 0.72rem; letter-spacing: -0.02em; }
 .scale-five .dt .detail-rating .rating-badge { font-size: 1rem; padding: 7px 14px; }
 .stat-label-scale { opacity: 0.55; }
+
+/* --- Rating badge legibility (fix) ---
+   renderRatingBadge sets background+color inline, which beats the art-deco
+   rule above. Drop the gilded text-shadow/frame for those toned badges so the
+   dark ink stays crisp; the .rating-na plaque keeps the gilded look. */
+.rating-badge--tone {
+  text-shadow: none;
+  font-family: 'Montserrat', 'Segoe UI', sans-serif;
+  font-weight: 800;
+  border-color: rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* --- Custom select: keyboard affordances (fix) ---
+   The native <select> is display:none, so the trigger is the real control.
+   It now carries role/tabindex/aria-*; these are the matching visuals. */
+.custom-select-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-color: var(--border-accent);
+}
+.custom-select-option.cs-active {
+  background: rgba(233, 69, 96, 0.14);
+  color: var(--text);
+}

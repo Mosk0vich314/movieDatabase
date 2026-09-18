@@ -304,7 +304,8 @@ const App = (() => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const el = entry.target;
-          el.style.setProperty('--poster', `url('${el.dataset.poster}')`);
+          const src = UI.cssUrl(el.dataset.poster);
+          if (src) el.style.setProperty('--poster', `url('${src}')`);
           observer.unobserve(el);
         }
       });

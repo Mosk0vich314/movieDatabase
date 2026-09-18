@@ -15,12 +15,43 @@ const UI = (() => {
     setTimeout(() => toast.classList.remove('show'), duration);
   }
 
+  // ---- URL sanitising ----
+  // Movie records can arrive from an imported backup or a pulled gist, i.e. from
+  // outside this app. Anything interpolated into a src="" or a CSS url() has to
+  // be proven to be a plain http(s) URL first, or `poster` doubles as a script
+  // injection point (and localStorage holds a GitHub token).
+  function safeUrl(u) {
+    if (!u) return '';
+    const s = String(u).trim();
+    if (!/^https?:\/\/[^\s"'<>\\]+$/i.test(s)) return '';
+    return s;
+  }
+
+  // For src="..." / data-*="..." attribute context.
+  function imgSrc(u) {
+    const s = safeUrl(u);
+    return s ? escapeHtml(s) : '';
+  }
+
+  // For CSS url('...') context — quotes and parens would break out of it.
+  function cssUrl(u) {
+    const s = safeUrl(u);
+    if (!s || /[()'"]/.test(s)) return '';
+    return s;
+  }
+
   function ratingColor(r) {
     if (r >= 9) return '#21d07a';
     if (r >= 7) return '#6bbd40';
     if (r >= 5) return '#ccb833';
     if (r >= 3) return '#d97c2e';
     return '#db2360';
+  }
+
+  // Ink that stays legible on top of ratingColor(). The four light bands take
+  // dark ink (6.4:1 - 9.8:1); only the low-end red is dark enough for white (4.8:1).
+  function ratingInk(r) {
+    return r >= 3 ? '#0a0a14' : '#ffffff';
   }
 
   function ratingColorRGB(r) {
@@ -85,7 +116,7 @@ const UI = (() => {
   function renderRatingBadge(rating) {
     if (!rating) return '<span class="rating-badge rating-na">-</span>';
     const starCls = isFiveStar() ? ' rating-badge--stars' : '';
-    return `<span class="rating-badge${starCls}" style="background:${ratingColor(rating)}">${formatRating(rating)}</span>`;
+    return `<span class="rating-badge rating-badge--tone${starCls}" style="background:${ratingColor(rating)};color:${ratingInk(rating)}">${formatRating(rating)}</span>`;
   }
 
   function renderDirectorBadge(directors) {
@@ -98,7 +129,7 @@ const UI = (() => {
 
   function renderMovieCard(movie) {
     const poster = movie.poster
-      ? `<img src="${movie.poster}" alt="${escapeHtml(movie.title)}" loading="lazy">`
+      ? `<img src="${imgSrc(movie.poster)}" alt="${escapeHtml(movie.title)}" loading="lazy">`
       : `<div class="no-poster">${escapeHtml(movie.title)}</div>`;
 
     const directorLine = (movie.directors || []).length > 0
@@ -124,7 +155,7 @@ const UI = (() => {
   function renderSearchResult(result) {
     const year = result.release_date ? result.release_date.substring(0, 4) : 'N/A';
     const poster = result.poster_path
-      ? `<img src="${TMDB.posterUrl(result.poster_path, 'w92')}" alt="${escapeHtml(result.title)}">`
+      ? `<img src="${imgSrc(TMDB.posterUrl(result.poster_path, 'w92'))}" alt="${escapeHtml(result.title)}">`
       : `<div class="no-poster-sm">No Poster</div>`;
 
     const origTitle = result.original_title && result.original_title !== result.title
@@ -147,7 +178,7 @@ const UI = (() => {
 
   function renderWatchlistCard(movie) {
     const poster = movie.poster
-      ? `<img src="${movie.poster}" alt="${escapeHtml(movie.title)}" loading="lazy">`
+      ? `<img src="${imgSrc(movie.poster)}" alt="${escapeHtml(movie.title)}" loading="lazy">`
       : `<div class="no-poster">${escapeHtml(movie.title)}</div>`;
 
     const directorLine = (movie.directors || []).length > 0
@@ -290,7 +321,7 @@ const UI = (() => {
     const owned = !preview && !movie.watchlist;
 
     const poster = movie.poster
-      ? `<img src="${movie.poster}" alt="${escapeHtml(movie.title)}" class="detail-poster">`
+      ? `<img src="${imgSrc(movie.poster)}" alt="${escapeHtml(movie.title)}" class="detail-poster">`
       : `<div class="no-poster-lg">${escapeHtml(movie.title)}</div>`;
 
     const genres = (movie.genres || []).map(g => {
@@ -305,7 +336,7 @@ const UI = (() => {
     // --- Hero: torn photo panel with the title band struck across it ---
     const heroHtml = movie.backdrop
       ? `<div class="detail-backdrop-wrap">
-          <img src="${movie.backdrop}" class="detail-backdrop-img" alt="">
+          <img src="${imgSrc(movie.backdrop)}" class="detail-backdrop-img" alt="">
           <div class="detail-backdrop-overlay"></div>
         </div>`
       : `<div class="detail-backdrop-wrap dt-hero--blank"></div>`;
@@ -331,7 +362,7 @@ const UI = (() => {
             ${movie.cast.map(c => `
               <div class="cast-member">
                 ${c.profileUrl
-                  ? `<img src="${c.profileUrl}" class="cast-photo" alt="${escapeHtml(c.name)}" loading="lazy">`
+                  ? `<img src="${imgSrc(c.profileUrl)}" class="cast-photo" alt="${escapeHtml(c.name)}" loading="lazy">`
                   : `<div class="cast-photo-placeholder"></div>`}
                 <div class="cast-name cast-name-link" data-person-name="${escapeHtml(c.name)}">${escapeHtml(c.name)}</div>
                 <div class="cast-char">${escapeHtml(c.character || '')}</div>
@@ -466,7 +497,7 @@ const UI = (() => {
 
     const items = scored.map(s => {
       const m = s.movie;
-      const posterImg = m.poster ? `<img src="${m.poster}" alt="" loading="lazy">` : '<div class="mlt-no-poster"></div>';
+      const posterImg = m.poster ? `<img src="${imgSrc(m.poster)}" alt="" loading="lazy">` : '<div class="mlt-no-poster"></div>';
       const rBadge = m.rating ? `<span class="mlt-rating" style="color:${ratingColor(m.rating)}">${formatRating(m.rating)}</span>` : '';
       return `<div class="mlt-item" data-id="${m.id}">
         <div class="mlt-poster">${posterImg}</div>
@@ -497,14 +528,14 @@ const UI = (() => {
 
   function renderFilmCard(movie) {
     const poster = movie.poster
-      ? `<img src="${movie.poster}" alt="${escapeHtml(movie.title)}" loading="lazy">`
+      ? `<img src="${imgSrc(movie.poster)}" alt="${escapeHtml(movie.title)}" loading="lazy">`
       : `<div class="no-poster-lane">${escapeHtml(movie.title)}</div>`;
 
     const sizeClass = movie.rating >= 9 ? 'card-xl' : (movie.rating >= 7 ? 'card-lg' : 'card-sm');
     const ratedClass = movie.rating ? ' rated' : '';
     const rcAttr = movie.rating ? ` style="--rc:${ratingColorRGB(movie.rating)}"` : '';
     const ratingBadge = movie.rating
-      ? `<span class="film-card-rating" style="background:${ratingColor(movie.rating)}">${formatRating(movie.rating)}</span>`
+      ? `<span class="film-card-rating rating-badge--tone" style="background:${ratingColor(movie.rating)};color:${ratingInk(movie.rating)}">${formatRating(movie.rating)}</span>`
       : '';
     const rewatchBadge = movie.rewatches
       ? `<span class="rewatch-badge">&#8634;${movie.rewatches}</span>`
@@ -534,7 +565,7 @@ const UI = (() => {
       ? `<div class="np-rewatch">&#8634; ${movie.rewatches}× watched</div>` : '';
     return `
       <div class="now-playing" data-id="${movie.id}">
-        ${backdrop ? `<img src="${backdrop}" class="np-backdrop" alt="">` : ''}
+        ${backdrop ? `<img src="${imgSrc(backdrop)}" class="np-backdrop" alt="">` : ''}
         <div class="np-overlay"></div>
         <div class="np-content">
           <div class="np-label">JUST ADDED</div>
@@ -556,7 +587,7 @@ const UI = (() => {
           ${results.map(r => {
             const year = r.release_date ? r.release_date.substring(0, 4) : '';
             const img = r.poster_path
-              ? `<img src="${TMDB.posterUrl(r.poster_path, 'w154')}" alt="${escapeHtml(r.title)}" loading="lazy">`
+              ? `<img src="${imgSrc(TMDB.posterUrl(r.poster_path, 'w154'))}" alt="${escapeHtml(r.title)}" loading="lazy">`
               : `<div class="suggestion-no-img"></div>`;
             return `
               <div class="suggestion-item" data-tmdb-id="${r.id}">
@@ -615,7 +646,7 @@ const UI = (() => {
   function renderMosaicItem(movie, sizeClass) {
     const img = movie.backdrop || movie.poster || '';
     const imgHtml = img
-      ? `<img src="${img}" alt="${escapeHtml(movie.title)}" loading="lazy">`
+      ? `<img src="${imgSrc(img)}" alt="${escapeHtml(movie.title)}" loading="lazy">`
       : `<div class="mosaic-no-img">${escapeHtml(movie.title)}</div>`;
     const ratingHtml = movie.rating
       ? `<span class="mosaic-rating" style="color:${ratingColor(movie.rating)}">${formatRating(movie.rating)}</span>`
@@ -822,7 +853,7 @@ const UI = (() => {
         } else {
           const m = item.movie;
           const pal = getGenrePalette(m.genres);
-          const posterAttr = m.poster ? ` data-poster="${m.poster}"` : '';
+          const posterAttr = m.poster ? ` data-poster="${imgSrc(m.poster)}"` : '';
           html += `<div class="bluray-case" data-id="${m.id}"${posterAttr} style="--sc:${pal.bg};--ac:${pal.accent}">
             <div class="case-spine">
               <span class="spine-title">${escapeHtml(m.title)}</span>
@@ -846,7 +877,7 @@ const UI = (() => {
     return `<div class="poster-grid">
       ${movies.map(m => {
         const img = m.poster
-          ? `<img src="${m.poster}" alt="${escapeHtml(m.title)}" loading="lazy">`
+          ? `<img src="${imgSrc(m.poster)}" alt="${escapeHtml(m.title)}" loading="lazy">`
           : `<div class="poster-card-no-img">${escapeHtml(m.title)}</div>`;
         const ratingClass = m.rating ? ' rated' : '';
         const rcAttr = m.rating ? ` style="--rc:${ratingColorRGB(m.rating)}"` : '';
@@ -865,7 +896,7 @@ const UI = (() => {
 
   function renderPersonResult(person, role = 'Director') {
     const photo = person.profile_path
-      ? `<img src="${TMDB.profileUrl(person.profile_path)}" alt="${escapeHtml(person.name)}">`
+      ? `<img src="${imgSrc(TMDB.profileUrl(person.profile_path))}" alt="${escapeHtml(person.name)}">`
       : `<div class="no-poster-sm">?</div>`;
     const knownFor = (person.known_for || [])
       .slice(0, 2)
@@ -887,7 +918,7 @@ const UI = (() => {
   function renderFilmographyResult(film, addedSet, subtext = null) {
     const year = film.release_date ? film.release_date.substring(0, 4) : 'N/A';
     const poster = film.poster_path
-      ? `<img src="${TMDB.posterUrl(film.poster_path, 'w92')}" alt="${escapeHtml(film.title)}">`
+      ? `<img src="${imgSrc(TMDB.posterUrl(film.poster_path, 'w92'))}" alt="${escapeHtml(film.title)}">`
       : `<div class="no-poster-sm">No Poster</div>`;
     const isAdded = addedSet && addedSet.has(String(film.id));
     const addedClass = isAdded ? ' search-result--added' : '';
@@ -915,7 +946,7 @@ const UI = (() => {
       return '<p class="no-results" style="margin-top:48px;">Rate some films to build your chart.</p>';
     }
     const items = movies.map((m, i) => `
-      <div class="top-item" data-id="${m.id}" ${m.backdrop ? `style="--ti-bg:url('${m.backdrop}')"` : ''}>
+      <div class="top-item" data-id="${m.id}" ${m.backdrop ? `style="--ti-bg:url('${cssUrl(m.backdrop)}')"` : ''}>
         <span class="top-rank">${i + 1}</span>
         <span class="top-title">${escapeHtml(m.title)} <span class="top-year">(${m.year || 'N/A'})</span></span>
         <span class="top-rating" style="color:${ratingColor(m.rating)}">${formatRating(m.rating)}</span>
@@ -944,12 +975,12 @@ const UI = (() => {
     }
     const rows = movies.map(m => {
       const poster = m.poster
-        ? `<img src="${m.poster}" alt="${escapeHtml(m.title)}" loading="lazy">`
+        ? `<img src="${imgSrc(m.poster)}" alt="${escapeHtml(m.title)}" loading="lazy">`
         : `<span class="fs-card-noimg">${escapeHtml((m.title || '?').charAt(0))}</span>`;
       const meta = [m.year, (m.directors || []).slice(0, 2).join(', ')].filter(Boolean).join(' · ');
       const bg = m.backdrop || m.poster;
       return `
-        <div class="fs-card" data-id="${m.id}"${bg ? ` style="--fs-bg:url('${bg}')"` : ''}>
+        <div class="fs-card" data-id="${m.id}"${bg ? ` style="--fs-bg:url('${cssUrl(bg)}')"` : ''}>
           <span class="fs-card-poster">${poster}</span>
           <span class="fs-card-body">
             <span class="fs-card-title">${escapeHtml(m.title)}</span>
@@ -985,7 +1016,7 @@ const UI = (() => {
         continue;
       }
       const art = m.poster
-        ? `<img src="${m.poster}" alt="">`
+        ? `<img src="${imgSrc(m.poster)}" alt="">`
         : '<span class="t10-noart">&#9634;</span>';
       const dir = (m.directors || [])[0];
       rows.push(`
@@ -1055,7 +1086,7 @@ const UI = (() => {
     const card = (m) => `
       <div class="tournament-card" data-id="${m.id}">
         <div class="tournament-poster-wrap">${m.poster
-          ? `<img src="${m.poster}" alt="" class="tournament-poster">`
+          ? `<img src="${imgSrc(m.poster)}" alt="" class="tournament-poster">`
           : '<div class="tournament-no-poster"></div>'}</div>
         <div class="tournament-card-title">${escapeHtml(m.title)}</div>
         <div class="tournament-card-year">${m.year || ''}</div>
@@ -1086,7 +1117,7 @@ const UI = (() => {
     if (!movies.length) return '<p class="no-results">No films match.</p>';
     return movies.map(m => {
       const taken = chosenIds.includes(m.id);
-      const art = m.poster ? `<img src="${m.poster}" alt="">` : '';
+      const art = m.poster ? `<img src="${imgSrc(m.poster)}" alt="">` : '';
       const dir = (m.directors || [])[0];
       return `
         <button class="t10-pick" type="button" data-id="${m.id}" ${taken ? 'disabled' : ''}>
@@ -1125,58 +1156,149 @@ const UI = (() => {
   // Wraps native <select> elements with styled custom dropdowns
   // The native select stays in the DOM (hidden) so existing change listeners work.
 
+  function closeCustomSelect(wrapper) {
+    wrapper.classList.remove('open');
+    const t = wrapper.querySelector('.custom-select-trigger');
+    if (t) {
+      t.setAttribute('aria-expanded', 'false');
+      t.removeAttribute('aria-activedescendant');
+    }
+    wrapper.querySelectorAll('.custom-select-option.cs-active')
+      .forEach(el => el.classList.remove('cs-active'));
+  }
+
   function initCustomSelects() {
     document.querySelectorAll('.filter-select').forEach(select => {
       if (select.dataset.customized) return;
       select.dataset.customized = 'true';
 
+      const listId = 'cs-' + (select.id || Math.random().toString(36).slice(2)) + '-list';
+      const name = select.getAttribute('aria-label') || (select.options[0] && select.options[0].text) || 'Filter';
+
       const wrapper = document.createElement('div');
       wrapper.className = 'custom-select';
 
+      // The native <select> is display:none, so the trigger IS the control.
+      // It therefore has to carry the role, the name, the tab stop and the keys.
       const trigger = document.createElement('div');
       trigger.className = 'custom-select-trigger';
-      trigger.innerHTML = `<span class="custom-select-label">${select.options[select.selectedIndex]?.text || ''}</span><span class="custom-select-arrow">&#9660;</span>`;
+      trigger.setAttribute('role', 'combobox');
+      trigger.setAttribute('tabindex', '0');
+      trigger.setAttribute('aria-haspopup', 'listbox');
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.setAttribute('aria-controls', listId);
+      trigger.setAttribute('aria-label', name);
+      trigger.innerHTML = '<span class="custom-select-label"></span>' +
+        '<span class="custom-select-arrow" aria-hidden="true">&#9660;</span>';
 
       const optionsContainer = document.createElement('div');
       optionsContainer.className = 'custom-select-options';
+      optionsContainer.id = listId;
+      optionsContainer.setAttribute('role', 'listbox');
+      optionsContainer.setAttribute('aria-label', name);
+
+      const items = () => Array.from(optionsContainer.children);
+      const isOpen = () => wrapper.classList.contains('open');
+      let activeIdx = -1;
+
+      function syncLabel() {
+        const opt = select.options[select.selectedIndex];
+        trigger.querySelector('.custom-select-label').textContent = opt ? opt.text : '';
+      }
+
+      function choose(idx) {
+        const opt = select.options[idx];
+        if (!opt) return;
+        select.value = opt.value;
+        select.dispatchEvent(new Event('change'));
+        items().forEach((el, i) => {
+          el.classList.toggle('selected', i === idx);
+          el.setAttribute('aria-selected', i === idx ? 'true' : 'false');
+        });
+        syncLabel();
+        close();
+      }
 
       function buildOptions() {
         optionsContainer.innerHTML = '';
-        Array.from(select.options).forEach(opt => {
+        Array.from(select.options).forEach((opt, i) => {
           const item = document.createElement('div');
           item.className = 'custom-select-option' + (opt.selected ? ' selected' : '');
+          item.id = listId + '-o' + i;
+          item.setAttribute('role', 'option');
+          item.setAttribute('aria-selected', opt.selected ? 'true' : 'false');
           item.textContent = opt.text;
           item.dataset.value = opt.value;
-          item.addEventListener('click', (e) => {
-            e.stopPropagation();
-            select.value = opt.value;
-            select.dispatchEvent(new Event('change'));
-            trigger.querySelector('.custom-select-label').textContent = opt.text;
-            optionsContainer.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
-            item.classList.add('selected');
-            wrapper.classList.remove('open');
-          });
+          item.addEventListener('click', (e) => { e.stopPropagation(); choose(i); });
           optionsContainer.appendChild(item);
         });
+        syncLabel();
       }
 
-      buildOptions();
+      function setActive(i) {
+        const els = items();
+        if (!els.length) return;
+        activeIdx = Math.max(0, Math.min(i, els.length - 1));
+        els.forEach((el, n) => el.classList.toggle('cs-active', n === activeIdx));
+        trigger.setAttribute('aria-activedescendant', els[activeIdx].id);
+        els[activeIdx].scrollIntoView({ block: 'nearest' });
+      }
 
-      // Observe the native select for options changes (genre/director filters get rebuilt)
-      const observer = new MutationObserver(() => {
-        buildOptions();
-        trigger.querySelector('.custom-select-label').textContent = select.options[select.selectedIndex]?.text || '';
-      });
-      observer.observe(select, { childList: true });
+      function open() {
+        document.querySelectorAll('.custom-select.open').forEach(w => {
+          if (w !== wrapper) closeCustomSelect(w);
+        });
+        wrapper.classList.add('open');
+        trigger.setAttribute('aria-expanded', 'true');
+        setActive(select.selectedIndex < 0 ? 0 : select.selectedIndex);
+      }
+
+      function close() {
+        closeCustomSelect(wrapper);
+        activeIdx = -1;
+      }
 
       trigger.addEventListener('click', (e) => {
         e.stopPropagation();
-        // Close any other open dropdowns
-        document.querySelectorAll('.custom-select.open').forEach(s => {
-          if (s !== wrapper) s.classList.remove('open');
-        });
-        wrapper.classList.toggle('open');
+        if (isOpen()) close(); else open();
       });
+
+      trigger.addEventListener('keydown', (e) => {
+        const opened = isOpen();
+        switch (e.key) {
+          case 'Enter':
+          case ' ':
+            e.preventDefault();
+            if (opened) choose(activeIdx); else open();
+            break;
+          case 'ArrowDown':
+            e.preventDefault();
+            if (opened) setActive(activeIdx + 1); else open();
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            if (opened) setActive(activeIdx - 1); else open();
+            break;
+          case 'Home':
+            if (opened) { e.preventDefault(); setActive(0); }
+            break;
+          case 'End':
+            if (opened) { e.preventDefault(); setActive(items().length - 1); }
+            break;
+          case 'Escape':
+            if (opened) { e.preventDefault(); e.stopPropagation(); close(); }
+            break;
+          case 'Tab':
+            if (opened) close();
+            break;
+        }
+      });
+
+      // The genre/director/tag filters get their <option>s rebuilt at runtime.
+      const observer = new MutationObserver(() => buildOptions());
+      observer.observe(select, { childList: true });
+
+      buildOptions();
 
       select.parentNode.insertBefore(wrapper, select);
       wrapper.appendChild(trigger);
@@ -1184,10 +1306,13 @@ const UI = (() => {
       wrapper.appendChild(select);
     });
 
-    // Close dropdowns on outside click
-    document.addEventListener('click', () => {
-      document.querySelectorAll('.custom-select.open').forEach(s => s.classList.remove('open'));
-    });
+    // Close on outside click — bound once for the document, not once per call.
+    if (!document.body.dataset.csOutsideBound) {
+      document.body.dataset.csOutsideBound = '1';
+      document.addEventListener('click', () => {
+        document.querySelectorAll('.custom-select.open').forEach(closeCustomSelect);
+      });
+    }
   }
 
   function renderTournamentStart(movieCount) {
@@ -1209,8 +1334,8 @@ const UI = (() => {
   }
 
   function renderTournamentMatch(movieA, movieB, matchNum, totalMatches, roundName, matchesDone, totalAllMatches) {
-    const posterA = movieA.poster ? `<img src="${movieA.poster}" alt="" class="tournament-poster">` : '<div class="tournament-no-poster"></div>';
-    const posterB = movieB.poster ? `<img src="${movieB.poster}" alt="" class="tournament-poster">` : '<div class="tournament-no-poster"></div>';
+    const posterA = movieA.poster ? `<img src="${imgSrc(movieA.poster)}" alt="" class="tournament-poster">` : '<div class="tournament-no-poster"></div>';
+    const posterB = movieB.poster ? `<img src="${imgSrc(movieB.poster)}" alt="" class="tournament-poster">` : '<div class="tournament-no-poster"></div>';
     const progressPct = totalAllMatches > 0 ? (matchesDone / totalAllMatches) * 100 : 0;
     return `
       <div class="tournament-match">
@@ -1241,7 +1366,7 @@ const UI = (() => {
     const medals = ['&#129351;', '&#129352;', '&#129353;'];
     const rows = rankings.map((m, i) => {
       const medal = i < 3 ? medals[i] : `<span class="tr-rank-num">${i + 1}</span>`;
-      const poster = m.poster ? `<img src="${m.poster}" alt="" class="tr-poster">` : '<div class="tr-no-poster"></div>';
+      const poster = m.poster ? `<img src="${imgSrc(m.poster)}" alt="" class="tr-poster">` : '<div class="tr-no-poster"></div>';
       const placeClass = i === 0 ? 'tr-gold' : i === 1 ? 'tr-silver' : i === 2 ? 'tr-bronze' : '';
       return `<div class="tr-row ${placeClass}" data-id="${m.id}">
         <span class="tr-rank">${medal}</span>
@@ -1254,7 +1379,7 @@ const UI = (() => {
         <div class="tournament-trophy">&#127942;</div>
         <h2 class="tournament-results-title">Tournament Results</h2>
         <div class="tournament-winner">
-          <div class="tournament-winner-poster">${rankings[0].poster ? `<img src="${rankings[0].poster}" alt="">` : ''}</div>
+          <div class="tournament-winner-poster">${rankings[0].poster ? `<img src="${imgSrc(rankings[0].poster)}" alt="">` : ''}</div>
           <div class="tournament-winner-name">${escapeHtml(rankings[0].title)}</div>
           <div class="tournament-winner-label">Champion</div>
         </div>
@@ -1264,8 +1389,8 @@ const UI = (() => {
   }
 
   function renderKothMatch(king, challenger, matchNum, total) {
-    const posterKing = king.poster ? `<img src="${king.poster}" alt="" class="tournament-poster">` : '<div class="tournament-no-poster"></div>';
-    const posterC = challenger.poster ? `<img src="${challenger.poster}" alt="" class="tournament-poster">` : '<div class="tournament-no-poster"></div>';
+    const posterKing = king.poster ? `<img src="${imgSrc(king.poster)}" alt="" class="tournament-poster">` : '<div class="tournament-no-poster"></div>';
+    const posterC = challenger.poster ? `<img src="${imgSrc(challenger.poster)}" alt="" class="tournament-poster">` : '<div class="tournament-no-poster"></div>';
     const progressPct = total > 0 ? ((matchNum - 1) / total) * 100 : 0;
     return `
       <div class="koth-match">
@@ -1295,7 +1420,7 @@ const UI = (() => {
   }
 
   function renderKothResults(king, kingWins, totalMovies) {
-    const poster = king.poster ? `<img src="${king.poster}" alt="">` : '';
+    const poster = king.poster ? `<img src="${imgSrc(king.poster)}" alt="">` : '';
     const streakLine = kingWins >= totalMovies - 1
       ? `Undefeated — dethroned every challenger`
       : `Final reign: defeated ${kingWins} challenger${kingWins !== 1 ? 's' : ''} in a row`;
@@ -1312,5 +1437,5 @@ const UI = (() => {
       </div>`;
   }
 
-  return { showToast, ratingColor, ratingColorRGB, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderFiveStarClub, renderTop10Builder, renderDuelIntro, renderDuelMatch, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
+  return { showToast, ratingColor, ratingColorRGB, ratingInk, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderFiveStarClub, renderTop10Builder, renderDuelIntro, renderDuelMatch, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, safeUrl, imgSrc, cssUrl, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
 })();

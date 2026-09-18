@@ -94,9 +94,30 @@ const MovieDB = (() => {
     });
   }
 
+  // Imported data comes from a file or a gist, i.e. from outside this app.
+  // Scrub the URL-bearing fields at the boundary so a crafted backup cannot
+  // smuggle a javascript:/data: URL or an attribute break-out into the DOM.
+  // Every other field is left untouched — this must never silently drop data.
+  function cleanUrl(u) {
+    if (!u) return undefined;
+    const s = String(u).trim();
+    return /^https?:\/\/[^\s"'<>\\]+$/i.test(s) ? s : undefined;
+  }
+
+  function scrubMovie(movie) {
+    if (!movie || typeof movie !== 'object') return null;
+    if ('poster' in movie) movie.poster = cleanUrl(movie.poster);
+    if ('backdrop' in movie) movie.backdrop = cleanUrl(movie.backdrop);
+    if (Array.isArray(movie.cast)) {
+      movie.cast.forEach(c => { if (c && typeof c === 'object') c.profileUrl = cleanUrl(c.profileUrl) || ''; });
+    }
+    return movie;
+  }
+
   function importData(jsonString) {
-    const movies = JSON.parse(jsonString);
-    if (!Array.isArray(movies)) throw new Error('Invalid data format');
+    const parsed = JSON.parse(jsonString);
+    if (!Array.isArray(parsed)) throw new Error('Invalid data format');
+    const movies = parsed.map(scrubMovie).filter(Boolean);
 
     return getStore('readwrite').then(store => {
       return new Promise((resolve, reject) => {
