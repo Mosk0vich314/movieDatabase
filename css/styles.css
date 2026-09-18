@@ -1,6 +1,8 @@
 /* === Fonts ===
    Must stay at the top of the file — @import is only honoured before other rules. */
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Cinzel:wght@400;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap');
+/* Fonts are loaded by <link rel=preconnect/stylesheet> in index.html.
+   An @import here would serialise behind this stylesheet and delay first paint,
+   and it is why this file used to require the import on line 1. */
 
 /* === Variables === */
 :root {
@@ -4080,7 +4082,7 @@ input[type="date"].form-input { color-scheme: dark; }
     -webkit-background-clip: text;
             background-clip: text;
     -webkit-text-fill-color: transparent;
-    animation: titleSheen 4.8s ease-in-out infinite alternate !important;
+    animation: titleSheen 4.8s ease-in-out infinite alternate;
   }
 }
 @keyframes titleSheen {
@@ -6474,4 +6476,60 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
 .custom-select-option.cs-active {
   background: rgba(233, 69, 96, 0.14);
   color: var(--text);
+}
+
+/* ============================================================
+   === Accessibility & layout corrections ===
+   Appended last deliberately: these override the earlier layers.
+   ============================================================ */
+
+/* --- Catalogue top bar: stop the controls starving the search input ---
+   The controls group is flex-shrink:0 and ~327px wide, so at 390px the
+   flex:1 search input collapsed to 23px. Below 600px the bar wraps and the
+   input takes its own row; the expanding-search collapse still applies. */
+@media (max-width: 600px) {
+  .catalogue-top-bar { flex-wrap: wrap; row-gap: 8px; }
+  .catalogue-top-bar .input-wrap { flex: 1 1 100%; min-width: 0; }
+  /* 44px minimums push this past 358px on one line, so let it wrap rather
+     than overflow the viewport. */
+  .catalogue-controls-group { flex: 1 1 auto; max-width: none; flex-wrap: wrap; row-gap: 6px; }
+  .catalogue-top-bar.search-active .catalogue-controls-group {
+    max-width: none;
+    height: 0;
+    margin: 0;
+    overflow: clip;
+  }
+  .watchlist-view .catalogue-top-bar .input-wrap,
+  #view-watchlist .catalogue-top-bar .input-wrap { flex: 1 1 100%; }
+}
+
+/* --- Touch targets ---
+   44px is the documented minimum; these sat at 34-36px wide. */
+.view-toggle-btn { min-width: 44px; min-height: 44px; justify-content: center; }
+.filter-toggle-btn, .filter-clear-btn, .random-pick-btn { min-height: 44px; min-width: 44px; }
+.filter-toggle-btn { justify-content: center; }
+.t10-btn { width: 38px; height: 38px; }
+.t10-tools { gap: 6px; }
+/* Separate the destructive control from the reorder pair - removeTop10 has no undo. */
+.t10-tools .t10-remove, .t10-tools > :last-child { margin-left: 6px; }
+.t10-picker-close { width: 44px; height: 44px; }
+
+/* --- Reduced motion ---
+   36 keyframes, 15 of them infinite, and one carried !important so the two
+   narrow blocks above could never reach it. 0.01ms rather than `none`:
+   app.js relies on animationend/transitionend firing to remove star-burst
+   particles and the people overlay, and `none` would never fire them. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  html { scroll-behavior: auto; }
+  /* `*` loses to any class-level !important, so name the one that carried it. */
+  .app-title, .np-label, .dt-band {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

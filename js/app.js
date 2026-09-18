@@ -21,6 +21,10 @@ const App = (() => {
   let previewBackHash = '#add';
   let pendingFormTmdbId = null;
   let lastHash = '';
+  // Scroll offset per view hash. showView() only toggles display:none, so
+  // without this a tap into a film leaves you mid-scroll and coming back
+  // loses your place in the lane you were reading.
+  const viewScroll = new Map();
   // Persistent watchlist filter — shared by the "Roll" sheet and the live watchlist view
   let watchlistFilter = { genres: new Set(), maxDuration: 0 };
   // Decades view: show all films per decade vs. top 10 (persisted)
@@ -218,6 +222,7 @@ const App = (() => {
 
   function navigate(hash) {
     const prevHash = lastHash;
+    if (prevHash) viewScroll.set(prevHash, window.scrollY);
     lastHash = hash;
 
     const viewMap = {
@@ -232,14 +237,14 @@ const App = (() => {
     if (hash.startsWith('#detail/')) {
       const id = parseInt(hash.split('/')[1], 10);
       showView('detail');
-      loadMovieDetail(id);
+      loadMovieDetail(id).then(() => restoreScroll(hash));
       return;
     }
 
     if (hash.startsWith('#preview/')) {
       const tmdbId = parseInt(hash.split('/')[1], 10);
       showView('detail');
-      loadMoviePreview(tmdbId);
+      loadMoviePreview(tmdbId).then(() => restoreScroll(hash));
       return;
     }
 
@@ -255,9 +260,9 @@ const App = (() => {
         }
       }
       personFilterJump = false;
-      loadCatalogue();
+      loadCatalogue().then(() => restoreScroll(hash));
     }
-    if (view === 'watchlist') loadWatchlist();
+    if (view === 'watchlist') loadWatchlist().then(() => restoreScroll(hash));
     if (view === 'chart') loadChart();
     if (view !== 'chart') { tournament = null; koth = null; duel = null; }
     if (view === 'stats') loadStats();
@@ -284,6 +289,13 @@ const App = (() => {
     }
   }
 
+  // Restore after the view's async render has painted, or go to the top for a
+  // hash we have not seen before (a film opened from a lane starts at the top).
+  function restoreScroll(hash) {
+    const y = viewScroll.get(hash) || 0;
+    requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
+  }
+
   function showView(name) {
     currentView = name;
     document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
@@ -297,7 +309,11 @@ const App = (() => {
 
   // --- Catalogue ---
 
+  let caseObserver = null;
   function lazyLoadCasePosters(container) {
+    // The catalogue re-renders on every return to the view; without this the
+    // previous run's observer stays alive holding its detached elements.
+    if (caseObserver) { caseObserver.disconnect(); caseObserver = null; }
     const cases = container.querySelectorAll('.bluray-case[data-poster]');
     if (!cases.length) return;
     const observer = new IntersectionObserver((entries) => {
@@ -310,6 +326,7 @@ const App = (() => {
         }
       });
     }, { rootMargin: '200px' });
+    caseObserver = observer;
     cases.forEach(el => observer.observe(el));
   }
 

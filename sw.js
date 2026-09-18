@@ -1,4 +1,4 @@
-const CACHE_NAME = 'movie-catalogue-v2026.09.18.1248';
+const CACHE_NAME = 'movie-catalogue-v2026.09.18.1255';
 const ASSETS = [
   './',
   './index.html',
@@ -11,6 +11,8 @@ const ASSETS = [
   './js/posters.js',
   './js/app.js',
   './manifest.json',
+  './icons/logo.jpg',
+  './icons/icon.svg',
 ];
 
 self.addEventListener('install', (e) => {
@@ -57,9 +59,14 @@ self.addEventListener('fetch', (e) => {
         }
         return response;
       }).catch(() => {
-        return caches.match(e.request).then(cached => {
+        // index.html requests assets as `styles.css?v=...`, but install-time
+        // precached them unversioned. Without ignoreSearch the precache is
+        // never hit and a first-run-offline launch finds nothing.
+        return caches.match(e.request, { ignoreSearch: true }).then(cached => {
           if (cached) return cached;
-          if (e.request.mode === 'navigate') return caches.match('./index.html');
+          if (e.request.mode === 'navigate') {
+            return caches.match('./index.html', { ignoreSearch: true });
+          }
         });
       })
     );
