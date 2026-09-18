@@ -207,9 +207,22 @@ const App = (() => {
   }
 
   function registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
-    }
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      // sw.js uses skipWaiting()+claim(), so a new build activates under a page
+      // that is still running the old one. Say so rather than leaving the user
+      // to guess why a deploy "didn't arrive" - an installed PWA resumed from
+      // the home screen often never reloads on its own.
+      reg.addEventListener('updatefound', () => {
+        const incoming = reg.installing;
+        if (!incoming) return;
+        incoming.addEventListener('statechange', () => {
+          if (incoming.state === 'activated' && navigator.serviceWorker.controller) {
+            UI.showToast('New version ready \u2014 reload to update', 6000);
+          }
+        });
+      });
+    }).catch(err => console.warn('[sw] registration failed', err));
   }
 
   // --- Routing ---

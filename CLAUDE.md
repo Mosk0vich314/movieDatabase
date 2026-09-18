@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Deployment
 
-There is no build step. To deploy changes:
+Hosting is GitHub Pages serving the **`main` branch at repo root** — there is no workflow file and no build step; pushing to `main` is the deploy. `tools/deploy.py` bumps the version, commits and pushes in one step.
+
+How an update reaches a device: the push triggers GitHub's `pages-build-deployment` (~30-60s, plus CDN propagation). The service worker is network-first, so **one reload of the page picks up the new build** — verified by simulating a deploy against a live worker: one refresh swaps the build, the old cache is purged on activate, and offline still serves the new version. The catch is that an **installed PWA resumed from the home screen often does not reload at all**; it restores the previous page. Force a reload (pull-to-refresh, or swipe the app away and reopen) or wait for the “New version ready” toast, which fires when a new worker activates under the running page.
+
+To deploy changes:
 
 ```bash
 python tools/deploy.py "Your commit message"
@@ -35,7 +39,7 @@ Each JS file is an IIFE that exposes a single module object:
 
 - **`js/app.js` → `App`**: The main controller. Owns hash-based routing (`#catalogue`, `#add`, `#watchlist`, `#chart`, `#stats`, `#inventory`, `#detail/:id`, `#preview/:tmdbId`), all event listeners, filter/sort logic, and wires together `MovieDB`, `TMDB`, `UI`, and `Stats`. Also contains `animateCounters`, `updateWatchlistBadge`, and `spawnStarBurst`. Module-level `searchMode` (`'movie'|'director'|'actor'`) and `selectedDirectorName` track Add-view state; `searchDirector()` and `loadFilmography(personId, name)` handle the director/actor search flow. `setupPosterDrag(movie)` wires the drag-to-reveal people overlay and is called by both detail loaders.
 
-- **`sw.js`**: Service worker. Caches all local assets at install. Network-first strategy for same-origin requests (falls back to cache offline). TMDB API/image requests bypass the cache entirely.
+- **`sw.js`**: Service worker. Precaches local assets at install — **one `cache.add()` per asset, never `cache.addAll()`**: addAll is atomic, so a single bad path in `ASSETS` would fail the install, the worker would never activate or claim clients, and offline support would vanish with nothing logged. Network-first for same-origin requests (falls back to cache offline, matching with `ignoreSearch` because the page requests `?v=`-stamped URLs). TMDB/Wikipedia/GitHub requests bypass the cache entirely. `registerServiceWorker()` in `app.js` logs registration failures and toasts “New version ready” when a new build activates under a running page.
 
 ## Views & features
 

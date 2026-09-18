@@ -1,4 +1,4 @@
-const CACHE_NAME = 'movie-catalogue-v2026.09.18.1255';
+const CACHE_NAME = 'movie-catalogue-v2026.09.18.1305';
 const ASSETS = [
   './',
   './index.html',
@@ -17,7 +17,15 @@ const ASSETS = [
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then(cache =>
+      // cache.addAll() is atomic: a single 404 rejects it, the install fails,
+      // the worker never activates or claims clients, and offline support
+      // disappears silently (registration errors used to be swallowed too).
+      // Cache each asset on its own so one missing file costs only that file.
+      Promise.all(ASSETS.map(url =>
+        cache.add(url).catch(err => console.warn('[sw] could not precache', url, err))
+      ))
+    )
   );
   self.skipWaiting();
 });
