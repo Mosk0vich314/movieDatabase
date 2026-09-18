@@ -7285,3 +7285,56 @@ body {
 /* Justified text on a ~340px column opens rivers of white space between
    words. Left-aligned reads better at phone width. */
 .dt-overview, .detail-overview, .form-overview { text-align: left; }
+
+/* ════════════════════════════════════════════════════════════════════
+   YELLOW AS THE EDITORIAL VOICE
+   Gold started out rarity-only (honours), so most screens showed none
+   of it. Re-split by FUNCTION rather than by rarity:
+     violet = things you tap      (buttons, tabs, links, focus rings)
+     yellow = things the app says (display headings, marks, its numbers)
+   Yellow appears only at display sizes on dark — #ffd60a on #131316 is
+   13.1:1 — and never on body copy or on a control.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* --- Display headings, every view --- */
+.decade-label,
+.dt .dt-sec-head,
+.dt-sec-head,
+.cast-label,
+.fs-head,
+.chart-header-title,
+.stats-section-title,
+.detail-ext-ratings-label,
+.np-label,
+.inventory-title { color: var(--gold); }
+
+.stats-section-title.danger-title { color: #ff7a9c; }
+
+/* the rule trailing a section mark takes the same hue */
+.dt .dt-sec-head::after,
+.dt-sec-head::after {
+  background: linear-gradient(90deg, rgba(var(--gold-rgb), 0.55), transparent);
+}
+.chart-header-sub { color: var(--text-dim); }
+
+/* --- Stats: the numbers are the content here, so they carry it --- */
+.stat-value, .stat-number, .stat-number--sm,
+.activity-value, .settings-stat-value, .taste-dna-value { color: var(--gold); }
+
+/* Chart ranks stay neutral on purpose: the rating is the data worth
+   finding, and two golds in one row cancel each other out. */
+.top-rank, .t10-rank { color: var(--text-dim); }
+.top-item:first-child .top-rank, .t10-row:first-child .t10-rank { color: var(--gold); }
+
+/* --- App title: a warm sheen in the new palette --- */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .app-title {
+    background-image: linear-gradient(100deg,
+      #d5d1bf 0%, #d5d1bf 36%, #fff6cf 45%, var(--gold) 50%, #fff6cf 55%, #d5d1bf 64%, #d5d1bf 100%);
+  }
+}
+
+/* --- A trace on the structure --- */
+.decade-header { border-bottom: 1px solid rgba(var(--gold-rgb), 0.20); padding-bottom: var(--s-2); }
+.stats-manage hr { border-top-color: rgba(var(--gold-rgb), 0.16); }
+.tonight-screening { border-color: rgba(var(--gold-rgb), 0.55); }
