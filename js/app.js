@@ -1291,7 +1291,13 @@ const App = (() => {
 
   let tournament = null;
   let koth = null;
-  let chartTab = localStorage.getItem('chartTab') === 'top10' ? 'top10' : 'ranked';
+  // The hand-ranked sub-tabs. Same builder, same picker, same duel - the only
+  // thing that differs is how long the list is and where it is kept.
+  const LISTS = {
+    top10: { tab: 'top10', key: 'manualTop10', limit: 10, pane: 'chart-top10' },
+    top25: { tab: 'top25', key: 'manualTop25', limit: 25, pane: 'chart-top25' },
+  };
+  let chartTab = LISTS[localStorage.getItem('chartTab')] ? localStorage.getItem('chartTab') : 'ranked';
 
   function loadChart() {
     setChartTab(chartTab, true);
@@ -1342,72 +1348,79 @@ const App = (() => {
   // --- Chart sub-tabs ---
 
   function setChartTab(tab, force) {
-    chartTab = tab === 'top10' ? 'top10' : 'ranked';
+    chartTab = LISTS[tab] ? tab : 'ranked';
     localStorage.setItem('chartTab', chartTab);
     document.querySelectorAll('#chart-tabs .chart-tab').forEach(b =>
       b.classList.toggle('active', b.dataset.tab === chartTab));
     document.getElementById('chart-list').style.display = chartTab === 'ranked' ? '' : 'none';
-    document.getElementById('chart-top10').style.display = chartTab === 'top10' ? '' : 'none';
+    Object.values(LISTS).forEach(cfg => {
+      document.getElementById(cfg.pane).style.display = chartTab === cfg.tab ? '' : 'none';
+    });
 
-    // A duel in progress lives inside #chart-top10 - same deal as the
+    // A duel in progress lives inside its own list pane - same deal as the
     // tournament below: don't wipe it just because the tabs were flipped.
-    if (chartTab === 'top10') { if (!duel) loadTop10(); return; }
+    if (LISTS[chartTab]) {
+      if (!duel || duel.cfg.tab !== chartTab) loadList(LISTS[chartTab]);
+      return;
+    }
     // A tournament in progress lives inside #chart-list — flipping back to the
     // ranked tab must not wipe it, so only re-render when nothing is running.
     if (force || (!tournament && !koth)) loadRankedChart();
   }
 
-  // --- My Top 10 (hand-ranked) ---
+  // --- Hand-ranked lists: My Top 10 and My Top 25 ---
   // The chart above ranks by the score the user gave; two 9s never settle which
-  // film is actually better, so this list is ordered by hand and kept in
-  // localStorage as an array of movie ids, #1 first.
+  // film is actually better, so these lists are ordered by hand and kept in
+  // localStorage as an array of movie ids, #1 first. The two are independent -
+  // a top 25 is its own ranking, not the top 10 with fifteen more behind it.
 
-  const TOP10_KEY = 'manualTop10';
-  let top10Movies = [];  // resolved, in rank order — what the poster prints
+  const listMovies = { top10: [], top25: [] };  // resolved, in rank order
+  const listExpanded = { top10: false, top25: false };  // long list, empty tail shown
 
-  function readTop10Ids() {
+  function readListIds(cfg) {
     try {
-      const raw = JSON.parse(localStorage.getItem(TOP10_KEY) || '[]');
+      const raw = JSON.parse(localStorage.getItem(cfg.key) || '[]');
       return Array.isArray(raw) ? raw.map(Number).filter(n => !isNaN(n)) : [];
     } catch (_) { return []; }
   }
 
-  function writeTop10Ids(ids) {
-    localStorage.setItem(TOP10_KEY, JSON.stringify(ids.slice(0, 10)));
+  function writeListIds(cfg, ids) {
+    localStorage.setItem(cfg.key, JSON.stringify(ids.slice(0, cfg.limit)));
   }
 
-  async function loadTop10() {
+  async function loadList(cfg) {
     const byId = new Map((await MovieDB.getAllMovies()).map(m => [m.id, m]));
-    const ids = readTop10Ids();
+    const ids = readListIds(cfg);
     const kept = ids.filter(id => byId.has(id));
-    if (kept.length !== ids.length) writeTop10Ids(kept); // a film was deleted
-    top10Movies = kept.map(id => byId.get(id));
-    document.getElementById('chart-top10').innerHTML = UI.renderTop10Builder(top10Movies);
+    if (kept.length !== ids.length) writeListIds(cfg, kept); // a film was deleted
+    listMovies[cfg.tab] = kept.map(id => byId.get(id));
+    document.getElementById(cfg.pane).innerHTML =
+      UI.renderTop10Builder(listMovies[cfg.tab], cfg.limit, listExpanded[cfg.tab]);
   }
 
-  function saveTop10(ids) {
-    writeTop10Ids(ids);
-    loadTop10();
+  function saveList(cfg, ids) {
+    writeListIds(cfg, ids);
+    loadList(cfg);
   }
 
-  function moveTop10(slot, dir) {
-    const ids = readTop10Ids();
+  function moveListItem(cfg, slot, dir) {
+    const ids = readListIds(cfg);
     const j = slot + dir;
     if (j < 0 || j >= ids.length) return;
     [ids[slot], ids[j]] = [ids[j], ids[slot]];
     haptic(8);
-    saveTop10(ids);
+    saveList(cfg, ids);
   }
 
-  function removeTop10(slot) {
-    const ids = readTop10Ids();
+  function removeListItem(cfg, slot) {
+    const ids = readListIds(cfg);
     if (slot < 0 || slot >= ids.length) return;
     ids.splice(slot, 1);
     haptic(8);
-    saveTop10(ids);
+    saveList(cfg, ids);
   }
 
-  async function openTop10Picker(slot) {
+  async function openListPicker(cfg, slot) {
     if (document.getElementById('t10-picker')) return;
     const all = (await MovieDB.getAllMovies())
       .filter(m => !m.watchlist)
@@ -1415,7 +1428,7 @@ const App = (() => {
         (a.title || '').localeCompare(b.title || ''));
     if (!all.length) { UI.showToast('Add some films first.'); return; }
 
-    const chosen = readTop10Ids();
+    const chosen = readListIds(cfg);
     // The list stays dense, so a tap on any empty slot lands at the next free rank.
     const target = Math.min(slot, chosen.length);
     const el = document.createElement('div');
@@ -1442,39 +1455,40 @@ const App = (() => {
       const row = e.target.closest('.t10-pick[data-id]');
       if (!row) return;
       const id = parseInt(row.dataset.id, 10);
-      const ids = readTop10Ids();
-      if (ids.includes(id) || ids.length >= 10) { close(); return; }
+      const ids = readListIds(cfg);
+      if (ids.includes(id) || ids.length >= cfg.limit) { close(); return; }
       ids.splice(Math.min(slot, ids.length), 0, id);
       haptic(12);
       close();
-      saveTop10(ids);
+      saveList(cfg, ids);
     });
   }
 
-  async function fillTop10FromRatings() {
-    if (readTop10Ids().length &&
-        !confirm('Replace your list with your ten highest-rated films?')) return;
+  async function fillListFromRatings(cfg) {
+    if (readListIds(cfg).length &&
+        !confirm('Replace your list with your ' + cfg.limit + ' highest-rated films?')) return;
     const top = (await MovieDB.getAllMovies())
       .filter(m => !m.watchlist && (m.rating || 0) > 0)
       .sort((a, b) => (b.rating || 0) - (a.rating || 0) ||
         new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0))
-      .slice(0, 10);
+      .slice(0, cfg.limit);
     if (!top.length) { UI.showToast('Rate some films first.'); return; }
     haptic(12);
-    saveTop10(top.map(m => m.id));
+    saveList(cfg, top.map(m => m.id));
   }
 
-  // --- Rank by duel (Chart > My Top 10) ---
+  // --- Rank by duel (Chart > My Top 10 / My Top 25) ---
   // Ratings can't order a wall of films that all scored the same, so this asks.
   // It's a binary insertion sort with the user as the comparator: each
   // contender is slotted into the running order by ~3-4 questions (halving the
   // window each time) instead of the ~n2/2 a full round-robin would need.
   //
-  // Two things keep it short. The order below rank 10 is never interesting, so
-  // `sorted` is trimmed to ten after every insertion - a film that loses to the
-  // current #10 drops out and is never asked about again. And the window a
-  // contender is searched into is at most ten long, so no film ever costs more
-  // than four questions however big the pool is.
+  // Two things keep it short. The order below the last rank is never
+  // interesting, so `sorted` is trimmed to the list's length after every
+  // insertion - a film that loses to the current last place drops out and is
+  // never asked about again. And the window a contender is searched into is at
+  // most that long, so no film costs more than four questions for a top 10 or
+  // five for a top 25, however big the pool is.
   //
   // It assumes preference is transitive (if A beats B and B beats C, A beats
   // C). Taste isn't perfectly transitive, but without that assumption there is
@@ -1482,40 +1496,45 @@ const App = (() => {
 
   let duel = null;
 
-  // The contenders: the films that could plausibly make a top 10. Everything
+  // The contenders: the films that could plausibly make the list. Everything
   // that prints top marks first, stepping the threshold down until there is an
   // actual contest to run.
-  function duelPool(movies) {
+  function duelPool(movies, limit) {
     const rated = movies.filter(m => !m.watchlist && (m.rating || 0) > 0);
+    // A longer list needs a wider net: a tier of four films can't fill a top 25.
+    const need = limit <= 10 ? 4 : Math.round(limit / 2);
     for (let min = 10; min >= 6; min--) {
       const films = rated.filter(m => Math.round(m.rating) >= min);
-      if (films.length >= 4) return { films, min };
+      if (films.length >= need) return { films, min };
     }
     return {
-      films: [...rated].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 12),
+      films: [...rated].sort((a, b) => (b.rating || 0) - (a.rating || 0))
+        .slice(0, Math.max(12, limit)),
       min: 0,
     };
   }
 
   // Questions to expect: log2 of the window each contender is searched into,
-  // and the window stops growing at ten.
-  function estimateDuels(n) {
+  // and the window stops growing at the length of the list being built.
+  function estimateDuels(n, limit) {
     let est = 0;
-    for (let i = 0; i < n; i++) est += Math.ceil(Math.log2(Math.min(i, 10) + 1));
+    for (let i = 0; i < n; i++) est += Math.ceil(Math.log2(Math.min(i, limit) + 1));
     return est;
   }
 
-  async function startDuel() {
-    const { films, min } = duelPool((await MovieDB.getAllMovies()).filter(m => !m.watchlist));
+  async function startDuel(cfg) {
+    const { films, min } = duelPool(
+      (await MovieDB.getAllMovies()).filter(m => !m.watchlist), cfg.limit);
     if (films.length < 3) { UI.showToast('Rate at least 3 films first.'); return; }
     duel = {
+      cfg,              // which list this run is building
       pool: shuffle(films),
       next: 0,          // index of the next contender to place
-      sorted: [],       // the running order, best first, never longer than 10
+      sorted: [],       // the running order, best first, trimmed to cfg.limit
       cur: null,        // contender being placed
       lo: 0, hi: 0,     // the window in `sorted` it is still being narrowed into
       done: 0,
-      est: estimateDuels(films.length),
+      est: estimateDuels(films.length, cfg.limit),
       picking: false,
     };
     const tier = min === 0
@@ -1523,8 +1542,8 @@ const App = (() => {
       : min === 10
         ? `Every film you gave ${UI.ratingThresholdLabel(10)}`
         : `Every film you gave ${UI.ratingThresholdLabel(min)} or better`;
-    document.getElementById('chart-top10').innerHTML =
-      UI.renderDuelIntro(films.length, duel.est, tier, readTop10Ids().length > 0);
+    document.getElementById(cfg.pane).innerHTML =
+      UI.renderDuelIntro(films.length, duel.est, tier, readListIds(cfg).length > 0);
   }
 
   // Pull contenders until one needs a question asked about it.
@@ -1541,8 +1560,9 @@ const App = (() => {
 
   function placeDuelCurrent() {
     duel.sorted.splice(duel.lo, 0, duel.cur);
-    // Rank 11 and below can never climb back, so they stop being compared.
-    if (duel.sorted.length > 10) duel.sorted.length = 10;
+    // Anything below the last rank on the list can never climb back, so it
+    // stops being compared - that is what caps the number of questions.
+    if (duel.sorted.length > duel.cfg.limit) duel.sorted.length = duel.cfg.limit;
     duel.cur = null;
   }
 
@@ -1552,7 +1572,7 @@ const App = (() => {
     const [left, right] = duel.done % 2
       ? [duel.sorted[mid], duel.cur]
       : [duel.cur, duel.sorted[mid]];
-    document.getElementById('chart-top10').innerHTML =
+    document.getElementById(duel.cfg.pane).innerHTML =
       UI.renderDuelMatch(left, right, duel.done, duel.est, duel.next - 1, duel.pool.length);
     duel.picking = false;
   }
@@ -1566,7 +1586,7 @@ const App = (() => {
 
     // Scoped to the pane - a tournament left running in the ranked tab has
     // .tournament-card elements of its own, earlier in the document.
-    const pane = document.getElementById('chart-top10');
+    const pane = document.getElementById(duel.cfg.pane);
     const loserId = movieId === duel.cur.id ? incumbent.id : duel.cur.id;
     const winnerCard = pane.querySelector(`.tournament-card[data-id="${movieId}"]`);
     const loserCard = pane.querySelector(`.tournament-card[data-id="${loserId}"]`);
@@ -1587,11 +1607,12 @@ const App = (() => {
 
   function finishDuel(early) {
     if (!duel) return;
-    const ranked = duel.sorted.slice(0, 10);
+    const cfg = duel.cfg;
+    const ranked = duel.sorted.slice(0, cfg.limit);
     duel = null;
-    if (!ranked.length) { loadTop10(); return; }
+    if (!ranked.length) { loadList(cfg); return; }
     haptic(15);
-    saveTop10(ranked.map(m => m.id));
+    saveList(cfg, ranked.map(m => m.id));
     UI.showToast(early
       ? `Stopped - your top ${ranked.length} is saved.`
       : `Your top ${ranked.length} is ranked.`);
@@ -3812,30 +3833,39 @@ const App = (() => {
       if (tab) { haptic(8); setChartTab(tab.dataset.tab); }
     });
 
-    document.getElementById('chart-top10').addEventListener('click', (e) => {
-      const act = e.target.closest('[data-act]');
-      if (act) {
-        const slot = parseInt(act.dataset.slot, 10);
-        if (act.dataset.act === 'pick') openTop10Picker(slot);
-        else if (act.dataset.act === 'up') moveTop10(slot, -1);
-        else if (act.dataset.act === 'down') moveTop10(slot, 1);
-        else if (act.dataset.act === 'remove') removeTop10(slot);
-        return;
-      }
-      if (e.target.closest('#t10-poster')) { haptic(15); Posters.openBoard(top10Movies); return; }
-      if (e.target.closest('#t10-duel')) { haptic(12); startDuel(); return; }
-      if (e.target.closest('#duel-start')) { haptic(12); advanceDuel(); return; }
-      if (e.target.closest('#duel-cancel')) { duel = null; loadTop10(); return; }
-      if (e.target.closest('#duel-finish')) { finishDuel(true); return; }
-      const duelCard = e.target.closest('.tournament-card[data-id]');
-      if (duelCard) { pickDuel(parseInt(duelCard.dataset.id, 10)); return; }
-      if (e.target.closest('#t10-fill')) { fillTop10FromRatings(); return; }
-      if (e.target.closest('#t10-clear')) {
-        if (confirm('Clear your top 10?')) { writeTop10Ids([]); loadTop10(); }
-        return;
-      }
-      const row = e.target.closest('.t10-row[data-id]');
-      if (row) window.location.hash = `#detail/${row.dataset.id}`;
+    // Both hand-ranked panes carry the same controls; the config says which
+    // list the tap is operating on.
+    Object.values(LISTS).forEach(cfg => {
+      document.getElementById(cfg.pane).addEventListener('click', (e) => {
+        const act = e.target.closest('[data-act]');
+        if (act) {
+          const slot = parseInt(act.dataset.slot, 10);
+          if (act.dataset.act === 'pick') openListPicker(cfg, slot);
+          else if (act.dataset.act === 'up') moveListItem(cfg, slot, -1);
+          else if (act.dataset.act === 'down') moveListItem(cfg, slot, 1);
+          else if (act.dataset.act === 'remove') removeListItem(cfg, slot);
+          return;
+        }
+        if (e.target.closest('#t10-show-all')) {
+          listExpanded[cfg.tab] = true; loadList(cfg); return;
+        }
+        if (e.target.closest('#t10-poster')) {
+          haptic(15); Posters.openBoard(listMovies[cfg.tab]); return;
+        }
+        if (e.target.closest('#t10-duel')) { haptic(12); startDuel(cfg); return; }
+        if (e.target.closest('#duel-start')) { haptic(12); advanceDuel(); return; }
+        if (e.target.closest('#duel-cancel')) { duel = null; loadList(cfg); return; }
+        if (e.target.closest('#duel-finish')) { finishDuel(true); return; }
+        const duelCard = e.target.closest('.tournament-card[data-id]');
+        if (duelCard) { pickDuel(parseInt(duelCard.dataset.id, 10)); return; }
+        if (e.target.closest('#t10-fill')) { fillListFromRatings(cfg); return; }
+        if (e.target.closest('#t10-clear')) {
+          if (confirm('Clear your top ' + cfg.limit + '?')) { writeListIds(cfg, []); loadList(cfg); }
+          return;
+        }
+        const row = e.target.closest('.t10-row[data-id]');
+        if (row) window.location.hash = `#detail/${row.dataset.id}`;
+      });
     });
 
     document.getElementById('chart-list').addEventListener('click', (e) => {

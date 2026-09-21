@@ -1004,13 +1004,19 @@ const UI = (() => {
       <div class="fs-list">${rows}</div>`;
   }
 
-  // --- Hand-ranked Top 10 (Chart > My Top 10) ---
-  // The chart above is ranked by the number the user gave a film; this one is
+  // --- Hand-ranked lists (Chart > Top 10 / Top 25) ---
+  // The chart above is ranked by the number the user gave a film; these are
   // ranked by hand, because a 9 and a 9 don't settle which is actually better.
+  // `limit` is the only thing that differs between the two sub-tabs.
 
-  function renderTop10Builder(entries) {
+  function renderTop10Builder(entries, limit = 10, expanded = false) {
+    const filled = entries.length;
+    // A mostly-empty top 25 would bury the actions under twenty-odd identical
+    // empty rows, so past ten the tail collapses behind one row until asked
+    // for. A top 10 is short enough to show whole, as it always has been.
+    const shown = (limit > 10 && !expanded) ? Math.min(limit, filled + 4) : limit;
     const rows = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < shown; i++) {
       const m = entries[i];
       if (!m) {
         rows.push(`
@@ -1040,10 +1046,18 @@ const UI = (() => {
         </div>`);
     }
 
-    const filled = entries.length;
+    const hidden = limit - shown;
+    if (hidden > 0) {
+      rows.push(`
+        <button class="t10-row t10-row--empty t10-row--more" type="button" id="t10-show-all">
+          <span class="t10-rank">+</span>
+          <span class="t10-empty-label">Show the remaining ${hidden} slot${hidden > 1 ? 's' : ''}</span>
+        </button>`);
+    }
+
     return `
       <div class="chart-header">
-        <div class="chart-header-title">My Top 10</div>
+        <div class="chart-header-title">My Top ${limit}</div>
         <div class="chart-header-sub">Ranked by hand, not by score</div>
       </div>
       <div class="t10-list">${rows.join('')}</div>

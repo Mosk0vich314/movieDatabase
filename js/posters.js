@@ -167,8 +167,7 @@ const Posters = (() => {
   // ---- The poster ----
   async function generate(movie, rank) {
     const src = hiRes(movie.backdrop || movie.poster || '');
-    let img = null;
-    if (src) { try { img = await loadImage(src); } catch (_) { img = null; } }
+    const img = await tryImage(src);
 
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H;
@@ -468,11 +467,24 @@ const Posters = (() => {
   //  The board — one print carrying the whole hand-ranked list
   // ============================================================
   const BW = 1080, BH = 1920;
+  const BOARD_MAX = 25;   // the longest hand-ranked list the chart offers
 
+  // The page renders these very TMDB URLs in plain <img> tags, so the browser
+  // may already hold a copy fetched without CORS; asking for the same URL with
+  // `crossOrigin` set can be failed outright against that cached response, and
+  // every chip comes back empty while the hero (a /original/ URL the DOM never
+  // requests) loads fine. A distinct URL forces a fresh, CORS-clean fetch.
   async function tryImage(src) {
     if (!src) return null;
-    try { return await loadImage(src); } catch (_) { return null; }
+    try { return await loadImage(src); } catch (_) { /* retry CORS-clean */ }
+    try { return await loadImage(src + (src.includes('?') ? '&' : '?') + 'cors=1'); }
+    catch (_) { return null; }
   }
+
+  // Stored posters are w342, which is exactly what the DOM renders; asking the
+  // canvas for w500 keeps the chip off that cached URL (see tryImage above) and
+  // prints it a little sharper. Backdrops, which have no w500, are left alone.
+  const chipSrc = (url) => (url || '').replace('/w342/', '/w500/');
 
   // Shrink until the line fits, but never past the floor — a title that still
   // doesn't fit there is wrapped or clipped instead of set microscopically.
@@ -509,31 +521,36 @@ const Posters = (() => {
   }
 
   async function generateBoard(entries) {
-    const list = entries.slice(0, 10);
+    const list = entries.slice(0, BOARD_MAX);
     const heroSrc = hiRes(list[0].backdrop || list[0].poster || '');
     const heroImg = await tryImage(heroSrc);
-    const arts = await Promise.all(list.map(m => tryImage(m.poster || m.backdrop || '')));
+    const arts = await Promise.all(list.map(m => tryImage(chipSrc(m.poster || m.backdrop || ''))));
+
+    const M = 78;
+    const FOOT = 100, GAP = 34;
+    // A short list would leave the page half empty, so the slack goes to the
+    // still: fewer films, bigger hero, same balance. A long one can't fit the
+    // 1080x1920 social frame at a readable row height, so the print grows
+    // taller instead of squeezing twenty-five films into slivers.
+    const baseHero = 620;
+    const avail0 = BH - FOOT - (baseHero + GAP);
+    const rowH = Math.max(92, Math.min(150, avail0 / list.length));
+    const used = rowH * list.length;
+    const BOARD_H = Math.max(BH, Math.round(baseHero + GAP + used + FOOT));
+    const slack = BOARD_H - FOOT - (baseHero + GAP) - used;
+    const heroH = Math.round(baseHero + Math.min(340, Math.max(0, slack) * 0.62));
 
     const canvas = document.createElement('canvas');
-    canvas.width = BW; canvas.height = BH;
+    canvas.width = BW; canvas.height = BOARD_H;
     const ctx = canvas.getContext('2d');
     const pal = heroImg ? samplePalette(heroImg) : fallbackPalette();
 
-    const M = 78;
-    // A short list would leave the page half empty, so the slack goes to the
-    // still: fewer films, bigger hero, same balance.
-    const baseHero = 620;
-    const avail0 = BH - 100 - (baseHero + 34);
-    const rowH = Math.min(150, avail0 / list.length);
-    const used = rowH * list.length;
-    const heroH = Math.round(baseHero + Math.min(340, Math.max(0, avail0 - used) * 0.62));
-
     // Ground
-    const ground = ctx.createLinearGradient(0, 0, 0, BH);
+    const ground = ctx.createLinearGradient(0, 0, 0, BOARD_H);
     ground.addColorStop(0, css(pal.groundHi));
     ground.addColorStop(1, css(pal.ground));
     ctx.fillStyle = ground;
-    ctx.fillRect(0, 0, BW, BH);
+    ctx.fillRect(0, 0, BW, BOARD_H);
 
     // Hero still, melting into the ground so the list reads on top of colour
     if (heroImg) {
@@ -577,8 +594,8 @@ const Posters = (() => {
     spacedText(ctx, `RANKED BY HAND · ${stamp}`, M, heroH - 46, 22 * 0.26);
 
     // The list
-    const top = heroH + 34;
-    const blockTop = top + (BH - 100 - top - used) / 2;
+    const top = heroH + GAP;
+    const blockTop = top + (BOARD_H - FOOT - top - used) / 2;
     const thumbH = Math.round(rowH - 24);
     const thumbW = Math.round(thumbH * 2 / 3);
     const rankRight = M + 66;
@@ -649,21 +666,22 @@ const Posters = (() => {
     ctx.globalCompositeOperation = 'overlay';
     ctx.globalAlpha = 0.15;
     ctx.fillStyle = grainPattern(ctx);
-    ctx.fillRect(0, 0, BW, BH);
+    ctx.fillRect(0, 0, BW, BOARD_H);
     ctx.restore();
 
-    const vig = ctx.createRadialGradient(BW / 2, BH * 0.45, BW * 0.25, BW / 2, BH * 0.5, BH * 0.75);
+    const vig = ctx.createRadialGradient(BW / 2, BOARD_H * 0.45, BW * 0.25,
+      BW / 2, BOARD_H * 0.5, BOARD_H * 0.75);
     vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
     vig.addColorStop(1, 'rgba(0, 0, 0, 0.42)');
     ctx.fillStyle = vig;
-    ctx.fillRect(0, 0, BW, BH);
+    ctx.fillRect(0, 0, BW, BOARD_H);
 
     return canvas;
   }
 
   async function openBoard(entries) {
     if (document.getElementById('poster-deck')) return;
-    const list = (entries || []).slice(0, 10);
+    const list = (entries || []).slice(0, BOARD_MAX);
     if (list.length < 3) {
       if (typeof UI !== 'undefined') UI.showToast('Pick at least 3 films first.');
       return;
@@ -717,8 +735,11 @@ const Posters = (() => {
     if (closed) return;
     url = URL.createObjectURL(blob);
 
+    // Letterboxing a 1:3 print into the stage would leave it unreadable, so a
+    // long board scrolls at full width instead.
+    const tall = canvas.height / canvas.width > 2.1;
     deck.querySelector('.pd-stage').innerHTML =
-      `<div class="pd-slide"><img src="${url}" alt="My top ${list.length}"></div>`;
+      `<div class="pd-slide${tall ? ' pd-slide--tall' : ''}"><img src="${url}" alt="My top ${list.length}"></div>`;
 
     const name = `my-top-${list.length}.png`;
     const saveBtn = deck.querySelector('.pd-save');
