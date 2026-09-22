@@ -252,6 +252,53 @@ const TMDB = (() => {
     } catch (_) { return []; }
   }
 
+  // ---- Credits ----
+  // One place that decides who counts as "the people behind a film", so the
+  // save path, the preview path and the backfill path can never disagree.
+  // TMDB spells the same role several ways, hence the job lists.
+  const CREW_ROLES = [
+    { role: 'Director',       jobs: ['Director'] },
+    { role: 'Screenplay',     jobs: ['Screenplay', 'Writer', 'Story'] },
+    { role: 'Cinematography', jobs: ['Director of Photography', 'Cinematography'] },
+    { role: 'Music',          jobs: ['Original Music Composer', 'Music', 'Composer'] },
+    { role: 'Editor',         jobs: ['Editor'] },
+  ];
+
+  function extractCast(credits, limit = 14) {
+    return (credits?.cast || []).slice(0, limit).map(c => ({
+      name: c.name,
+      character: c.character || '',
+      profileUrl: c.profile_path ? posterUrl(c.profile_path, 'w185') : '',
+    }));
+  }
+
+  // Director, writer, DoP, composer, editor — deduped by person, so someone
+  // who both wrote and directed appears once carrying both roles.
+  function extractCrew(credits) {
+    const crew = credits?.crew || [];
+    const byName = new Map();
+    for (const { role, jobs } of CREW_ROLES) {
+      for (const c of crew) {
+        if (!jobs.includes(c.job)) continue;
+        const existing = byName.get(c.name);
+        if (existing) {
+          if (!existing.roles.includes(role)) existing.roles.push(role);
+        } else {
+          byName.set(c.name, {
+            name: c.name,
+            roles: [role],
+            profileUrl: c.profile_path ? posterUrl(c.profile_path, 'w185') : '',
+          });
+        }
+      }
+    }
+    // keep the CREW_ROLES order: director first, then writer, DoP, music, editor
+    const order = CREW_ROLES.map(r => r.role);
+    return [...byName.values()]
+      .sort((a, b) => order.indexOf(a.roles[0]) - order.indexOf(b.roles[0]))
+      .slice(0, 8);
+  }
+
   function posterUrl(path, size = 'w342') {
     if (!path) return '';
     return `${IMG_BASE}/${size}${path}`;
@@ -262,5 +309,5 @@ const TMDB = (() => {
     return `${IMG_BASE}/${size}${path}`;
   }
 
-  return { getApiKey, setApiKey, searchMovies, getMovieDetails, searchPerson, searchActor, getPersonMovieCredits, getMovieRecommendations, getMovieVideos, pickBestTrailer, fetchOmdbData, getGenreList, discoverByGenres, posterUrl, profileUrl };
+  return { getApiKey, setApiKey, extractCast, extractCrew, searchMovies, getMovieDetails, searchPerson, searchActor, getPersonMovieCredits, getMovieRecommendations, getMovieVideos, pickBestTrailer, fetchOmdbData, getGenreList, discoverByGenres, posterUrl, profileUrl };
 })();

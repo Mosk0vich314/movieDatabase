@@ -7579,3 +7579,156 @@ body {
 }
 .tonight-screening .ts-content { padding-right: 130px; }
 .tonight-screening .ts-meta { font-size: var(--fs-xs); }
+
+/* ── The taped poster lifts ─────────────────────────────────────────
+   The poster is taped to the page at its top edge, so the gesture is a
+   lift, not a slide: it pivots about the tape while the credits sheet
+   unfolds underneath. The tape sits on the wrapper, not on the poster —
+   tape stuck to the poster would swing away with it.
+   ─────────────────────────────────────────────────────────────────── */
+.dt .poster-lift {
+  position: relative;
+  flex: 0 0 clamp(108px, 30vw, 158px);
+  transform: rotate(-1.8deg);
+  perspective: 900px;
+}
+/* the wrapper now carries the layout, so the poster itself resets */
+.dt .poster-lift .detail-poster-drag {
+  position: relative;
+  flex: none;
+  transform: rotate(-1.8deg) rotateX(0deg);
+  transform-origin: top center;
+  transform-style: preserve-3d;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  touch-action: pan-y;
+  will-change: transform;
+}
+.dt .poster-lift .detail-poster-drag::after { content: none; }  /* old tape */
+
+/* tape, now on the wrapper and above the poster so it reads as holding it */
+.dt .poster-lift::after {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 54px;
+  height: 18px;
+  transform: translateX(-50%) rotate(2.6deg);
+  background: rgba(224, 216, 198, 0.16);
+  border-left: 1px solid rgba(224, 216, 198, 0.18);
+  border-right: 1px solid rgba(224, 216, 198, 0.18);
+  pointer-events: none;
+  z-index: 3;
+}
+/* the shadow deepens as the poster peels away from the page */
+.dt .poster-lift .detail-poster-drag .detail-poster {
+  transition: box-shadow 0.35s ease, filter 0.35s ease;
+}
+.dt .poster-lift.is-lifting .detail-poster-drag .detail-poster {
+  box-shadow: 0 26px 46px rgba(0, 0, 0, 0.85);
+  filter: brightness(0.86);
+}
+
+/* the affordance — visible until you've lifted it once */
+.poster-lift-hint {
+  position: absolute;
+  left: 50%;
+  bottom: -20px;
+  transform: translateX(-50%);
+  font-family: var(--font-text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.poster-lift.is-open .poster-lift-hint { opacity: 0; }
+
+/* ── The credits sheet ──────────────────────────────────────────── */
+.credits-sheet {
+  overflow: hidden;
+  height: 0;
+  opacity: 0;
+  margin: 0 0 var(--s-4);
+}
+.credits-sheet-inner {
+  padding: var(--s-4) 0 var(--s-2);
+  border-top: 1px dashed rgba(var(--accent-rgb), 0.28);
+}
+.cs-head {
+  font-family: var(--font-text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: var(--s-3);
+}
+.cs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: var(--s-3) var(--s-2);
+}
+.cs-person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: var(--s-2) 4px;
+  background: none;
+  border: none;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  font-family: var(--font-text);
+  text-align: center;
+  min-height: 44px;
+  transition: background 0.18s ease;
+}
+.cs-person:hover { background: rgba(255, 255, 255, 0.05); }
+.cs-person:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cs-photo {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-3);
+  border: 1px solid var(--line-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cs-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cs-initials {
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  color: var(--text-dim);
+}
+.cs-name {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cs-role {
+  font-size: 0.62rem;
+  color: var(--text-faint);
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* the lede slides up as the poster tilts off it */
+.dt .dt-lede { transition: margin-bottom 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
+/* names of different lengths would stagger the roles below them */
+.cs-name { min-height: 2.4em; display: flex; align-items: flex-start; justify-content: center; }

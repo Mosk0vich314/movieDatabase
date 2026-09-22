@@ -805,17 +805,15 @@ const App = (() => {
       const directors = (details.credits?.crew || [])
         .filter(c => c.job === 'Director')
         .map(c => c.name);
-      const cast = (details.credits?.cast || []).slice(0, 6).map(c => ({
-        name: c.name,
-        character: c.character,
-        profileUrl: c.profile_path ? TMDB.posterUrl(c.profile_path, 'w185') : '',
-      }));
+      const cast = TMDB.extractCast(details.credits);
+      const crew = TMDB.extractCrew(details.credits);
       await MovieDB.addMovie({
         tmdbId: details.id,
         title: details.title,
         year: details.release_date ? details.release_date.substring(0, 4) : '',
         genres: (details.genres || []).map(g => g.name),
         directors,
+        crew,
         poster: TMDB.posterUrl(details.poster_path),
         backdrop: details.backdrop_path ? TMDB.posterUrl(details.backdrop_path, 'w1280') : '',
         overview: details.overview || '',
@@ -1866,11 +1864,8 @@ const App = (() => {
       poster: TMDB.posterUrl(details.poster_path),
       backdrop: details.backdrop_path ? TMDB.posterUrl(details.backdrop_path, 'w1280') : '',
       overview: details.overview || '',
-      cast: (details.credits?.cast || []).slice(0, 6).map(c => ({
-        name: c.name,
-        character: c.character,
-        profileUrl: c.profile_path ? TMDB.posterUrl(c.profile_path, 'w185') : '',
-      })),
+      cast: TMDB.extractCast(details.credits),
+      crew: TMDB.extractCrew(details.credits),
       runtime: details.runtime || 0,
       voteAverage: details.vote_average || 0,
       voteCount: details.vote_count || 0,
@@ -1887,7 +1882,7 @@ const App = (() => {
     container.innerHTML = UI.renderMovieDetail(movie, { allMovies, preview: true });
 
     setupTrailerButton(movie);
-    setupPosterDrag(movie);
+    setupPosterLift(movie);
 
     document.getElementById('detail-back').addEventListener('click', () => {
       window.location.hash = previewBackHash;
@@ -1923,16 +1918,20 @@ const App = (() => {
     }
 
     // Backfill fields for movies saved before these fields existed
-    if ((!movie.overview || !movie.cast || !movie.backdrop || !movie.voteAverage) && movie.tmdbId) {
+    // `!movie.crew` and the short-cast test pull the fuller credits into films
+    // saved before the lift panel existed.
+    if ((!movie.overview || !movie.cast || (movie.cast || []).length < 10 || !movie.crew
+         || !movie.backdrop || !movie.voteAverage) && movie.tmdbId) {
       try {
         const details = await TMDB.getMovieDetails(movie.tmdbId);
         let updated = false;
         if (!movie.overview && details.overview) { movie.overview = details.overview; updated = true; }
-        if (!movie.cast && details.credits?.cast?.length) {
-          movie.cast = details.credits.cast.slice(0, 6).map(c => ({
-            name: c.name, character: c.character,
-            profileUrl: c.profile_path ? TMDB.posterUrl(c.profile_path, 'w185') : '',
-          }));
+        if ((movie.cast || []).length < 10 && details.credits?.cast?.length) {
+          movie.cast = TMDB.extractCast(details.credits);
+          updated = true;
+        }
+        if (!movie.crew && details.credits?.crew?.length) {
+          movie.crew = TMDB.extractCrew(details.credits);
           updated = true;
         }
         if (!movie.backdrop && details.backdrop_path) {
@@ -2094,135 +2093,143 @@ const App = (() => {
       }
     });
 
-    setupPosterDrag(movie);
+    setupPosterLift(movie);
   }
 
   // Drag the poster sideways to reveal director/cast bubbles.
-  function setupPosterDrag(movie) {
-    const dragEl = document.getElementById('detail-poster-drag');
-    if (dragEl) {
-      const directorPhotos = {};
-      // Pre-fetch director photos in background
-      (movie.directors || []).forEach(async name => {
-        try {
-          const results = await TMDB.searchPerson(name);
-          const person = (results || []).find(p => p.known_for_department === 'Directing') || results[0];
-          if (person?.profile_path) directorPhotos[name] = TMDB.profileUrl(person.profile_path);
-        } catch (_) {}
+  // The poster is taped to the page at its top edge, so it lifts rather than
+  // slides: drag up (or tap) and it pivots about the tape while the credits
+  // sheet unfolds from underneath. It latches open — with a dozen-odd people
+  // to tap, springing shut the moment you let go would be useless.
+  function setupPosterLift(movie) {
+    const lift = document.getElementById('poster-lift');
+    const card = document.getElementById('detail-poster-drag');
+    const sheet = document.getElementById('credits-sheet');
+    if (!lift || !card || !sheet) return;
+    const lede = lift.closest('.dt-lede');
+
+    const MAX_ANGLE = 72;      // degrees the poster peels back
+    const THRESHOLD = 34;      // px of upward drag that latches it open
+    const TILT = 'rotate(-1.8deg)';
+    let open = false, startY = 0, tracking = false, dragging = false;
+
+    const setAngle = (deg, animate) => {
+      card.style.transition = animate
+        ? 'transform 0.42s cubic-bezier(0.22, 1, 0.36, 1)' : 'none';
+      card.style.transform = `${TILT} rotateX(${-deg}deg)`;
+      lift.classList.toggle('is-lifting', deg > 2);
+    };
+
+    function openSheet() {
+      if (open) return;
+      open = true;
+      lift.classList.add('is-open');
+      card.setAttribute('aria-expanded', 'true');
+      sheet.hidden = false;
+      // measure, then animate to that height so the page below moves with it
+      const h = sheet.scrollHeight;
+      sheet.style.height = '0px';
+      requestAnimationFrame(() => {
+        sheet.style.transition = 'height 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease';
+        sheet.style.height = h + 'px';
+        sheet.style.opacity = '1';
       });
-
-      function buildBubbleHtml(p, i) {
-        const initials = p.name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
-        const photoHtml = p.photoUrl
-          ? `<img src="${p.photoUrl}" alt="${UI.escapeHtml(p.name)}">`
-          : `<span>${initials}</span>`;
-        return `<div class="people-bubble" style="--i:${i}" data-person-name="${UI.escapeHtml(p.name)}" data-person-mode="${p.mode}">
-          <div class="people-bubble-photo">${photoHtml}</div>
-          <span class="people-bubble-role">${UI.escapeHtml(p.role)}</span>
-          <span class="people-bubble-name">${UI.escapeHtml(p.name)}</span>
-        </div>`;
-      }
-
-      function showPeopleOverlay() {
-        if (document.getElementById('people-overlay')) return;
-        const people = [];
-        (movie.directors || []).forEach(name => people.push({ name, mode: 'director', role: 'Director', photoUrl: directorPhotos[name] || '' }));
-        (movie.cast || []).slice(0, 5).forEach(c => people.push({ name: c.name, mode: 'actor', role: c.character || 'Actor', photoUrl: c.profileUrl || '' }));
-
-        const overlay = document.createElement('div');
-        overlay.id = 'people-overlay';
-        overlay.className = 'people-overlay';
-        overlay.innerHTML = `<div class="people-overlay-inner">${people.map(buildBubbleHtml).join('')}</div>`;
-        document.body.appendChild(overlay);
-
-        overlay.addEventListener('click', e => {
-          const bubble = e.target.closest('.people-bubble');
-          if (bubble) {
-            pendingPersonSearch = { mode: bubble.dataset.personMode, query: bubble.dataset.personName };
-            dismissOverlay();
-            window.location.hash = '#add';
-          } else {
-            dismissOverlay();
-          }
-        });
-      }
-
-      function dismissOverlay() {
-        const overlay = document.getElementById('people-overlay');
-        if (!overlay) return;
-        overlay.classList.add('people-overlay--out');
-        overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
-      }
-
-      let touchX0 = 0, touchY0 = 0, tracking = false, dragging = false, maxDx = 0;
-      const THRESHOLD = 40;
-
-      function getMaxDrag() {
-        const rect = dragEl.getBoundingClientRect();
-        return Math.max(0, window.innerWidth - rect.left - 20);
-      }
-
-      // The poster sits slightly tilted on the page — carry that through the drag.
-      const TILT = 'rotate(-1.8deg)';
-
-      function springBack(dx) {
-        dragEl.style.willChange = '';
-        dragEl.style.transition = 'transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)';
-        dragEl.style.transform = `translateX(0) ${TILT}`;
-        if (dx >= THRESHOLD) {
-          dragEl.addEventListener('transitionend', function handler() {
-            dragEl.removeEventListener('transitionend', handler);
-            showPeopleOverlay();
-          });
-        }
-      }
-
-      dragEl.addEventListener('touchstart', e => {
-        touchX0 = e.touches[0].clientX;
-        touchY0 = e.touches[0].clientY;
-        tracking = true;
-        dragging = false;
-        maxDx = getMaxDrag();
-      }, { passive: true });
-
-      dragEl.addEventListener('touchmove', e => {
-        if (!tracking) return;
-        const dx = e.touches[0].clientX - touchX0;
-        const dy = e.touches[0].clientY - touchY0;
-        // Direction not yet decided — wait for ~8px of motion, then commit
-        if (!dragging) {
-          if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-          if (Math.abs(dy) > Math.abs(dx)) {
-            // Vertical intent — release the gesture so the page scrolls normally
-            tracking = false;
-            return;
-          }
-          // Horizontal intent — claim the gesture
-          dragging = true;
-          dragEl.style.transition = 'none';
-          dragEl.style.willChange = 'transform';
-        }
-        e.preventDefault();
-        const clamped = Math.max(0, Math.min(dx, maxDx));
-        dragEl.style.transform = `translateX(${clamped}px) ${TILT}`;
-      }, { passive: false });
-
-      dragEl.addEventListener('touchend', e => {
-        if (!tracking && !dragging) return;
-        tracking = false;
-        if (!dragging) return;
-        dragging = false;
-        const dx = Math.max(0, e.changedTouches[0].clientX - touchX0);
-        springBack(dx);
+      sheet.addEventListener('transitionend', function done(e) {
+        if (e.propertyName !== 'height') return;
+        sheet.removeEventListener('transitionend', done);
+        sheet.style.height = 'auto';   // so it reflows if the viewport changes
       });
-
-      dragEl.addEventListener('touchcancel', () => {
-        if (!dragging) { tracking = false; return; }
-        tracking = false;
-        dragging = false;
-        springBack(0);
-      });
+      // The poster keeps its full layout box while it is tilted, which would
+      // leave a tall gap where it used to lie. Pull the page up by what the
+      // tilt vacates (at 72deg the poster projects to about a third of its
+      // height) — but never past the facts column beside it, or the sheet
+      // rides up over the genre chips.
+      if (lede) {
+        const facts = lede.querySelector('.dt-facts');
+        const spare = facts ? Math.max(0, lede.offsetHeight - facts.offsetHeight - 8) : 0;
+        const vacated = Math.round(card.offsetHeight * 0.58);
+        lede.style.marginBottom = `-${Math.min(vacated, spare)}px`;
+      }
+      setAngle(MAX_ANGLE, true);
+      haptic(12);
     }
+
+    function closeSheet() {
+      if (!open) return;
+      open = false;
+      lift.classList.remove('is-open');
+      card.setAttribute('aria-expanded', 'false');
+      sheet.style.height = sheet.scrollHeight + 'px';
+      requestAnimationFrame(() => {
+        sheet.style.transition = 'height 0.34s ease, opacity 0.22s ease';
+        sheet.style.height = '0px';
+        sheet.style.opacity = '0';
+      });
+      sheet.addEventListener('transitionend', function done(e) {
+        if (e.propertyName !== 'height') return;
+        sheet.removeEventListener('transitionend', done);
+        if (!open) sheet.hidden = true;
+      });
+      if (lede) lede.style.marginBottom = '';
+      setAngle(0, true);
+    }
+
+    const toggle = () => (open ? closeSheet() : openSheet());
+
+    // Tap works too — the drag is the flourish, not the only way in.
+    card.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-controls', 'credits-sheet');
+    card.setAttribute('aria-expanded', 'false');
+    card.setAttribute('aria-label', 'Lift the poster to see cast and crew');
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+      if (e.key === 'Escape' && open) closeSheet();
+    });
+
+    card.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+      tracking = true; dragging = false;
+    }, { passive: true });
+
+    card.addEventListener('touchmove', (e) => {
+      if (!tracking) return;
+      const dy = e.touches[0].clientY - startY;
+      if (!dragging) {
+        if (Math.abs(dy) < 8) return;
+        // downward intent while closed is a page scroll — let it go
+        if (dy > 0 && !open) { tracking = false; return; }
+        dragging = true;
+      }
+      e.preventDefault();
+      // dragging up peels it open; dragging down while open puts it back
+      const lifted = open ? MAX_ANGLE : 0;
+      const deg = Math.max(0, Math.min(MAX_ANGLE, lifted + (-dy * 0.9)));
+      setAngle(deg, false);
+    }, { passive: false });
+
+    const release = (dy) => {
+      if (!dragging) { tracking = false; return; }
+      tracking = false; dragging = false;
+      if (!open && -dy >= THRESHOLD) openSheet();
+      else if (open && dy >= THRESHOLD) closeSheet();
+      else setAngle(open ? MAX_ANGLE : 0, true);
+    };
+    card.addEventListener('touchend', (e) => release(e.changedTouches[0].clientY - startY));
+    card.addEventListener('touchcancel', () => release(0));
+
+    // tapping a person goes to their filmography
+    sheet.addEventListener('click', (e) => {
+      const btn = e.target.closest('.cs-person');
+      if (!btn) return;
+      const mode = btn.dataset.personMode;
+      pendingPersonSearch = {
+        mode: mode === 'actor' ? 'actor' : 'director',
+        query: btn.dataset.personName,
+      };
+      window.location.hash = '#add';
+    });
   }
 
   async function setupTrailerButton(movie) {

@@ -316,6 +316,45 @@ const UI = (() => {
 
   // `ctx.preview` renders a film that is not in the database yet — the same page,
   // with add actions instead of edit/delete ones.
+  // The sheet tucked behind the poster: everyone worth a credit, as chips you
+  // can tap through to their filmography. Built from stored cast/crew, so it
+  // needs no network — the old overlay fetched director photos on every open.
+  function renderCreditsSheet(movie) {
+    const people = [];
+    const seen = new Set();
+    const push = (name, role, photoUrl, mode) => {
+      const key = name.toLowerCase();
+      if (!name || seen.has(key)) return;
+      seen.add(key);
+      people.push({ name, role, photoUrl: photoUrl || '', mode });
+    };
+    (movie.crew || []).forEach(c =>
+      push(c.name, (c.roles || []).join(' · '), c.profileUrl,
+           (c.roles || []).includes('Director') ? 'director' : 'crew'));
+    // films saved before crew existed still have directors[]
+    (movie.directors || []).forEach(n => push(n, 'Director', '', 'director'));
+    (movie.cast || []).forEach(c => push(c.name, c.character || 'Cast', c.profileUrl, 'actor'));
+    if (!people.length) return '';
+
+    const chip = p => {
+      const initials = p.name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      const photo = p.photoUrl
+        ? `<img src="${imgSrc(p.photoUrl)}" alt="" loading="lazy">`
+        : `<span class="cs-initials">${escapeHtml(initials)}</span>`;
+      return `<button class="cs-person" type="button" data-person-name="${escapeHtml(p.name)}" data-person-mode="${p.mode}">
+        <span class="cs-photo">${photo}</span>
+        <span class="cs-name">${escapeHtml(p.name)}</span>
+        <span class="cs-role">${escapeHtml(p.role)}</span>
+      </button>`;
+    };
+    return `<div class="credits-sheet" id="credits-sheet" hidden>
+      <div class="credits-sheet-inner">
+        <div class="cs-head">Cast &amp; crew</div>
+        <div class="cs-grid">${people.map(chip).join('')}</div>
+      </div>
+    </div>`;
+  }
+
   function renderMovieDetail(movie, ctx = {}) {
     const preview = !!ctx.preview;
     const owned = !preview && !movie.watchlist;
@@ -372,9 +411,15 @@ const UI = (() => {
         </div>`
       : '';
 
-    const hasPeople = (movie.directors || []).length > 0 || (movie.cast || []).length > 0;
+    const hasPeople = (movie.directors || []).length > 0
+      || (movie.cast || []).length > 0 || (movie.crew || []).length > 0;
+    // The tape lives on the wrapper, not on the poster: the poster pivots
+    // under it, so a tape stuck to the poster would swing away with it.
     const posterSlideHtml = hasPeople
-      ? `<div class="detail-poster-drag" id="detail-poster-drag">${poster}</div>`
+      ? `<div class="poster-lift" id="poster-lift">
+           <div class="detail-poster-drag" id="detail-poster-drag">${poster}</div>
+           <span class="poster-lift-hint" aria-hidden="true">&#8593; lift</span>
+         </div>`
       : `<div class="detail-poster-wrap">${poster}</div>`;
 
     // Specs line under the director credit — year and runtime already sit in the band
@@ -460,6 +505,7 @@ const UI = (() => {
               ${contextHtml}
             </div>
           </div>
+          ${hasPeople ? renderCreditsSheet(movie) : ''}
           ${preview ? actionsHtml : ''}
           ${dtSection('Synopsis', movie.overview ? `<p class="detail-overview">${escapeHtml(movie.overview)}</p>` : '')}
           ${dtSection('Elsewhere', buildExtBadgesHtml(movie, false))}
@@ -1456,5 +1502,5 @@ const UI = (() => {
       </div>`;
   }
 
-  return { showToast, ratingColor, ratingColorRGB, ratingInk, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderFiveStarClub, renderTop10Builder, renderDuelIntro, renderDuelMatch, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, safeUrl, imgSrc, cssUrl, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
+  return { showToast, ratingColor, ratingColorRGB, ratingInk, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderCreditsSheet, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderFiveStarClub, renderTop10Builder, renderDuelIntro, renderDuelMatch, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, safeUrl, imgSrc, cssUrl, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
 })();
