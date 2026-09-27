@@ -252,6 +252,29 @@ const TMDB = (() => {
     } catch (_) { return []; }
   }
 
+  // Every backdrop TMDB holds for a film, as `/path.jpg` strings. The carousel
+  // heads a page with a frame from one of the films on it, and that frame has
+  // to differ from the one on the film's own card — one image per film isn't
+  // enough. Textless plates first (a backdrop with a language is usually a
+  // title card), then by vote.
+  async function getMovieBackdrops(tmdbId) {
+    const key = getApiKey();
+    if (!key || !tmdbId) return [];
+    const url = `${BASE_URL}/movie/${tmdbId}/images?api_key=${encodeURIComponent(key)}` +
+      `&include_image_language=null,en`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.backdrops || [])
+        .slice()
+        .sort((a, b) => (a.iso_639_1 ? 1 : 0) - (b.iso_639_1 ? 1 : 0) ||
+          (b.vote_average || 0) - (a.vote_average || 0))
+        .map(b => b.file_path)
+        .filter(Boolean);
+    } catch (_) { return []; }
+  }
+
   // ---- Credits ----
   // One place that decides who counts as "the people behind a film", so the
   // save path, the preview path and the backfill path can never disagree.
@@ -309,5 +332,5 @@ const TMDB = (() => {
     return `${IMG_BASE}/${size}${path}`;
   }
 
-  return { getApiKey, setApiKey, extractCast, extractCrew, searchMovies, getMovieDetails, searchPerson, searchActor, getPersonMovieCredits, getMovieRecommendations, getMovieVideos, pickBestTrailer, fetchOmdbData, getGenreList, discoverByGenres, posterUrl, profileUrl };
+  return { getApiKey, setApiKey, extractCast, extractCrew, searchMovies, getMovieDetails, searchPerson, searchActor, getPersonMovieCredits, getMovieRecommendations, getMovieVideos, pickBestTrailer, fetchOmdbData, getGenreList, discoverByGenres, getMovieBackdrops, posterUrl, profileUrl };
 })();

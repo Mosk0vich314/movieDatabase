@@ -377,11 +377,13 @@ const Posters = (() => {
     document.body.appendChild(deck);
 
     const items = [];
+    const onClosed = [];
     let current = 0;
     let closed = false;
     const close = () => {
       closed = true;
       items.forEach(it => URL.revokeObjectURL(it.url));
+      onClosed.forEach(fn => fn());
       deck.classList.add('poster-deck--out');
       setTimeout(() => deck.remove(), 200);
     };
@@ -391,20 +393,39 @@ const Posters = (() => {
       if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
     });
 
-    const labelEl = deck.querySelector('.pd-loading-label');
-    const fillEl = deck.querySelector('.pd-loading-fill');
+    const stage = deck.querySelector('.pd-stage');
 
     return {
       closed: () => closed,
+      // Anything waiting on the person — the header picker — has to be let go
+      // when they close the deck, or it waits for an answer that never comes.
+      onClose: (fn) => onClosed.push(fn),
       add: (item) => items.push(item),
+      // Hand the stage over to a step that asks something before printing.
+      ask(node) {
+        deck.classList.add('poster-deck--asking');
+        stage.replaceChildren(node);
+      },
+      // Back to the progress bar. The elements are re-made because `ask` may
+      // have replaced them, so `progress` looks them up each time.
+      busy(text) {
+        deck.classList.remove('poster-deck--asking');
+        stage.innerHTML = `
+          <div class="pd-loading">
+            <div class="pd-loading-label">${text}</div>
+            <div class="pd-loading-track"><div class="pd-loading-fill"></div></div>
+          </div>`;
+      },
       progress(frac, text) {
+        const fillEl = deck.querySelector('.pd-loading-fill');
+        const labelEl = deck.querySelector('.pd-loading-label');
         if (fillEl) fillEl.style.width = `${Math.round(frac * 100)}%`;
         if (text && labelEl) labelEl.textContent = text;
       },
       // `alt` lands in markup, so callers pass a rank or a page number — never
       // a film title, which arrives from TMDB or an imported backup.
       show(shareTitle, tall) {
-        const stage = deck.querySelector('.pd-stage');
+        deck.classList.remove('poster-deck--asking');
         const slide = (it) =>
           `<div class="pd-slide${tall ? ' pd-slide--tall' : ''}"><img src="${it.url}" alt="${it.alt}"></div>`;
         stage.innerHTML = items.length > 1
@@ -979,6 +1000,98 @@ const Posters = (() => {
     return canvas;
   }
 
+  // A page is headed by a frame from one of the films on it — and by a frame
+  // the page doesn't already show, the way the reference set heads its Stalker
+  // page with a second Stalker still. The card keeps the stored backdrop; the
+  // header takes the best of the film's other plates.
+  const frameCache = new Map();
+  async function headerFrame(movie) {
+    const own = movie.backdrop || '';
+    if (typeof TMDB !== 'undefined' && TMDB.getMovieBackdrops && movie.tmdbId) {
+      if (!frameCache.has(movie.tmdbId)) {
+        frameCache.set(movie.tmdbId, await TMDB.getMovieBackdrops(movie.tmdbId));
+      }
+      const ownPath = own ? own.slice(own.lastIndexOf('/')) : '';
+      const alt = (frameCache.get(movie.tmdbId) || []).find(p => p !== ownPath);
+      if (alt) return TMDB.posterUrl(alt, 'original');
+    }
+    // One plate on file, or no key: the card's own still is better than none.
+    return hiRes(own || movie.poster || '');
+  }
+
+  const pickSrc = (url) =>
+    (typeof UI !== 'undefined' && UI.imgSrc ? UI.imgSrc(url) : url);
+
+  // Ask, page by page, which film heads it. Built with DOM calls rather than a
+  // markup string: titles and image URLs here come from TMDB or an imported
+  // backup, and `textContent`/`imgSrc` keep them out of the parser.
+  function pickHeaders(deck, gridPages) {
+    return new Promise((resolve) => {
+      const picks = [];
+      deck.onClose(() => resolve(null));
+
+      const step = () => {
+        if (deck.closed()) { resolve(null); return; }
+        if (picks.length === gridPages.length) { resolve(picks); return; }
+        const page = gridPages[picks.length];
+        // Nothing to choose between on a page of one.
+        if (page.length < 2) { picks.push(page[0].movie); step(); return; }
+        render(picks.length, page);
+      };
+
+      const render = (i, page) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'pd-pick';
+
+        const title = document.createElement('div');
+        title.className = 'pd-pick-title';
+        title.textContent = `Page ${i + 1} of ${gridPages.length}`;
+        const sub = document.createElement('div');
+        sub.className = 'pd-pick-sub';
+        sub.textContent = `Which film heads ranks ${page[0].rank} - ${page[page.length - 1].rank}?`;
+
+        const grid = document.createElement('div');
+        grid.className = 'pd-pick-grid';
+        for (const item of page) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pd-pick-card';
+          const img = document.createElement('img');
+          img.alt = '';
+          img.src = pickSrc(item.movie.backdrop || item.movie.poster || '');
+          const rank = document.createElement('span');
+          rank.className = 'pd-pick-rank';
+          rank.textContent = String(item.rank);
+          const label = document.createElement('span');
+          label.className = 'pd-pick-label';
+          label.textContent = item.movie.title || '';
+          btn.append(img, rank, label);
+          btn.addEventListener('click', () => { buzz(8); picks.push(item.movie); step(); });
+          grid.appendChild(btn);
+        }
+
+        const auto = document.createElement('button');
+        auto.type = 'button';
+        auto.className = 'btn btn-secondary pd-pick-auto';
+        auto.textContent = 'Pick for me';
+        auto.addEventListener('click', () => {
+          buzz(8);
+          // The best-ranked film on each remaining page heads it.
+          while (picks.length < gridPages.length) {
+            const p = gridPages[picks.length];
+            picks.push(p[p.length - 1].movie);
+          }
+          step();
+        });
+
+        wrap.append(title, sub, grid, auto);
+        deck.ask(wrap);
+      };
+
+      step();
+    });
+  }
+
   async function openCarousel(entries) {
     if (document.getElementById('poster-deck')) return;
     const list = (entries || []).slice(0, BOARD_MAX);
@@ -988,23 +1101,35 @@ const Posters = (() => {
     }
 
     const pages = carouselPages(list);
-    const deck = mountDeck(`Printing 1 / ${pages.length}`, true);
+    const gridPages = pages.slice(0, -1); // the last page is #1 alone
+    const deck = mountDeck('Fetching stills', true);
     await ensureFonts();
 
     // Every film on the page shows its own still, not just the hero, so fill
-    // in the ones saved before backdrops were stored.
+    // in the ones saved before backdrops were stored — and the picker needs
+    // them all on screen before it can ask.
     for (let i = 0; i < list.length; i++) {
       if (deck.closed()) return;
-      deck.progress(0.3 * (i / list.length), 'Fetching stills');
+      deck.progress(0.25 * (i / list.length));
       await ensureBackdrop(list[i]);
     }
     if (deck.closed()) return;
-    const headImg = await tryImage(hiRes(list[0].backdrop || list[0].poster || ''));
+
+    const heads = await pickHeaders(deck, gridPages);
+    if (!heads || deck.closed()) return;
+
+    deck.busy('Finding the frames');
+    const headImgs = [];
+    for (let i = 0; i < heads.length; i++) {
+      if (deck.closed()) return;
+      deck.progress(0.25 + 0.2 * (i / heads.length));
+      headImgs.push(await tryImage(await headerFrame(heads[i])));
+    }
 
     for (let i = 0; i < pages.length; i++) {
       if (deck.closed()) return;
-      deck.progress(0.3 + 0.7 * (i / pages.length), `Printing ${i + 1} / ${pages.length}`);
-      const canvas = await generateCarouselPage(pages[i], i + 1, pages.length, headImg, list.length);
+      deck.progress(0.45 + 0.55 * (i / pages.length), `Printing ${i + 1} / ${pages.length}`);
+      const canvas = await generateCarouselPage(pages[i], i + 1, pages.length, headImgs[i], list.length);
       const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
       if (deck.closed()) return;
       deck.add({
