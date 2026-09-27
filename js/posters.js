@@ -348,14 +348,12 @@ const Posters = (() => {
     if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (_) {} }
   }
 
-  async function openTop10(movies) {
-    if (document.getElementById('poster-deck')) return;
-    const seq = pickTop(movies);
-    if (seq.length < 3) {
-      if (typeof UI !== 'undefined') UI.showToast('Rate at least 3 films first.');
-      return;
-    }
-
+  // The deck chrome every print set shares: the modal, the progress bar shown
+  // while the canvases are drawn, and the swipeable track they land in. The
+  // prints are handed over with `add()` — {blob, url, name, alt, title} — so a
+  // one-print board and a five-page countdown mount the same way, and closing
+  // mid-print still revokes whatever was made so far.
+  function mountDeck(labelText, multi) {
     const deck = document.createElement('div');
     deck.id = 'poster-deck';
     deck.className = 'poster-deck';
@@ -365,20 +363,21 @@ const Posters = (() => {
         <button class="pd-close" aria-label="Close">&times;</button>
         <div class="pd-stage">
           <div class="pd-loading">
-            <div class="pd-loading-label">Printing 1 / ${seq.length}</div>
+            <div class="pd-loading-label">${labelText}</div>
             <div class="pd-loading-track"><div class="pd-loading-fill"></div></div>
           </div>
         </div>
-        <div class="pd-dots"></div>
+        ${multi ? '<div class="pd-dots"></div>' : ''}
         <div class="pd-actions">
           <button class="btn btn-primary pd-share" type="button" disabled>Share</button>
           <button class="btn btn-secondary pd-save" type="button" disabled>&#11015; Save</button>
-          <button class="btn btn-secondary pd-save-all" type="button" disabled>Save all</button>
+          ${multi ? '<button class="btn btn-secondary pd-save-all" type="button" disabled>Save all</button>' : ''}
         </div>
       </div>`;
     document.body.appendChild(deck);
 
     const items = [];
+    let current = 0;
     let closed = false;
     const close = () => {
       closed = true;
@@ -392,75 +391,108 @@ const Posters = (() => {
       if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
     });
 
+    const labelEl = deck.querySelector('.pd-loading-label');
+    const fillEl = deck.querySelector('.pd-loading-fill');
+
+    return {
+      closed: () => closed,
+      add: (item) => items.push(item),
+      progress(frac, text) {
+        if (fillEl) fillEl.style.width = `${Math.round(frac * 100)}%`;
+        if (text && labelEl) labelEl.textContent = text;
+      },
+      // `alt` lands in markup, so callers pass a rank or a page number — never
+      // a film title, which arrives from TMDB or an imported backup.
+      show(shareTitle, tall) {
+        const stage = deck.querySelector('.pd-stage');
+        const slide = (it) =>
+          `<div class="pd-slide${tall ? ' pd-slide--tall' : ''}"><img src="${it.url}" alt="${it.alt}"></div>`;
+        stage.innerHTML = items.length > 1
+          ? `<div class="pd-track">${items.map(slide).join('')}</div>`
+          : slide(items[0]);
+
+        const dots = deck.querySelector('.pd-dots');
+        const track = stage.querySelector('.pd-track');
+        if (dots && track) {
+          dots.innerHTML = items.map((_, i) => `<span class="pd-dot${i === 0 ? ' active' : ''}"></span>`).join('');
+          track.addEventListener('scroll', () => {
+            const i = Math.round(track.scrollLeft / track.clientWidth);
+            if (i === current || !items[i]) return;
+            current = i;
+            dots.querySelectorAll('.pd-dot').forEach((d, j) => d.classList.toggle('active', j === i));
+          }, { passive: true });
+        }
+
+        const saveBtn = deck.querySelector('.pd-save');
+        const shareBtn = deck.querySelector('.pd-share');
+        const saveAllBtn = deck.querySelector('.pd-save-all');
+        [saveBtn, shareBtn, saveAllBtn].forEach(b => { if (b) b.disabled = false; });
+
+        const saveOne = (it) => {
+          const link = document.createElement('a');
+          link.download = it.name;
+          link.href = it.url;
+          link.click();
+        };
+
+        saveBtn.addEventListener('click', () => { buzz(10); saveOne(items[current]); });
+
+        if (saveAllBtn) saveAllBtn.addEventListener('click', async () => {
+          buzz(10);
+          for (const it of items) {
+            saveOne(it);
+            await new Promise(res => setTimeout(res, 350)); // browsers throttle bursts
+          }
+        });
+
+        shareBtn.addEventListener('click', async () => {
+          buzz(10);
+          const files = items.map(it => new File([it.blob], it.name, { type: 'image/png' }));
+          try {
+            if (navigator.canShare && navigator.canShare({ files })) {
+              await navigator.share({ files, title: shareTitle });
+              return;
+            }
+            const one = [files[current]];
+            if (navigator.canShare && navigator.canShare({ files: one })) {
+              await navigator.share({ files: one, title: items[current].title || shareTitle });
+              return;
+            }
+            saveOne(items[current]);
+          } catch (_) { /* dismissed */ }
+        });
+      },
+    };
+  }
+
+  async function openTop10(movies) {
+    if (document.getElementById('poster-deck')) return;
+    const seq = pickTop(movies);
+    if (seq.length < 3) {
+      if (typeof UI !== 'undefined') UI.showToast('Rate at least 3 films first.');
+      return;
+    }
+
+    const deck = mountDeck(`Printing 1 / ${seq.length}`, true);
     await ensureFonts();
 
-    const label = deck.querySelector('.pd-loading-label');
-    const fill = deck.querySelector('.pd-loading-fill');
     for (let i = 0; i < seq.length; i++) {
-      if (closed) return;
-      if (label) label.textContent = `Printing ${i + 1} / ${seq.length}`;
-      if (fill) fill.style.width = `${(i / seq.length) * 100}%`;
+      if (deck.closed()) return;
+      deck.progress(i / seq.length, `Printing ${i + 1} / ${seq.length}`);
       await ensureBackdrop(seq[i].movie);
       const canvas = await generate(seq[i].movie, seq[i].rank);
       const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-      if (closed) return;
-      items.push({ ...seq[i], blob, url: URL.createObjectURL(blob) });
+      if (deck.closed()) return;
+      deck.add({
+        blob,
+        url: URL.createObjectURL(blob),
+        name: fileName(seq[i]),
+        alt: `#${seq[i].rank}`,
+        title: `#${seq[i].rank} — ${seq[i].movie.title}`,
+      });
       await new Promise(res => setTimeout(res, 0)); // let the UI breathe
     }
-
-    const stage = deck.querySelector('.pd-stage');
-    stage.innerHTML = `<div class="pd-track">${items.map(it => `
-      <div class="pd-slide"><img src="${it.url}" alt="#${it.rank}"></div>`).join('')}</div>`;
-    const dots = deck.querySelector('.pd-dots');
-    dots.innerHTML = items.map((_, i) => `<span class="pd-dot${i === 0 ? ' active' : ''}"></span>`).join('');
-
-    const track = stage.querySelector('.pd-track');
-    let current = 0;
-    track.addEventListener('scroll', () => {
-      const i = Math.round(track.scrollLeft / track.clientWidth);
-      if (i === current || !items[i]) return;
-      current = i;
-      dots.querySelectorAll('.pd-dot').forEach((d, j) => d.classList.toggle('active', j === i));
-    }, { passive: true });
-
-    const saveBtn = deck.querySelector('.pd-save');
-    const shareBtn = deck.querySelector('.pd-share');
-    const saveAllBtn = deck.querySelector('.pd-save-all');
-    [saveBtn, shareBtn, saveAllBtn].forEach(b => { b.disabled = false; });
-
-    const saveOne = (it) => {
-      const link = document.createElement('a');
-      link.download = fileName(it);
-      link.href = it.url;
-      link.click();
-    };
-
-    saveBtn.addEventListener('click', () => { buzz(10); saveOne(items[current]); });
-
-    saveAllBtn.addEventListener('click', async () => {
-      buzz(10);
-      for (const it of items) {
-        saveOne(it);
-        await new Promise(res => setTimeout(res, 350)); // browsers throttle bursts
-      }
-    });
-
-    shareBtn.addEventListener('click', async () => {
-      buzz(10);
-      const files = items.map(it => new File([it.blob], fileName(it), { type: 'image/png' }));
-      try {
-        if (navigator.canShare && navigator.canShare({ files })) {
-          await navigator.share({ files, title: 'My top 10' });
-          return;
-        }
-        const one = [files[current]];
-        if (navigator.canShare && navigator.canShare({ files: one })) {
-          await navigator.share({ files: one, title: `#${items[current].rank} — ${items[current].movie.title}` });
-          return;
-        }
-        saveOne(items[current]);
-      } catch (_) { /* dismissed */ }
-    });
+    deck.show('My top 10');
   }
 
   // ============================================================
@@ -687,84 +719,306 @@ const Posters = (() => {
       return;
     }
 
-    const deck = document.createElement('div');
-    deck.id = 'poster-deck';
-    deck.className = 'poster-deck';
-    deck.innerHTML = `
-      <div class="pd-backdrop"></div>
-      <div class="pd-content">
-        <button class="pd-close" aria-label="Close">&times;</button>
-        <div class="pd-stage">
-          <div class="pd-loading">
-            <div class="pd-loading-label">Printing your top ${list.length}</div>
-            <div class="pd-loading-track"><div class="pd-loading-fill"></div></div>
-          </div>
-        </div>
-        <div class="pd-actions">
-          <button class="btn btn-primary pd-share" type="button" disabled>Share</button>
-          <button class="btn btn-secondary pd-save" type="button" disabled>&#11015; Save</button>
-        </div>
-      </div>`;
-    document.body.appendChild(deck);
-
-    let closed = false;
-    let url = null;
-    const close = () => {
-      closed = true;
-      if (url) URL.revokeObjectURL(url);
-      deck.classList.add('poster-deck--out');
-      setTimeout(() => deck.remove(), 200);
-    };
-    deck.querySelector('.pd-close').addEventListener('click', close);
-    deck.querySelector('.pd-backdrop').addEventListener('click', close);
-    document.addEventListener('keydown', function onEsc(e) {
-      if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
-    });
-
-    const fill = deck.querySelector('.pd-loading-fill');
-    if (fill) fill.style.width = '15%';
+    const deck = mountDeck(`Printing your top ${list.length}`, false);
+    deck.progress(0.15);
     await ensureFonts();
     await ensureBackdrop(list[0]); // the hero still sets the whole palette
-    if (closed) return;
-    if (fill) fill.style.width = '45%';
+    if (deck.closed()) return;
+    deck.progress(0.45);
 
     const canvas = await generateBoard(list);
-    if (closed) return;
-    if (fill) fill.style.width = '85%';
+    if (deck.closed()) return;
+    deck.progress(0.85);
     const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-    if (closed) return;
-    url = URL.createObjectURL(blob);
+    if (deck.closed()) return;
 
+    deck.add({
+      blob,
+      url: URL.createObjectURL(blob),
+      name: `my-top-${list.length}.png`,
+      alt: 'The board',
+    });
     // Letterboxing a 1:3 print into the stage would leave it unreadable, so a
     // long board scrolls at full width instead.
-    const tall = canvas.height / canvas.width > 2.1;
-    deck.querySelector('.pd-stage').innerHTML =
-      `<div class="pd-slide${tall ? ' pd-slide--tall' : ''}"><img src="${url}" alt="My top ${list.length}"></div>`;
-
-    const name = `my-top-${list.length}.png`;
-    const saveBtn = deck.querySelector('.pd-save');
-    const shareBtn = deck.querySelector('.pd-share');
-    saveBtn.disabled = shareBtn.disabled = false;
-
-    const save = () => {
-      const link = document.createElement('a');
-      link.download = name;
-      link.href = url;
-      link.click();
-    };
-    saveBtn.addEventListener('click', () => { buzz(10); save(); });
-    shareBtn.addEventListener('click', async () => {
-      buzz(10);
-      const files = [new File([blob], name, { type: 'image/png' })];
-      try {
-        if (navigator.canShare && navigator.canShare({ files })) {
-          await navigator.share({ files, title: `My top ${list.length}` });
-          return;
-        }
-        save();
-      } catch (_) { /* dismissed */ }
-    });
+    deck.show(`My top ${list.length}`, canvas.height / canvas.width > 2.1);
   }
 
-  return { generate, openTop10, pickTop, manualTop10, generateBoard, openBoard };
+  // ============================================================
+  //  The countdown carousel — the long list as a set of pages
+  // ============================================================
+  // Printed as one board a top 25 comes out 1080x3054: a strip that has to be
+  // shrunk past reading to be taken in whole. A countdown is read a handful at
+  // a time anyway, so the long list prints as pages instead — warm stock, a
+  // still from the champion heading each page under the range it covers, six
+  // films to a grid, ranks counting down, and #1 alone on the last page.
+  const PER_PAGE = 6;
+  const STOCK = [239, 230, 210];     // the card stock every page is printed on
+  const cream = (a) => `rgba(${STOCK[0]}, ${STOCK[1]}, ${STOCK[2]}, ${a})`;
+  const PM = 20, PGAP = 22, HEAD_H = 288;
+
+  // Ranks N..2, six to a page at most, then #1 by itself. The films are spread
+  // evenly over the pages rather than packed from the front: 24 of them still
+  // come out 6-6-6-6, but 13 come out 5-4-4 instead of 6-6-1, and no page is
+  // left holding a single stranded card.
+  function carouselPages(entries) {
+    const ranked = entries.map((movie, i) => ({ movie, rank: i + 1 }));
+    const rest = ranked.slice(1).reverse();
+    const count = Math.ceil(rest.length / PER_PAGE);
+    const pages = [];
+    for (let p = 0, i = 0; p < count; p++) {
+      const take = Math.floor(rest.length / count) + (p < rest.length % count ? 1 : 0);
+      pages.push(rest.slice(i, i + take));
+      i += take;
+    }
+    pages.push([ranked[0]]);
+    return pages;
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // Centre a title on the numeral. A long one is broken over two lines rather
+  // than set at a third the size of the short ones beside it — the cards are
+  // read as a set, so the type has to stay one size.
+  function centredTitle(ctx, title, cx, baseline, maxW, startSize, minSize) {
+    const sp = (size) => size * 0.08;
+    let pick = null;
+    for (let size = startSize; size >= minSize; size -= 2) {
+      ctx.font = `800 ${size}px ${FACE}`;
+      const lines = wrapSpaced(ctx, title, maxW, sp(size), 2);
+      if (lines.every(l => spacedWidth(ctx, l, sp(size)) <= maxW)) { pick = { size, lines }; break; }
+    }
+    if (!pick) {
+      ctx.font = `800 ${minSize}px ${FACE}`;
+      pick = { size: minSize, lines: wrapSpaced(ctx, title, maxW, sp(minSize), 2) };
+    }
+    ctx.font = `800 ${pick.size}px ${FACE}`;
+    let y = baseline - (pick.lines.length - 1) * pick.size * 0.6;
+    for (const line of pick.lines) {
+      spacedText(ctx, line, cx, y, sp(pick.size), 'center');
+      y += pick.size * 1.2;
+    }
+  }
+
+  // The title sits across the waist of the rank numeral, which is what makes
+  // the card read as one object rather than a picture with a caption.
+  function drawCarouselCell(ctx, item, img, x, y, w, h) {
+    ctx.save();
+    roundRect(ctx, x, y, w, h, 8);
+    ctx.clip();
+    if (img) drawCover(ctx, img, x, y, w, h, 0.45);
+    else { ctx.fillStyle = '#14141c'; ctx.fillRect(x, y, w, h); }
+    const scrim = ctx.createLinearGradient(0, y, 0, y + h);
+    scrim.addColorStop(0, 'rgba(0, 0, 0, 0.06)');
+    scrim.addColorStop(0.42, 'rgba(0, 0, 0, 0.18)');
+    scrim.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+    ctx.fillStyle = scrim;
+    ctx.fillRect(x, y, w, h);
+    ctx.restore();
+
+    const cx = x + w / 2;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+
+    ctx.font = `800 ${Math.round(h * 0.58)}px ${FACE}`;
+    ctx.fillStyle = cream(0.9);
+    ctx.shadowBlur = 28;
+    ctx.textAlign = 'center';
+    ctx.fillText(String(item.rank), cx, y + h * 0.8);
+    ctx.textAlign = 'left';
+
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 14;
+    const max = Math.round(Math.min(34, h * 0.11));
+    centredTitle(ctx, (item.movie.title || '').toUpperCase(), cx, y + h * 0.55,
+      w - 56, max, Math.round(max * 0.62));
+
+    ctx.shadowBlur = 0;
+  }
+
+  function drawCarouselHead(ctx, img, page, pageNo, pageCount, total) {
+    if (img) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W, HEAD_H);
+      ctx.clip();
+      drawCover(ctx, img, 0, 0, W, HEAD_H, 0.42);
+      const scrim = ctx.createLinearGradient(0, 0, 0, HEAD_H);
+      scrim.addColorStop(0, 'rgba(0, 0, 0, 0.5)');
+      scrim.addColorStop(0.55, 'rgba(0, 0, 0, 0.2)');
+      scrim.addColorStop(1, 'rgba(0, 0, 0, 0.38)');
+      ctx.fillStyle = scrim;
+      ctx.fillRect(0, 0, W, HEAD_H);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = '#12121a';
+      ctx.fillRect(0, 0, W, HEAD_H);
+    }
+
+    const hi = page[0].rank, lo = page[page.length - 1].rank;
+    const range = hi === lo ? String(hi) : `${hi} - ${lo}`;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    ctx.shadowBlur = 26;
+    const fit = fitLine(ctx, range, W - 260, 132, 0.02, 800, 76);
+    ctx.font = `800 ${fit.size}px ${FACE}`;
+    ctx.fillStyle = cream(0.96);
+    spacedText(ctx, range, W / 2, 208, fit.sp, 'center');
+
+    ctx.shadowBlur = 14;
+    ctx.font = `600 22px ${FACE}`;
+    ctx.fillStyle = cream(0.72);
+    spacedText(ctx, `MY TOP ${total}`, W / 2, 84, 22 * 0.34, 'center');
+    ctx.shadowBlur = 0;
+
+    // Page counter, the way a carousel numbers its slides
+    const tag = `${pageNo} / ${pageCount}`;
+    ctx.font = `600 26px ${FACE}`;
+    const cw = spacedWidth(ctx, tag, 26 * 0.1) + 44;
+    roundRect(ctx, W - PM - 12 - cw, 26, cw, 56, 28);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.fill();
+    ctx.fillStyle = cream(0.9);
+    spacedText(ctx, tag, W - PM - 12 - cw / 2, 63, 26 * 0.1, 'center');
+  }
+
+  // #1 gets the page to itself — the poster full-bleed inside the stock frame,
+  // the numeral at the size the rest of the set has been counting towards.
+  function drawCarouselFinale(ctx, item, img, total) {
+    const w = W - PM * 2, h = H - PM * 2;
+    ctx.save();
+    roundRect(ctx, PM, PM, w, h, 10);
+    ctx.clip();
+    if (img) drawCover(ctx, img, PM, PM, w, h, 0.42);
+    else { ctx.fillStyle = '#14141c'; ctx.fillRect(PM, PM, w, h); }
+    const scrim = ctx.createLinearGradient(0, PM, 0, PM + h);
+    scrim.addColorStop(0, 'rgba(0, 0, 0, 0.55)');
+    scrim.addColorStop(0.3, 'rgba(0, 0, 0, 0.12)');
+    scrim.addColorStop(0.62, 'rgba(0, 0, 0, 0.32)');
+    scrim.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
+    ctx.fillStyle = scrim;
+    ctx.fillRect(PM, PM, w, h);
+    ctx.restore();
+
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 20;
+    ctx.font = `600 26px ${FACE}`;
+    ctx.fillStyle = cream(0.8);
+    spacedText(ctx, `MY TOP ${total} · NUMBER ONE`, W / 2, PM + 92, 26 * 0.34, 'center');
+
+    ctx.shadowBlur = 44;
+    ctx.font = `800 520px ${FACE}`;
+    ctx.fillStyle = cream(0.92);
+    ctx.textAlign = 'center';
+    ctx.fillText('1', W / 2, H * 0.76);
+    ctx.textAlign = 'left';
+
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 18;
+    // Across the numeral's waist, the same way the grid cards are set
+    centredTitle(ctx, (item.movie.title || '').toUpperCase(), W / 2, H * 0.62, W - 180, 76, 42);
+
+    const meta = [item.movie.year, (item.movie.directors || [])[0]]
+      .filter(Boolean).join('   ·   ').toUpperCase();
+    if (meta) {
+      ctx.font = `600 26px ${FACE}`;
+      ctx.fillStyle = cream(0.75);
+      spacedText(ctx, clipToWidth(ctx, meta, W - 220, 26 * 0.26), W / 2, H - PM - 74, 26 * 0.26, 'center');
+    }
+    ctx.shadowBlur = 0;
+  }
+
+  async function generateCarouselPage(page, pageNo, pageCount, headImg, total) {
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = css(STOCK);
+    ctx.fillRect(0, 0, W, H);
+
+    if (page.length === 1 && page[0].rank === 1) {
+      // The still, not the poster: the page sets the film's title itself, and
+      // a poster carries its own — printed over each other they fight.
+      const m = page[0].movie;
+      drawCarouselFinale(ctx, page[0], await tryImage(hiRes(m.backdrop || m.poster || '')), total);
+    } else {
+      const arts = await Promise.all(page.map(it =>
+        tryImage(it.movie.backdrop || chipSrc(it.movie.poster || ''))));
+      drawCarouselHead(ctx, headImg, page, pageNo, pageCount, total);
+
+      const rows = Math.ceil(page.length / 2);
+      const top = HEAD_H + PM;
+      const colW = (W - PM * 2 - PGAP) / 2;
+      const rowH = (H - PM - top - PGAP * (rows - 1)) / rows;
+      // An odd page would otherwise leave a hole in the grid, so its first
+      // film runs the full measure instead.
+      let i = 0;
+      for (let r = 0; r < rows; r++) {
+        const full = page.length % 2 === 1 && r === 0;
+        const y = top + r * (rowH + PGAP);
+        for (let c = 0; c < (full ? 1 : 2) && i < page.length; c++, i++) {
+          drawCarouselCell(ctx, page[i], arts[i],
+            full ? PM : PM + c * (colW + PGAP), y, full ? W - PM * 2 : colW, rowH);
+        }
+      }
+    }
+
+    // Paper tooth over the whole page
+    ctx.save();
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.globalAlpha = 0.1;
+    ctx.fillStyle = grainPattern(ctx);
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+
+    return canvas;
+  }
+
+  async function openCarousel(entries) {
+    if (document.getElementById('poster-deck')) return;
+    const list = (entries || []).slice(0, BOARD_MAX);
+    if (list.length < 3) {
+      if (typeof UI !== 'undefined') UI.showToast('Pick at least 3 films first.');
+      return;
+    }
+
+    const pages = carouselPages(list);
+    const deck = mountDeck(`Printing 1 / ${pages.length}`, true);
+    await ensureFonts();
+
+    // Every film on the page shows its own still, not just the hero, so fill
+    // in the ones saved before backdrops were stored.
+    for (let i = 0; i < list.length; i++) {
+      if (deck.closed()) return;
+      deck.progress(0.3 * (i / list.length), 'Fetching stills');
+      await ensureBackdrop(list[i]);
+    }
+    if (deck.closed()) return;
+    const headImg = await tryImage(hiRes(list[0].backdrop || list[0].poster || ''));
+
+    for (let i = 0; i < pages.length; i++) {
+      if (deck.closed()) return;
+      deck.progress(0.3 + 0.7 * (i / pages.length), `Printing ${i + 1} / ${pages.length}`);
+      const canvas = await generateCarouselPage(pages[i], i + 1, pages.length, headImg, list.length);
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      if (deck.closed()) return;
+      deck.add({
+        blob,
+        url: URL.createObjectURL(blob),
+        name: `my-top-${list.length}-${String(i + 1).padStart(2, '0')}.png`,
+        alt: `Page ${i + 1}`,
+      });
+      await new Promise(res => setTimeout(res, 0)); // let the UI breathe
+    }
+    deck.show(`My top ${list.length}`);
+  }
+  return {
+    generate, openTop10, pickTop, manualTop10,
+    generateBoard, openBoard, generateCarouselPage, openCarousel,
+  };
 })();

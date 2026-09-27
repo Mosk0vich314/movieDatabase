@@ -3857,7 +3857,13 @@ const App = (() => {
           listExpanded[cfg.tab] = true; loadList(cfg); return;
         }
         if (e.target.closest('#t10-poster')) {
-          haptic(15); Posters.openBoard(listMovies[cfg.tab]); return;
+          haptic(15);
+          // A top 25 prints as a countdown carousel — six films a page — because
+          // one board carrying twenty-five rows comes out 1080x3054. A top 10
+          // still fits one print.
+          if (cfg.limit > 10) Posters.openCarousel(listMovies[cfg.tab]);
+          else Posters.openBoard(listMovies[cfg.tab]);
+          return;
         }
         if (e.target.closest('#t10-duel')) { haptic(12); startDuel(cfg); return; }
         if (e.target.closest('#duel-start')) { haptic(12); advanceDuel(); return; }

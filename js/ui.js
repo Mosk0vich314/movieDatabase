@@ -1108,14 +1108,16 @@ const UI = (() => {
       </div>
       <div class="t10-list">${rows.join('')}</div>
       <div class="t10-actions">
-        <button class="btn btn-primary" type="button" id="t10-poster" ${filled < 3 ? 'disabled' : ''}>&#127917; Make the poster</button>
+        <button class="btn btn-primary" type="button" id="t10-poster" ${filled < 3 ? 'disabled' : ''}>&#127917; Make the poster${limit > 10 ? 's' : ''}</button>
         <button class="btn btn-secondary" type="button" id="t10-duel">&#9876; Rank by duel</button>
         <button class="btn btn-secondary" type="button" id="t10-fill">Fill from ratings</button>
         ${filled ? '<button class="btn btn-secondary" type="button" id="t10-clear">Clear</button>' : ''}
       </div>
       <p class="t10-hint">${filled < 3
         ? 'Add at least three films to print the poster.'
-        : 'One poster, all ' + filled + ' films, in this order.'}</p>`;
+        : limit > 10
+          ? 'A set of posters, six films a page, counting down to #1.'
+          : 'One poster, all ' + filled + ' films, in this order.'}</p>`;
   }
 
   // --- Rank by duel (Chart > My Top 10) ---
