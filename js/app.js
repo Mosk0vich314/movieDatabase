@@ -19,6 +19,7 @@ const App = (() => {
   let currentFilmography = null;
   // Search preview (#preview/:tmdbId) state
   let previewBackHash = '#add';
+  let detailBackHash = '';
   let pendingFormTmdbId = null;
   let lastHash = '';
   // Scroll offset per view hash. showView() only toggles display:none, so
@@ -30,7 +31,11 @@ const App = (() => {
   // Decades view: show all films per decade vs. top 10 (persisted)
   let decadeShowAll = localStorage.getItem('decadeShowAll') === '1';
   // Pulls suggestions from local storage if they exist
-  let pendingSuggestions = JSON.parse(localStorage.getItem('savedSuggestions') || 'null');
+  let pendingSuggestions = null;
+  try {
+    const saved = JSON.parse(localStorage.getItem('savedSuggestions') || 'null');
+    if (saved && typeof saved.movieTitle === 'string' && Array.isArray(saved.results)) pendingSuggestions = saved;
+  } catch (_) { localStorage.removeItem('savedSuggestions'); }
 
   // Hidden Gems lens — high personal ratings, low TMDB vote counts
   let gemsLens = localStorage.getItem('gemsLens') === '1';
@@ -61,7 +66,8 @@ const App = (() => {
       localStorage.removeItem(TONIGHT_KEY);
       return null;
     }
-    const stored = JSON.parse(localStorage.getItem(TONIGHT_KEY) || 'null');
+    let stored = null;
+    try { stored = JSON.parse(localStorage.getItem(TONIGHT_KEY) || 'null'); } catch (_) { localStorage.removeItem(TONIGHT_KEY); }
     const today = todayKey();
     if (!force && stored && stored.date === today) {
       const stillExists = movies.find(m => m.id === stored.id);
@@ -83,7 +89,7 @@ const App = (() => {
     const poster = UI.imgSrc(movie.poster || movie.backdrop || '');
     const dirLine = (movie.directors || []).length > 0
       ? `<div class="ts-director">${UI.escapeHtml(movie.directors[0])}</div>` : '';
-    const yearLine = movie.year ? `<span class="ts-year">${movie.year}</span>` : '';
+    const yearLine = movie.year ? `<span class="ts-year">${UI.escapeHtml(movie.year)}</span>` : '';
     const showtime = '20:00'; // Doors open at 8pm
     wrap.innerHTML = `
       <div class="tonight-screening" data-id="${movie.id}">
@@ -161,6 +167,7 @@ const App = (() => {
     MovieDB.open().then(() => migrateRatings()).then(() => {
       setupRouting();
       setupEventListeners();
+      Directors.init({addToWatchlist, openPreview});
       setupImageLoader();
       setupHaptics();
       UI.applyRatingScaleClass();
@@ -169,7 +176,7 @@ const App = (() => {
       navigate(window.location.hash || '#catalogue');
       updateWatchlistBadge();
       registerServiceWorker();
-    });
+    }).catch(error => UI.showToast(`Could not open your collection: ${error.message}`, 8000));
   }
 
   // Delegated, lightweight haptic feedback on key UI surfaces
@@ -238,6 +245,8 @@ const App = (() => {
   }
 
   function navigate(hash) {
+    if (hash !== '#chart') { tournament = null; koth = null; duel = null; }
+    if (typeof Directors !== 'undefined') Directors.cancel();
     const prevHash = lastHash;
     if (prevHash) viewScroll.set(prevHash, window.scrollY);
     lastHash = hash;
@@ -249,9 +258,17 @@ const App = (() => {
       '#chart': 'chart',
       '#inventory': 'inventory',
       '#stats': 'stats',
+      '#directors': 'directors',
     };
 
+    if (hash.startsWith('#director/')) {
+      showView('directors');
+      Directors.loadProfile(hash.slice('#director/'.length)).then(() => restoreScroll(hash));
+      return;
+    }
     if (hash.startsWith('#detail/')) {
+      if (prevHash?.startsWith('#director/')) detailBackHash = prevHash;
+      else if (!prevHash?.startsWith('#detail/')) detailBackHash = '';
       const id = parseInt(hash.split('/')[1], 10);
       showView('detail');
       loadMovieDetail(id).then(() => restoreScroll(hash));
@@ -283,6 +300,7 @@ const App = (() => {
     if (view === 'chart') loadChart();
     if (view !== 'chart') { tournament = null; koth = null; duel = null; }
     if (view === 'stats') loadStats();
+    if (view === 'directors') Directors.loadLibrary();
     if (view === 'inventory') loadInventory();
     if (view === 'add') {
       // Returning from a preview — keep the search results the user was browsing.
@@ -309,8 +327,9 @@ const App = (() => {
   // Restore after the view's async render has painted, or go to the top for a
   // hash we have not seen before (a film opened from a lane starts at the top).
   function restoreScroll(hash) {
+    if (window.location.hash && window.location.hash !== hash) return;
     const y = viewScroll.get(hash) || 0;
-    requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (!window.location.hash || window.location.hash===hash) window.scrollTo(0,y); }));
   }
 
   function showView(name) {
@@ -466,7 +485,7 @@ const App = (() => {
     const current = select.value;
     select.innerHTML = '<option value="">All Genres</option>';
     [...genres].sort().forEach(g => {
-      select.innerHTML += `<option value="${g}"${g === current ? ' selected' : ''}>${g}</option>`;
+      select.add(new Option(g, g, false, g === current));
     });
   }
 
@@ -477,7 +496,7 @@ const App = (() => {
     const current = select.value;
     select.innerHTML = '<option value="">All Directors</option>';
     [...directors].sort().forEach(d => {
-      select.innerHTML += `<option value="${d}"${d === current ? ' selected' : ''}>${d}</option>`;
+      select.add(new Option(d, d, false, d === current));
     });
   }
 
@@ -798,7 +817,7 @@ const App = (() => {
       UI.showToast(existing.watchlist
         ? `"${existing.title}" is already on your watchlist`
         : `"${existing.title}" is already in your catalogue`);
-      return;
+      return true;
     }
     try {
       const details = await TMDB.getMovieDetails(tmdbId);
@@ -814,6 +833,8 @@ const App = (() => {
         genres: (details.genres || []).map(g => g.name),
         directors,
         crew,
+        directorCredits: TMDB.extractDirectors(details.credits),
+        creditsFetchedAt: new Date().toISOString(),
         poster: TMDB.posterUrl(details.poster_path),
         backdrop: details.backdrop_path ? TMDB.posterUrl(details.backdrop_path, 'w1280') : '',
         overview: details.overview || '',
@@ -823,8 +844,10 @@ const App = (() => {
       });
       updateWatchlistBadge();
       UI.showToast(`"${details.title}" added to watchlist!`);
+      return true;
     } catch (err) {
       UI.showToast(err.message);
+      return false;
     }
   }
 
@@ -875,6 +898,7 @@ const App = (() => {
     if (!TMDB.getApiKey()) return;
     try {
       const results = await TMDB.searchMovies(q, true);
+      if (searchMode !== 'movie' || currentView !== 'add' || document.getElementById('tmdb-search').value.trim() !== q) return;
       acResults = results.slice(0, 6);
       renderAutocomplete();
     } catch (_) { closeAutocomplete(); }
@@ -933,6 +957,7 @@ const App = (() => {
 
     try {
       const results = await TMDB.searchMovies(query);
+      if (searchMode !== 'movie' || currentView !== 'add' || document.getElementById('tmdb-search').value.trim() !== query) return;
       const container = document.getElementById('search-results');
       if (results.length === 0) {
         container.innerHTML = '<p class="no-results">No movies found.</p>';
@@ -950,6 +975,7 @@ const App = (() => {
     if (!query) return;
     try {
       const results = await TMDB.searchPerson(query);
+      if (searchMode !== 'director' || currentView !== 'add' || document.getElementById('tmdb-search').value.trim() !== query) return;
       const container = document.getElementById('search-results');
       if (results.length === 0) {
         container.innerHTML = '<p class="no-results">No directors found.</p>';
@@ -1000,6 +1026,7 @@ const App = (() => {
         TMDB.getPersonMovieCredits(personId),
         MovieDB.getAllMovies(),
       ]);
+      if (searchMode !== 'director' || currentView !== 'add' || currentFilmography?.personId !== personId) return;
       const addedSet = new Set(allMovies.map(m => String(m.tmdbId)));
       const seen = new Set();
       const directed = (credits.crew || [])
@@ -1023,6 +1050,7 @@ const App = (() => {
     if (!query) return;
     try {
       const results = await TMDB.searchActor(query);
+      if (searchMode !== 'actor' || currentView !== 'add' || document.getElementById('tmdb-search').value.trim() !== query) return;
       const container = document.getElementById('search-results');
       if (results.length === 0) {
         container.innerHTML = '<p class="no-results">No actors found.</p>';
@@ -1044,6 +1072,7 @@ const App = (() => {
         TMDB.getPersonMovieCredits(personId),
         MovieDB.getAllMovies(),
       ]);
+      if (currentFilmography?.personId !== personId || searchMode !== 'actor' || currentView !== 'add') return;
       const addedSet = new Set(allMovies.map(m => String(m.tmdbId)));
       const seen = new Set();
       const acted = (credits.cast || [])
@@ -1067,12 +1096,9 @@ const App = (() => {
       const directors = (details.credits?.crew || [])
         .filter(c => c.job === 'Director')
         .map(c => c.name);
-      const cast = (details.credits?.cast || []).slice(0, 6).map(c => ({
-        name: c.name,
-        character: c.character,
-        profileUrl: c.profile_path ? TMDB.posterUrl(c.profile_path, 'w185') : '',
-      }));
+      const cast = TMDB.extractCast(details.credits);
       const omdb = await TMDB.fetchOmdbData(details.imdb_id);
+      if (currentView !== 'add') return;
       populateForm({
         tmdbId: details.id,
         title: details.title,
@@ -1083,6 +1109,9 @@ const App = (() => {
         backdrop: details.backdrop_path ? TMDB.posterUrl(details.backdrop_path, 'w1280') : '',
         overview: details.overview || '',
         cast,
+        crew: TMDB.extractCrew(details.credits),
+        directorCredits: TMDB.extractDirectors(details.credits),
+        creditsFetchedAt: new Date().toISOString(),
         runtime: details.runtime || 0,
         voteAverage: details.vote_average || 0,
         voteCount: details.vote_count || 0,
@@ -1129,6 +1158,9 @@ const App = (() => {
     form.dataset.overview = data.overview || '';
     form.dataset.backdrop = data.backdrop || '';
     form.dataset.cast = JSON.stringify(data.cast || []);
+    form.dataset.crew = JSON.stringify(data.crew || editingMovie?.crew || []);
+    form.dataset.directorCredits = JSON.stringify(data.directorCredits || editingMovie?.directorCredits || []);
+    form.dataset.creditsFetchedAt = data.creditsFetchedAt || editingMovie?.creditsFetchedAt || '';
     form.dataset.runtime = data.runtime || 0;
     form.dataset.voteAverage = data.voteAverage || 0;
     form.dataset.voteCount = data.voteCount || 0;
@@ -1220,6 +1252,7 @@ const App = (() => {
     const form = document.getElementById('movie-form');
 
     const movie = {
+      ...(editingMovie || {}),
       tmdbId: document.getElementById('form-tmdb-id').value,
       title: form.dataset.title,
       year: form.dataset.year,
@@ -1229,13 +1262,16 @@ const App = (() => {
       backdrop: form.dataset.backdrop || '',
       overview: form.dataset.overview || '',
       cast: JSON.parse(form.dataset.cast || '[]'),
+      crew: JSON.parse(form.dataset.crew || '[]'),
+      directorCredits: JSON.parse(form.dataset.directorCredits || '[]'),
+      creditsFetchedAt: form.dataset.creditsFetchedAt,
       runtime: parseInt(form.dataset.runtime) || 0,
-      voteAverage: parseFloat(form.dataset.voteAverage) || 0,
-      voteCount: parseInt(form.dataset.voteCount) || 0,
-      imdbId: form.dataset.imdbId || '',
-      imdbRating: parseFloat(form.dataset.imdbRating) || 0,
-      imdbVotes: form.dataset.imdbVotes || '',
-      rtScore: form.dataset.rtScore || '',
+      voteAverage: parseFloat(form.dataset.voteAverage) || editingMovie?.voteAverage || 0,
+      voteCount: parseInt(form.dataset.voteCount) || editingMovie?.voteCount || 0,
+      imdbId: form.dataset.imdbId || editingMovie?.imdbId || '',
+      imdbRating: parseFloat(form.dataset.imdbRating) || editingMovie?.imdbRating || 0,
+      imdbVotes: form.dataset.imdbVotes || editingMovie?.imdbVotes || '',
+      rtScore: form.dataset.rtScore || editingMovie?.rtScore || '',
       rating: selectedRating,
       notes: document.getElementById('form-notes').value.trim(),
       tags: getFormTags(),
@@ -1248,6 +1284,7 @@ const App = (() => {
       if (existingId) {
         movie.id = parseInt(existingId);
         movie.dateAdded = isWatchlistConversion ? new Date().toISOString() : editingMovie.dateAdded;
+        if (isWatchlistConversion) { movie.watchlist = false; movie.pinned = false; movie.resumeSeconds = undefined; }
         await MovieDB.updateMovie(movie);
         UI.showToast('Movie updated!');
       } else {
@@ -1267,7 +1304,7 @@ const App = (() => {
 
       // AWAIT the suggestions fetch BEFORE we reload the catalogue
       if ((!existingId || isWatchlistConversion) && movie.tmdbId) {
-        await fetchSimilarSuggestions(movie.title, movie.tmdbId);
+        fetchSimilarSuggestions(movie.title, movie.tmdbId);
       }
 
       editingMovie = null;
@@ -1384,6 +1421,7 @@ const App = (() => {
 
   function writeListIds(cfg, ids) {
     localStorage.setItem(cfg.key, JSON.stringify(ids.slice(0, cfg.limit)));
+    MovieDB.preferenceChanged(cfg.key);
   }
 
   async function loadList(cfg) {
@@ -1594,8 +1632,9 @@ const App = (() => {
     if (vsBadge) vsBadge.classList.add('tournament-vs-hide');
     haptic(10);
 
+    const run = duel;
     setTimeout(() => {
-      if (!duel) return;  // navigated away mid-animation
+      if (duel !== run) return;
       if (movieId === duel.cur.id) duel.hi = mid; else duel.lo = mid + 1;
       duel.done++;
       if (duel.lo >= duel.hi) placeDuelCurrent();
@@ -1732,6 +1771,7 @@ const App = (() => {
   function pickTournamentWinner(movieId) {
     if (!tournament || tournament.picking) return;
     tournament.picking = true;
+    const run = tournament;
 
     const round = tournament.rounds[tournament.currentRound];
     const match = round[tournament.currentMatchIdx];
@@ -1748,6 +1788,7 @@ const App = (() => {
     if (vsBadge) vsBadge.classList.add('tournament-vs-hide');
 
     setTimeout(() => {
+      if (tournament !== run) return;
       const winner = match.a.id === movieId ? match.a : match.b;
       const loser = match.a.id === movieId ? match.b : match.a;
       match.winner = winner;
@@ -1793,6 +1834,7 @@ const App = (() => {
   function pickKothWinner(movieId) {
     if (!koth || koth.picking) return;
     koth.picking = true;
+    const run = koth;
 
     const challenger = koth.challengers[koth.done];
     const isKingWon = koth.king.id === movieId;
@@ -1806,6 +1848,7 @@ const App = (() => {
     if (vsBadge) vsBadge.classList.add('tournament-vs-hide');
 
     setTimeout(() => {
+      if (koth !== run) return;
       if (isKingWon) {
         koth.kingWins++;
       } else {
@@ -1866,6 +1909,8 @@ const App = (() => {
       overview: details.overview || '',
       cast: TMDB.extractCast(details.credits),
       crew: TMDB.extractCrew(details.credits),
+      directorCredits: TMDB.extractDirectors(details.credits),
+      creditsFetchedAt: new Date().toISOString(),
       runtime: details.runtime || 0,
       voteAverage: details.vote_average || 0,
       voteCount: details.vote_count || 0,
@@ -1876,9 +1921,10 @@ const App = (() => {
     };
 
     // The route can change while TMDB is answering — don't paint over the new view.
-    if (!window.location.hash.startsWith(`#preview/${tmdbId}`)) return;
+    if (window.location.hash !== `#preview/${tmdbId}`) return;
 
     const allMovies = (await MovieDB.getAllMovies()).filter(m => !m.watchlist);
+    if (window.location.hash !== `#preview/${tmdbId}`) return;
     container.innerHTML = UI.renderMovieDetail(movie, { allMovies, preview: true });
 
     setupTrailerButton(movie);
@@ -1897,8 +1943,9 @@ const App = (() => {
     document.getElementById('preview-watchlist').addEventListener('click', async (e) => {
       const btn = e.currentTarget;
       btn.disabled = true;
-      await addToWatchlist(tmdbId);
-      window.location.hash = previewBackHash;
+      const added = await addToWatchlist(tmdbId);
+      if (added && window.location.hash === `#preview/${tmdbId}`) window.location.hash = previewBackHash;
+      else btn.disabled = false;
     });
 
     document.getElementById('preview-rate').addEventListener('click', () => {
@@ -1920,8 +1967,7 @@ const App = (() => {
     // Backfill fields for movies saved before these fields existed
     // `!movie.crew` and the short-cast test pull the fuller credits into films
     // saved before the lift panel existed.
-    if ((!movie.overview || !movie.cast || (movie.cast || []).length < 10 || !movie.crew
-         || !movie.backdrop || !movie.voteAverage) && movie.tmdbId) {
+    if ((!movie.creditsFetchedAt || !movie.directorCredits) && movie.tmdbId) {
       try {
         const details = await TMDB.getMovieDetails(movie.tmdbId);
         let updated = false;
@@ -1930,7 +1976,7 @@ const App = (() => {
           movie.cast = TMDB.extractCast(details.credits);
           updated = true;
         }
-        if (!movie.crew && details.credits?.crew?.length) {
+        if (!(movie.crew || []).length && details.credits?.crew?.length) {
           movie.crew = TMDB.extractCrew(details.credits);
           updated = true;
         }
@@ -1942,7 +1988,9 @@ const App = (() => {
         if (!movie.voteAverage && details.vote_average) { movie.voteAverage = details.vote_average; updated = true; }
         if (!movie.voteCount && details.vote_count) { movie.voteCount = details.vote_count; updated = true; }
         if (!movie.imdbId && details.imdb_id) { movie.imdbId = details.imdb_id; updated = true; }
-        if (updated) await MovieDB.updateMovie(movie);
+        movie.directorCredits = TMDB.extractDirectors(details.credits);
+        movie.creditsFetchedAt = new Date().toISOString();
+        await MovieDB.updateMovie(movie, {metadataOnly:true});
       } catch (_) { /* best-effort */ }
     }
     // Backfill IMDb/RT ratings from OMDB
@@ -1954,18 +2002,19 @@ const App = (() => {
           if (!movie.imdbRating && omdb.imdbRating) { movie.imdbRating = omdb.imdbRating; updated = true; }
           if (!movie.imdbVotes && omdb.imdbVotes) { movie.imdbVotes = omdb.imdbVotes; updated = true; }
           if (!movie.rtScore && omdb.rtScore) { movie.rtScore = omdb.rtScore; updated = true; }
-          if (updated) await MovieDB.updateMovie(movie);
+          if (updated) await MovieDB.updateMovie(movie, {metadataOnly:true});
         }
       } catch (_) { /* best-effort */ }
     }
 
     const ctx = { allMovies: allMovies.filter(m => !m.watchlist) };
+    if (window.location.hash !== `#detail/${id}`) return;
     document.getElementById('movie-detail').innerHTML = UI.renderMovieDetail(movie, ctx);
 
     setupTrailerButton(movie);
 
     document.getElementById('detail-back').addEventListener('click', () => {
-      window.location.hash = movie.watchlist ? '#watchlist' : '#catalogue';
+      window.location.hash = detailBackHash || (movie.watchlist ? '#watchlist' : '#catalogue');
     });
 
     document.querySelectorAll('.mlt-item[data-id]').forEach(item => {
@@ -2239,7 +2288,7 @@ const App = (() => {
     let videos = [];
     try { videos = await TMDB.getMovieVideos(movie.tmdbId); } catch (_) { return; }
     const trailer = TMDB.pickBestTrailer(videos);
-    if (!trailer) return;
+    if (!trailer || !wrap.isConnected) return;
     const btn = document.createElement('button');
     btn.className = 'trailer-play-btn';
     btn.type = 'button';
@@ -2271,15 +2320,16 @@ const App = (() => {
         </div>
       </div>`;
     document.body.appendChild(modal);
+    const releaseFocus=UI.focusDialog(modal,'Trailer');
     const close = () => {
+      releaseFocus();document.removeEventListener('keydown',onEsc);
       modal.classList.add('trailer-modal--out');
       setTimeout(() => modal.remove(), 200);
     };
     modal.querySelector('.trailer-modal-close').addEventListener('click', close);
     modal.querySelector('.trailer-modal-backdrop').addEventListener('click', close);
-    document.addEventListener('keydown', function onEsc(e) {
-      if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
-    });
+    function onEsc(e) { if (e.key === 'Escape') close(); }
+    document.addEventListener('keydown',onEsc);
   }
 
   // ---- Ticket Stub generator ----
@@ -2365,12 +2415,12 @@ const App = (() => {
     const tx = 50 + (H - 80) * (2 / 3) + 28;
 
     ctx.fillStyle = '#5a3a18';
-    ctx.font = '600 14px "Cinzel", serif';
+    ctx.font = '600 14px "Staatliches", Impact, sans-serif';
     ctx.textBaseline = 'top';
     ctx.fillText('CINEMA · ADMIT ONE', tx, 50);
 
     ctx.fillStyle = '#1a0e02';
-    ctx.font = '700 48px "Cinzel", "Times New Roman", serif';
+    ctx.font = '700 48px "Staatliches", Impact, sans-serif';
     const titleLines = wrapText(ctx, movie.title || 'Untitled', perfX - tx - 20);
     let yCursor = 80;
     for (let i = 0; i < Math.min(2, titleLines.length); i++) {
@@ -2379,7 +2429,7 @@ const App = (() => {
     }
 
     ctx.fillStyle = '#5a3a18';
-    ctx.font = '400 22px "Cinzel", serif';
+    ctx.font = '400 22px "Staatliches", Impact, sans-serif';
     ctx.fillText(movie.year || '', tx, yCursor + 4);
     yCursor += 40;
 
@@ -2393,11 +2443,11 @@ const App = (() => {
 
     // Rating — large
     yCursor = Math.max(yCursor, 240);
-    ctx.font = '800 26px "Cinzel", serif';
+    ctx.font = '800 26px "Staatliches", Impact, sans-serif';
     ctx.fillStyle = '#5a3a18';
     ctx.fillText('YOUR RATING', tx, yCursor);
     yCursor += 32;
-    ctx.font = '900 86px "Cinzel", serif';
+    ctx.font = '900 86px "Staatliches", Impact, sans-serif';
     ctx.fillStyle = '#c0392b';
     ctx.fillText(UI.ratingText(movie.rating || 0), tx, yCursor);
 
@@ -2405,7 +2455,7 @@ const App = (() => {
     const dateStr = movie.dateAdded
       ? new Date(movie.dateAdded).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
       : '';
-    ctx.font = '600 16px "Cinzel", serif';
+    ctx.font = '600 16px "Staatliches", Impact, sans-serif';
     ctx.fillStyle = '#3a2510';
     ctx.fillText(dateStr, tx, H - 70);
     ctx.font = '400 12px monospace';
@@ -2418,10 +2468,10 @@ const App = (() => {
     ctx.translate(sx, H / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = 'center';
-    ctx.font = '900 56px "Cinzel", serif';
+    ctx.font = '900 56px "Staatliches", Impact, sans-serif';
     ctx.fillStyle = '#1a0e02';
     ctx.fillText('ADMIT ONE', 0, -40);
-    ctx.font = '600 16px "Cinzel", serif';
+    ctx.font = '600 16px "Staatliches", Impact, sans-serif';
     ctx.fillStyle = '#5a3a18';
     ctx.fillText(_ticketSerial(movie), 0, 12);
     ctx.font = '400 12px monospace';
@@ -2474,7 +2524,9 @@ const App = (() => {
       </div>`;
     document.body.appendChild(modal);
 
+    const releaseFocus=UI.focusDialog(modal,'Movie ticket',()=>close());
     const close = () => {
+      releaseFocus();
       modal.classList.add('ticket-modal--out');
       setTimeout(() => modal.remove(), 200);
     };
@@ -2760,11 +2812,12 @@ const App = (() => {
       sugWrap.innerHTML = '';
     });
     sugWrap.querySelectorAll('.suggestion-wl-btn').forEach(btn => {
-      btn.addEventListener('click', e => {
+      btn.addEventListener('click', async e => {
         e.stopPropagation();
-        addToWatchlist(parseInt(btn.dataset.tmdbId));
-        btn.textContent = '✓';
         btn.disabled = true;
+        const added=await addToWatchlist(parseInt(btn.dataset.tmdbId));
+        btn.textContent = added ? '✓' : '+ Watchlist';
+        btn.disabled = added;
       });
     });
     sugWrap.querySelectorAll('.suggestion-item').forEach(item => {
@@ -3257,15 +3310,14 @@ const App = (() => {
         e.stopPropagation();
         btn.disabled = true;
         btn.textContent = 'Adding…';
-        await addToWatchlist(parseInt(btn.dataset.tmdbId));
-        btn.textContent = 'Added';
+        const added = await addToWatchlist(parseInt(btn.dataset.tmdbId));
+        btn.textContent = added ? 'Added' : '+ Watchlist';
+        btn.disabled = added;
       });
     });
   }
 
   // ---- Complete the Director: filmography lanes for favorite directors ----
-  const DIR_FILMO_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
-  const DIR_FILMO_CACHE_VER = 'v3'; // bump to invalidate old caches
   const DIR_FAV_RATING = 8;
 
   function findFavoriteDirectors(movies) {
@@ -3286,40 +3338,13 @@ const App = (() => {
   }
 
   async function getDirectorFilmography(name) {
-    const cacheKey = `dirFilmo_${DIR_FILMO_CACHE_VER}:${name}`;
     try {
-      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
-      if (cached && Date.now() - cached.t < DIR_FILMO_CACHE_TTL) return cached.data;
-    } catch (_) {}
-    try {
-      const persons = await TMDB.searchPerson(name);
-      const person = (persons || []).find(p => p.known_for_department === 'Directing') || (persons || [])[0];
-      if (!person) return null;
-      const credits = await TMDB.getPersonMovieCredits(person.id);
-      // Filter to director credits only, deduplicate by id, require ≥500 votes
-      // (shorts, behind-the-scenes, and featurettes rarely exceed this threshold)
-      const seen = new Set();
-      const directed = (credits.crew || [])
-        .filter(c => c.job === 'Director' && c.id && !seen.has(c.id) && seen.add(c.id))
-        .filter(c => (c.vote_count || 0) >= 500 && c.release_date && c.title);
-      const data = {
-        personId: person.id,
-        profileUrl: person.profile_path ? TMDB.profileUrl(person.profile_path) : '',
-        films: directed.map(f => ({
-          id: f.id,
-          title: f.title,
-          year: f.release_date ? f.release_date.slice(0, 4) : '',
-          poster: f.poster_path ? TMDB.posterUrl(f.poster_path, 'w154') : '',
-          voteCount: f.vote_count || 0,
-          voteAverage: f.vote_average || 0,
-          releaseDate: f.release_date || '',
-        })),
-      };
-      try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), data })); } catch (_) {}
-      return data;
+      const director = await Directors.knownByName(name);
+      if (!director) return null;
+      return {personId:director.id,profileUrl:director.profileUrl,
+        films:director.films.filter(f=>f.releaseDate && f.releaseDate <= new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10))};
     } catch (_) { return null; }
   }
-
   async function loadDirectorMarathons(allMovies) {
     const wrap = document.getElementById('director-marathons-wrap');
     if (!wrap) return;
@@ -3352,7 +3377,7 @@ const App = (() => {
       if (unwatched.length === 0) return null;
 
       const photoHtml = filmo.profileUrl
-        ? `<img src="${filmo.profileUrl}" alt="${UI.escapeHtml(fav.name)}" class="dm-photo">`
+        ? `<img src="${UI.imgSrc(filmo.profileUrl)}" alt="${UI.escapeHtml(fav.name)}" class="dm-photo">`
         : `<div class="dm-photo dm-photo-placeholder">${UI.escapeHtml(fav.name).split(' ').map(w => w[0]).join('').slice(0, 2)}</div>`;
 
       const filmsHtml = unwatched.map(f => {
@@ -3363,10 +3388,10 @@ const App = (() => {
         return `
         <div class="dm-film" data-tmdb-id="${f.id}">
           ${f.poster
-            ? `<img src="${f.poster}" class="dm-film-poster" alt="${UI.escapeHtml(f.title)}" loading="lazy">`
+            ? `<img src="${UI.imgSrc(f.poster)}" class="dm-film-poster" alt="${UI.escapeHtml(f.title)}" loading="lazy">`
             : `<div class="dm-film-poster dm-film-poster-empty"></div>`}
           <div class="dm-film-title">${UI.escapeHtml(f.title)}</div>
-          <div class="dm-film-year">${f.year || ''}</div>
+          <div class="dm-film-year">${UI.escapeHtml(f.year || '')}</div>
           ${btn}
         </div>`;
       }).join('');
@@ -3402,7 +3427,7 @@ const App = (() => {
           btn.disabled = true;
           btn.textContent = 'Adding…';
           try {
-            await addToWatchlist(id);
+            if (!await addToWatchlist(id)) throw new Error('Could not add movie');
             btn.textContent = '✓ Added';
             btn.classList.add('dm-add-btn--added');
             const card = btn.closest('.dm-film');
@@ -3674,10 +3699,11 @@ const App = (() => {
     });
 
     document.getElementById('movie-form').addEventListener('submit', saveMovie);
-    document.getElementById('form-watchlist-btn').addEventListener('click', () => {
+    document.getElementById('form-watchlist-btn').addEventListener('click', async () => {
       const tmdbId = parseInt(document.getElementById('form-tmdb-id').value);
       if (tmdbId) {
-        addToWatchlist(tmdbId);
+        if (!await addToWatchlist(tmdbId)) return;
+        if (currentView !== 'add') return;
         document.getElementById('movie-form').style.display = 'none';
         editingMovie = null;
         if (currentFilmography) {
@@ -3719,7 +3745,7 @@ const App = (() => {
     // Director/cast link: filter catalogue by person
     document.addEventListener('click', (e) => {
       const dirLink = e.target.closest('.director-link');
-      if (dirLink) { e.stopPropagation(); filterByPerson(dirLink.dataset.director); return; }
+      if (dirLink) { e.stopPropagation(); Directors.openByName(dirLink.dataset.director); return; }
       const castName = e.target.closest('.cast-name-link');
       if (castName) { e.stopPropagation(); filterByPerson(castName.dataset.personName); return; }
     });
@@ -4089,6 +4115,7 @@ const App = (() => {
       document.getElementById('sync-status').textContent = `${label}...`;
       try {
         await action();
+        syncRatingScaleUI();
         updateWatchlistBadge();
         if (currentView === 'stats') loadStats();
         updateSyncUI();
@@ -4119,7 +4146,7 @@ const App = (() => {
 
     document.getElementById('clear-all-data').addEventListener('click', async () => {
       if (confirm('Are you sure? This will permanently delete ALL your movies.')) {
-        await MovieDB.importData('[]');
+        await MovieDB.clearData();
         updateWatchlistBadge();
         UI.showToast('All data cleared.');
         loadStats();
@@ -4141,15 +4168,26 @@ const App = (() => {
     document.getElementById('import-data').addEventListener('click', () => {
       document.getElementById('import-file').click();
     });
+    document.getElementById('restore-recovery').addEventListener('click', async () => {
+      if (!confirm('Restore the collection saved before the last import or sync?')) return;
+      try {
+        const count = await MovieDB.restoreRecovery();
+        syncRatingScaleUI(); updateWatchlistBadge(); loadStats();
+        UI.showToast(`Recovered ${count} movies.`);
+      } catch (error) { UI.showToast(error.message); }
+    });
     document.getElementById('import-file').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
       try {
         const text = await file.text();
+        const backup = MovieDB.parseData(text);
+        if (!confirm(`Restore ${backup.movies.length} films? This replaces the current collection. A recovery copy will be saved.`)) { e.target.value = ''; return; }
         const count = await MovieDB.importData(text);
         updateWatchlistBadge();
         UI.showToast(`Imported ${count} movies!`);
-        if (currentView === 'catalogue') loadCatalogue();
+        syncRatingScaleUI();
+        if (currentView === 'stats') loadStats();
       } catch (err) {
         UI.showToast('Import failed: ' + err.message);
       }

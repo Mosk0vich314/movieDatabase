@@ -42,3 +42,4 @@ try:
     print("Deployment complete! Refresh your phone to see the update.")
 except Exception as e:
     print(f"Git push failed: {e}")
+    sys.exit(1)

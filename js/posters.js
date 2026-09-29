@@ -336,7 +336,7 @@ const Posters = (() => {
       const details = await TMDB.getMovieDetails(movie.tmdbId);
       if (details.backdrop_path) {
         movie.backdrop = TMDB.posterUrl(details.backdrop_path, 'w1280');
-        if (typeof MovieDB !== 'undefined' && movie.id) MovieDB.updateMovie(movie);
+        if (typeof MovieDB !== 'undefined' && movie.id) await MovieDB.updateMovie(movie, {metadataOnly:true});
       }
     } catch (_) { /* the poster will do */ }
   }
@@ -376,13 +376,17 @@ const Posters = (() => {
         </div>
       </div>`;
     document.body.appendChild(deck);
+    const releaseFocus = typeof UI !== 'undefined' ? UI.focusDialog(deck,labelText) : () => {};
 
     const items = [];
     const onClosed = [];
     let current = 0;
     let closed = false;
     const close = () => {
+      if (closed) return;
       closed = true;
+      releaseFocus();
+      document.removeEventListener('keydown', onEsc);
       items.forEach(it => URL.revokeObjectURL(it.url));
       onClosed.forEach(fn => fn());
       deck.classList.add('poster-deck--out');
@@ -390,9 +394,8 @@ const Posters = (() => {
     };
     deck.querySelector('.pd-close').addEventListener('click', close);
     deck.querySelector('.pd-backdrop').addEventListener('click', close);
-    document.addEventListener('keydown', function onEsc(e) {
-      if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
-    });
+    function onEsc(e) { if (e.key === 'Escape') close(); }
+    document.addEventListener('keydown', onEsc);
 
     const stage = deck.querySelector('.pd-stage');
 
@@ -427,11 +430,16 @@ const Posters = (() => {
       // a film title, which arrives from TMDB or an imported backup.
       show(shareTitle, tall) {
         deck.classList.remove('poster-deck--asking');
-        const slide = (it) =>
-          `<div class="pd-slide${tall ? ' pd-slide--tall' : ''}"><img src="${it.url}" alt="${it.alt}"></div>`;
-        stage.innerHTML = items.length > 1
-          ? `<div class="pd-track">${items.map(slide).join('')}</div>`
-          : slide(items[0]);
+        const trackNode = document.createElement('div');
+        trackNode.className = items.length > 1 ? 'pd-track' : '';
+        for (const it of items) {
+          const node = document.createElement('div');
+          node.className = `pd-slide${tall ? ' pd-slide--tall' : ''}`;
+          const img = document.createElement('img');
+          img.src = it.url; img.alt = it.alt;
+          node.appendChild(img); trackNode.appendChild(node);
+        }
+        stage.replaceChildren(trackNode);
 
         const dots = deck.querySelector('.pd-dots');
         const track = stage.querySelector('.pd-track');

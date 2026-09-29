@@ -19,8 +19,7 @@ const CloudSync = (() => {
     const token = getToken();
     if (!token) throw new Error('No GitHub token configured');
 
-    const movies = await MovieDB.getAllMovies();
-    const content = JSON.stringify(movies, null, 2);
+    const content = await MovieDB.exportData();
     const gistId = getGistId();
 
     if (gistId) {
@@ -57,39 +56,21 @@ const CloudSync = (() => {
     const file = data.files[FILENAME];
     if (!file) throw new Error('No movie data found in gist');
 
-    const remoteMovies = JSON.parse(file.content);
-    const localMovies = await MovieDB.getAllMovies();
-
-    // Merge by tmdbId: union of both, newest dateAdded wins on conflict
-    const localMap = new Map();
-    localMovies.forEach(m => { if (m.tmdbId) localMap.set(String(m.tmdbId), m); });
-
-    const merged = [];
-    const seen = new Set();
-
-    remoteMovies.forEach(rm => {
-      const key = String(rm.tmdbId);
-      seen.add(key);
-      const lm = localMap.get(key);
-      if (lm) {
-        const ld = new Date(lm.dateAdded || 0).getTime();
-        const rd = new Date(rm.dateAdded || 0).getTime();
-        merged.push(rd >= ld ? rm : lm);
-      } else {
-        merged.push(rm);
-      }
-    });
-
-    localMovies.forEach(lm => {
-      if (lm.tmdbId && !seen.has(String(lm.tmdbId))) merged.push(lm);
-    });
-
-    const count = await MovieDB.importData(JSON.stringify(merged));
+    let content = file.content;
+    if (file.truncated) {
+      const raw = new URL(file.raw_url);
+      if (raw.protocol !== 'https:' || raw.hostname !== 'gist.githubusercontent.com') throw new Error('Invalid cloud backup URL');
+      const response = await fetch(raw.href);
+      if (!response.ok) throw new Error(`Cloud download failed: ${response.status}`);
+      content = await response.text();
+    }
+    const count = await MovieDB.mergeData(content);
     localStorage.setItem(KEY_LAST, new Date().toISOString());
     return count;
   }
 
   async function sync() {
+    if (!getGistId()) { await push(); return; }
     await pull();
     await push();
   }

@@ -1,9 +1,15 @@
 const Stats = (() => {
   const MILESTONE_VALUES = [10, 25, 50, 100, 250, 500, 1000];
 
+  function dayKey(value) {
+    const d = new Date(value);
+    if (!Number.isFinite(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
 
   function computeDecadePassport(movies) {
-    const dec = {};
+    const dec = Object.create(null);
     movies.forEach(m => {
       const yr = parseInt(m.year);
       if (!isNaN(yr)) { const d = Math.floor(yr / 10) * 10; dec[d] = (dec[d] || 0) + 1; }
@@ -21,17 +27,17 @@ const Stats = (() => {
     const weekStartMs = now.getTime() - (dow === 0 ? 6 : dow - 1) * 86400000;
     const weekStart = new Date(weekStartMs);
     weekStart.setHours(0, 0, 0, 0);
-    const weekStartStr = weekStart.toISOString().substring(0, 10);
+    const weekStartStr = dayKey(weekStart);
 
-    const addedThisWeek = movies.filter(m => m.dateAdded && m.dateAdded >= weekStartStr).length;
-    const highRatedThisWeek = movies.filter(m => m.dateAdded && m.dateAdded >= weekStartStr && m.rating >= 8).length;
+    const addedThisWeek = movies.filter(m => m.dateAdded && dayKey(m.dateAdded) >= weekStartStr).length;
+    const highRatedThisWeek = movies.filter(m => m.dateAdded && dayKey(m.dateAdded) >= weekStartStr && m.rating >= 8).length;
 
-    const decCounts = {};
+    const decCounts = Object.create(null);
     movies.forEach(m => {
       const yr = parseInt(m.year);
       if (!isNaN(yr)) { const d = Math.floor(yr / 10) * 10; decCounts[d] = (decCounts[d] || 0) + 1; }
     });
-    const genreCounts = {};
+    const genreCounts = Object.create(null);
     movies.forEach(m => (m.genres || []).forEach(g => { genreCounts[g] = (genreCounts[g] || 0) + 1; }));
     const rareGenres = Object.entries(genreCounts).sort((a, b) => a[1] - b[1]).map(([g]) => g);
 
@@ -50,7 +56,7 @@ const Stats = (() => {
     const decadePool = [1920, 1930, 1940, 1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020];
     const targetDecade = decadePool[weekNum % decadePool.length];
     const thisWeekDecade = movies.filter(m =>
-      m.dateAdded && m.dateAdded >= weekStartStr &&
+      m.dateAdded && dayKey(m.dateAdded) >= weekStartStr &&
       !isNaN(parseInt(m.year)) && Math.floor(parseInt(m.year) / 10) * 10 === targetDecade
     ).length;
     challenges.push({
@@ -65,7 +71,7 @@ const Stats = (() => {
     if (genrePool.length > 0) {
       const targetGenre = genrePool[weekNum % genrePool.length];
       const thisWeekGenre = movies.filter(m =>
-        m.dateAdded && m.dateAdded >= weekStartStr && (m.genres || []).includes(targetGenre)
+        m.dateAdded && dayKey(m.dateAdded) >= weekStartStr && (m.genres || []).includes(targetGenre)
       ).length;
       challenges.push({
         id: 'genre', icon: '🎭',
@@ -99,7 +105,7 @@ const Stats = (() => {
 
     // Weight genre by both frequency AND how highly you rate it, so a genre you love
     // bubbles above one you merely watch a lot.
-    const genreData = {};
+    const genreData = Object.create(null);
     movies.forEach(m => {
       (m.genres || []).forEach(g => {
         if (!genreData[g]) genreData[g] = { count: 0, ratingSum: 0 };
@@ -111,12 +117,13 @@ const Stats = (() => {
       .map(([g, d]) => ({ g, score: (d.ratingSum / d.count) * Math.log2(d.count + 1) }))
       .sort((a, b) => b.score - a.score);
     const topGenre = genreScored[0]?.g || null;
-    const genreWord = topGenre ? (genreAbbrev[topGenre] || topGenre) : 'Cinema';
+    const genreWord = topGenre ? (Object.hasOwn(genreAbbrev,topGenre) ? genreAbbrev[topGenre] : topGenre) : 'Cinema';
 
-    const directorCounts = {};
+    const directorCounts = Object.create(null);
     movies.forEach(m => (m.directors || []).forEach(d => { directorCounts[d] = (directorCounts[d] || 0) + 1; }));
     const ratio = Object.keys(directorCounts).length / movies.length;
-    const avgRating = movies.reduce((s, m) => s + (m.rating || 0), 0) / movies.length;
+    const rated = movies.filter(m=>m.rating>0);
+    const avgRating = rated.length ? rated.reduce((s,m)=>s+m.rating,0)/rated.length : 0;
 
     // Two axes: director diversity (loyal vs. wide-ranging) and rating generosity
     // (selective/tough critic vs. enthusiastic). Combined into 6 descriptors.
@@ -134,7 +141,7 @@ const Stats = (() => {
 
   function computeStreak(movies) {
     const dates = new Set();
-    movies.forEach(m => { if (m.dateAdded) dates.add(m.dateAdded.substring(0, 10)); });
+    movies.forEach(m => { if (m.dateAdded && dayKey(m.dateAdded)) dates.add(dayKey(m.dateAdded)); });
     if (!dates.size) return { current: 0, longest: 0 };
 
     const sorted = Array.from(dates).sort();
@@ -145,15 +152,16 @@ const Stats = (() => {
       else cur = 1;
     }
 
-    const today = new Date().toISOString().substring(0, 10);
-    const yesterday = new Date(Date.now() - 86400000).toISOString().substring(0, 10);
+    const today = dayKey(new Date());
+    const previousDay = new Date(); previousDay.setDate(previousDay.getDate()-1);
+    const yesterday = dayKey(previousDay);
     let current = 0;
     if (dates.has(today) || dates.has(yesterday)) {
       current = 1;
-      const d = new Date(dates.has(today) ? today : yesterday);
+      const d = new Date((dates.has(today) ? today : yesterday) + 'T12:00:00');
       while (true) {
         d.setDate(d.getDate() - 1);
-        if (dates.has(d.toISOString().substring(0, 10))) current++;
+        if (dates.has(dayKey(d))) current++;
         else break;
       }
     }
@@ -188,19 +196,19 @@ const Stats = (() => {
     const msSinceMonday = (dow === 0 ? 6 : dow - 1) * 86400000;
     const weekStart = new Date(now.getTime() - msSinceMonday);
     weekStart.setHours(0, 0, 0, 0);
-    const weekStartStr = weekStart.toISOString().substring(0, 10);
+    const weekStartStr = dayKey(weekStart);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthStartStr = monthStart.toISOString().substring(0, 10);
+    const monthStartStr = dayKey(monthStart);
 
-    const thisWeek  = movies.filter(m => m.dateAdded && m.dateAdded >= weekStartStr);
-    const thisMonth = movies.filter(m => m.dateAdded && m.dateAdded >= monthStartStr);
+    const thisWeek  = movies.filter(m => m.dateAdded && dayKey(m.dateAdded) >= weekStartStr);
+    const thisMonth = movies.filter(m => m.dateAdded && dayKey(m.dateAdded) >= monthStartStr);
 
     const monthRated = thisMonth.filter(m => m.rating > 0);
     const avgMonth = monthRated.length
       ? (monthRated.reduce((s, m) => s + m.rating, 0) / monthRated.length).toFixed(1)
       : null;
 
-    const genreCounts = {};
+    const genreCounts = Object.create(null);
     thisMonth.forEach(m => (m.genres || []).forEach(g => { genreCounts[g] = (genreCounts[g] || 0) + 1; }));
     const topGenre = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 
@@ -208,7 +216,7 @@ const Stats = (() => {
   }
 
   function computeBlindSpotGenreIds(movies, genreList) {
-    const genreCounts = {};
+    const genreCounts = Object.create(null);
     movies.forEach(m => (m.genres || []).forEach(g => { genreCounts[g] = (genreCounts[g] || 0) + 1; }));
     const top2Names = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([g]) => g);
     return top2Names.map(name => {
@@ -219,17 +227,18 @@ const Stats = (() => {
 
   function compute(movies) {
     const total = movies.length;
-    const avgRating = total > 0
-      ? (movies.reduce((sum, m) => sum + (m.rating || 0), 0) / total).toFixed(1)
+    const rated = movies.filter(m => m.rating > 0);
+    const avgRating = rated.length > 0
+      ? (rated.reduce((sum, m) => sum + m.rating, 0) / rated.length).toFixed(1)
       : 0;
 
-    const genreCounts = {};
+    const genreCounts = Object.create(null);
     movies.forEach(m => {
       (m.genres || []).forEach(g => { genreCounts[g] = (genreCounts[g] || 0) + 1; });
     });
     const genresSorted = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]);
 
-    const directorCounts = {};
+    const directorCounts = Object.create(null);
     movies.forEach(m => {
       (m.directors || []).forEach(d => { directorCounts[d] = (directorCounts[d] || 0) + 1; });
     });
@@ -238,7 +247,7 @@ const Stats = (() => {
 
     const ratingDist = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     movies.forEach(m => {
-      if (m.rating >= 1 && m.rating <= 10) ratingDist[Math.min(Math.floor(m.rating), 10) - 1]++;
+      if (m.rating >= 1 && m.rating <= 10) ratingDist[Math.min(Math.round(m.rating), 10) - 1]++;
     });
 
     const topRated = [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 30);
@@ -278,7 +287,7 @@ const Stats = (() => {
             <div class="challenge-card${c.done ? ' challenge-done' : ''}">
               <div class="challenge-icon">${c.icon}</div>
               <div class="challenge-body">
-                <div class="challenge-title">${c.title}</div>
+              <div class="challenge-title">${UI.escapeHtml(c.title)}</div>
                 <div class="challenge-bar-wrap">
                   <div class="challenge-bar" style="width:${c.goal > 0 ? Math.round((c.progress / c.goal) * 100) : 0}%"></div>
                 </div>
@@ -451,7 +460,7 @@ const Stats = (() => {
             <div class="achievement-badges">
               ${stats.genreBadges.map(b => `
                 <div class="achievement-badge">
-                  <span class="ab-name">${b.name}</span>
+                  <span class="ab-name">${UI.escapeHtml(b.name)}</span>
                   <span class="ab-count">&times;${b.count}</span>
                 </div>
               `).join('')}
@@ -464,7 +473,7 @@ const Stats = (() => {
             <div class="achievement-badges">
               ${stats.auteurBadges.map(b => `
                 <div class="achievement-badge achievement-badge--director">
-                  <span class="ab-name">${b.name}</span>
+                  <span class="ab-name">${UI.escapeHtml(b.name)}</span>
                   <span class="ab-count">&times;${b.count}</span>
                 </div>
               `).join('')}
@@ -479,7 +488,7 @@ const Stats = (() => {
             <div class="bar-chart">
               ${stats.directorsSorted.slice(0, 10).map(([director, count]) => `
                 <div class="bar-row">
-                  <span class="bar-label">${director}</span>
+                  <span class="bar-label">${UI.escapeHtml(director)}</span>
                   <div class="bar-track">
                     <div class="bar-fill" style="width: ${(count / maxDirector) * 100}%"></div>
                   </div>
@@ -495,7 +504,7 @@ const Stats = (() => {
           <div class="bar-chart">
             ${stats.genresSorted.slice(0, 10).map(([genre, count]) => `
               <div class="bar-row">
-                <span class="bar-label">${genre}</span>
+                <span class="bar-label">${UI.escapeHtml(genre)}</span>
                 <div class="bar-track">
                   <div class="bar-fill" style="width: ${(count / maxGenre) * 100}%"></div>
                 </div>

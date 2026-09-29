@@ -15,6 +15,25 @@ const UI = (() => {
     setTimeout(() => toast.classList.remove('show'), duration);
   }
 
+  function focusDialog(node, label, onEscape) {
+    const previous = document.activeElement;
+    node.setAttribute('role','dialog');node.setAttribute('aria-modal','true');node.setAttribute('aria-label',label);
+    node.tabIndex=-1;
+    const focusable=()=>[...node.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),iframe,[tabindex="0"]')].filter(el=>el.getClientRects().length);
+    const onKey=e=>{
+      if(e.key==='Escape' && onEscape){e.preventDefault();onEscape();return;}
+      if(e.key!=='Tab')return;
+      const items=focusable(),first=items[0] || node,last=items.at(-1) || node;
+      if(!node.contains(document.activeElement) || (e.shiftKey && document.activeElement===first) || (!e.shiftKey && document.activeElement===last)) {
+        e.preventDefault();(e.shiftKey?last:first).focus();
+      }
+    };
+    document.addEventListener('keydown',onKey);
+    (focusable()[0] || node).focus();
+    let released=false;
+    return ()=>{if(released)return;released=true;document.removeEventListener('keydown',onKey);if(previous?.isConnected)previous.focus();};
+  }
+
   // ---- URL sanitising ----
   // Movie records can arrive from an imported backup or a pulled gist, i.e. from
   // outside this app. Anything interpolated into a src="" or a CSS url() has to
@@ -72,9 +91,10 @@ const UI = (() => {
   function getRatingScale() { return ratingScale; }
   function isFiveStar() { return ratingScale === 'five'; }
 
-  function setRatingScale(scale) {
+  function setRatingScale(scale, rememberChange = true) {
     ratingScale = scale === 'five' ? 'five' : 'ten';
     try { localStorage.setItem('ratingScale', ratingScale); } catch (e) { /* private mode */ }
+    if (rememberChange && typeof MovieDB !== 'undefined') MovieDB.preferenceChanged('ratingScale');
     applyRatingScaleClass();
     return ratingScale;
   }
@@ -122,7 +142,7 @@ const UI = (() => {
   function renderDirectorBadge(directors) {
     if (!directors || directors.length === 0) return '';
     const names = directors.map(d =>
-      `<span class="director-link" data-director="${escapeHtml(d)}">${escapeHtml(d)}</span>`
+      `<button type="button" class="director-link" data-director="${escapeHtml(d)}">${escapeHtml(d)}</button>`
     ).join(', ');
     return `<div class="director-badge"><span class="director-badge-icon">&#127916;</span> ${names}</div>`;
   }
@@ -220,7 +240,7 @@ const UI = (() => {
     }
     if (movie.imdbId) {
       const sc = movie.imdbRating ? `<span class="ext-badge-score">${movie.imdbRating.toFixed(1)}</span>` : '';
-      const vt = movie.imdbVotes ? `<span class="ext-badge-votes">${movie.imdbVotes}</span>` : '';
+      const vt = movie.imdbVotes ? `<span class="ext-badge-votes">${escapeHtml(movie.imdbVotes)}</span>` : '';
       badges.push(`<a href="https://www.imdb.com/title/${movie.imdbId}/" target="_blank" rel="noopener" class="ext-badge ext-badge--imdb" title="IMDb">
         <span class="ext-badge-logo">IMDb</span>${sc}${vt}
         ${!movie.imdbRating ? `<span class="ext-badge-arrow">&#8599;</span>` : ''}
@@ -230,7 +250,7 @@ const UI = (() => {
       const rv = parseInt(movie.rtScore);
       badges.push(`<a href="https://www.rottentomatoes.com/search?search=${encodeURIComponent(movie.title)}" target="_blank" rel="noopener" class="ext-badge ${rv >= 60 ? 'ext-badge--rt-fresh' : 'ext-badge--rt-rotten'}" title="Rotten Tomatoes">
         <span class="ext-badge-logo">${rv >= 60 ? '&#127813;' : '&#128169;'} RT</span>
-        <span class="ext-badge-score">${movie.rtScore}</span>
+        <span class="ext-badge-score">${escapeHtml(movie.rtScore)}</span>
       </a>`);
     }
     if (movie.tmdbId) {
@@ -470,7 +490,7 @@ const UI = (() => {
     }
 
     const contextHtml = chips.length
-      ? `<div class="detail-context">${chips.map(c => `<span class="detail-chip">${c}</span>`).join('')}</div>`
+      ? `<div class="detail-context">${chips.map(c => `<span class="detail-chip">${escapeHtml(c)}</span>`).join('')}</div>`
       : '';
 
     const actionsHtml = preview
@@ -1214,9 +1234,8 @@ const UI = (() => {
   }
 
   function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text || '';
-    return div.innerHTML;
+    const entities = {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'};
+    return String(text ?? '').replace(/[&<>"']/g, ch => entities[ch]);
   }
 
   // --- Custom Dropdown ---
@@ -1504,5 +1523,5 @@ const UI = (() => {
       </div>`;
   }
 
-  return { showToast, ratingColor, ratingColorRGB, ratingInk, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderCreditsSheet, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderFiveStarClub, renderTop10Builder, renderDuelIntro, renderDuelMatch, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, safeUrl, imgSrc, cssUrl, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
+  return { showToast, focusDialog, ratingColor, ratingColorRGB, ratingInk, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderCreditsSheet, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderFiveStarClub, renderTop10Builder, renderDuelIntro, renderDuelMatch, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, safeUrl, imgSrc, cssUrl, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
 })();

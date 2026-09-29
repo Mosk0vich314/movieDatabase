@@ -1,6 +1,9 @@
 const TMDB = (() => {
   const BASE_URL = 'https://api.themoviedb.org/3';
   const IMG_BASE = 'https://image.tmdb.org/t/p';
+  function request(url, options = {}) {
+    return fetch(url, {signal:AbortSignal.timeout(15000), ...options});
+  }
 
   const API_KEY = '3dadc2d1f1bf4bd38ef92969098e3051';
 
@@ -16,7 +19,7 @@ const TMDB = (() => {
     const key = getApiKey();
     if (!key) throw new Error('No TMDB API key set. Go to Settings to add one.');
     const url = `${BASE_URL}/search/movie?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(query)}&include_adult=false`;
-    const res = await fetch(url);
+    const res = await request(url);
     if (!res.ok) throw new Error(`TMDB search failed: ${res.status}`);
     const data = await res.json();
     const tmdbResults = data.results || [];
@@ -64,7 +67,7 @@ const TMDB = (() => {
   async function _wikiSearchMovies(query, apiKey) {
     const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search` +
       `&srsearch=${encodeURIComponent(query + ' film')}&srlimit=5&format=json&origin=*`;
-    const wikiRes = await fetch(wikiUrl);
+    const wikiRes = await request(wikiUrl);
     if (!wikiRes.ok) return [];
     const wikiData = await wikiRes.json();
     const pages = (wikiData.query?.search || [])
@@ -75,7 +78,7 @@ const TMDB = (() => {
     const titles = pages.map(p => p.title).join('|');
     const propsUrl = `https://en.wikipedia.org/w/api.php?action=query` +
       `&titles=${encodeURIComponent(titles)}&prop=pageprops&ppprop=wikibase_item&format=json&origin=*`;
-    const propsRes = await fetch(propsUrl);
+    const propsRes = await request(propsUrl);
     if (!propsRes.ok) return [];
     const propsData = await propsRes.json();
     const wikidataIds = Object.values(propsData.query?.pages || {})
@@ -86,7 +89,7 @@ const TMDB = (() => {
     // Fetch TMDB IDs from Wikidata
     const wdUrl = `https://www.wikidata.org/w/api.php?action=wbgetentities` +
       `&ids=${wikidataIds.join('|')}&props=claims&format=json&origin=*`;
-    const wdRes = await fetch(wdUrl);
+    const wdRes = await request(wdUrl);
     if (!wdRes.ok) return [];
     const wdData = await wdRes.json();
 
@@ -102,7 +105,7 @@ const TMDB = (() => {
     for (const tmdbId of tmdbIds.filter(Boolean)) {
       try {
         const url = `${BASE_URL}/movie/${tmdbId}?api_key=${encodeURIComponent(apiKey)}`;
-        const r = await fetch(url);
+        const r = await request(url);
         if (r.ok) {
           const movie = await r.json();
           // Shape it like a search result
@@ -129,26 +132,38 @@ const TMDB = (() => {
     const key = getApiKey();
     if (!key) throw new Error('No TMDB API key set.');
     const url = `${BASE_URL}/movie/${tmdbId}?api_key=${encodeURIComponent(key)}&append_to_response=credits`;
-    const res = await fetch(url);
+    const res = await request(url);
     if (!res.ok) throw new Error(`TMDB detail failed: ${res.status}`);
     return res.json();
   }
 
-  async function searchPerson(query) {
+  async function searchPerson(query, includeOthers = false) {
     const key = getApiKey();
     if (!key) throw new Error('No TMDB API key set.');
     const url = `${BASE_URL}/search/person?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(query)}&include_adult=false`;
-    const res = await fetch(url);
+    const res = await request(url);
     if (!res.ok) throw new Error(`TMDB person search failed: ${res.status}`);
     const data = await res.json();
-    return (data.results || []).filter(r => r.known_for_department === 'Directing');
+    return (data.results || []).filter(r => includeOthers || r.known_for_department === 'Directing');
+  }
+
+  async function getPersonDetails(personId) {
+    const res = await request(`${BASE_URL}/person/${Number(personId)}?api_key=${encodeURIComponent(getApiKey())}&append_to_response=movie_credits`, {signal:AbortSignal.timeout(15000)});
+    if (!res.ok) throw new Error(`Director profile failed: ${res.status}`);
+    return res.json();
+  }
+
+  function extractDirectors(credits) {
+    return (credits?.crew || []).filter(c => c.job === 'Director').map(c => ({
+      personId:c.id, name:c.name, profileUrl:c.profile_path ? profileUrl(c.profile_path) : '',
+    }));
   }
 
   async function fetchOmdbData(imdbId) {
     if (!imdbId) return null;
     try {
       const url = `https://www.omdbapi.com/?apikey=trilogy&i=${encodeURIComponent(imdbId)}`;
-      const res = await fetch(url);
+      const res = await request(url);
       if (!res.ok) return null;
       const data = await res.json();
       if (data.Response === 'False') return null;
@@ -165,7 +180,7 @@ const TMDB = (() => {
     const key = getApiKey();
     if (!key) throw new Error('No TMDB API key set.');
     const url = `${BASE_URL}/search/person?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(query)}&include_adult=false`;
-    const res = await fetch(url);
+    const res = await request(url);
     if (!res.ok) throw new Error(`TMDB person search failed: ${res.status}`);
     const data = await res.json();
     return (data.results || []).filter(r => r.known_for_department === 'Acting');
@@ -175,7 +190,7 @@ const TMDB = (() => {
     const key = getApiKey();
     if (!key) throw new Error('No TMDB API key set.');
     const url = `${BASE_URL}/person/${personId}/movie_credits?api_key=${encodeURIComponent(key)}`;
-    const res = await fetch(url);
+    const res = await request(url);
     if (!res.ok) throw new Error(`TMDB credits fetch failed: ${res.status}`);
     return res.json();
   }
@@ -185,7 +200,7 @@ const TMDB = (() => {
     if (!key) return [];
     try {
       const url = `${BASE_URL}/movie/${tmdbId}/videos?api_key=${encodeURIComponent(key)}`;
-      const res = await fetch(url);
+      const res = await request(url);
       if (!res.ok) return [];
       const data = await res.json();
       return data.results || [];
@@ -213,7 +228,7 @@ const TMDB = (() => {
     if (!key) return [];
     try {
       const url = `${BASE_URL}/movie/${tmdbId}/recommendations?api_key=${encodeURIComponent(key)}&page=1`;
-      const res = await fetch(url);
+      const res = await request(url);
       if (!res.ok) return [];
       const data = await res.json();
       return data.results || [];
@@ -229,7 +244,7 @@ const TMDB = (() => {
       if (cached && Date.now() - cached.t < 7 * 24 * 3600000) return cached.data;
     } catch (_) {}
     try {
-      const res = await fetch(`${BASE_URL}/genre/movie/list?api_key=${encodeURIComponent(key)}`);
+      const res = await request(`${BASE_URL}/genre/movie/list?api_key=${encodeURIComponent(key)}`);
       if (!res.ok) return [];
       const data = await res.json();
       const genres = data.genres || [];
@@ -245,7 +260,7 @@ const TMDB = (() => {
       `&with_genres=${genreIds.join(',')}&vote_average.gte=7.5&vote_count.gte=50000` +
       `&sort_by=vote_count.desc&page=${page}&include_adult=false`;
     try {
-      const res = await fetch(url);
+      const res = await request(url);
       if (!res.ok) return [];
       const data = await res.json();
       return data.results || [];
@@ -263,7 +278,7 @@ const TMDB = (() => {
     const url = `${BASE_URL}/movie/${tmdbId}/images?api_key=${encodeURIComponent(key)}` +
       `&include_image_language=null,en`;
     try {
-      const res = await fetch(url);
+      const res = await request(url);
       if (!res.ok) return [];
       const data = await res.json();
       return (data.backdrops || [])
@@ -289,6 +304,7 @@ const TMDB = (() => {
 
   function extractCast(credits, limit = 14) {
     return (credits?.cast || []).slice(0, limit).map(c => ({
+      personId: c.id,
       name: c.name,
       character: c.character || '',
       profileUrl: c.profile_path ? posterUrl(c.profile_path, 'w185') : '',
@@ -303,11 +319,13 @@ const TMDB = (() => {
     for (const { role, jobs } of CREW_ROLES) {
       for (const c of crew) {
         if (!jobs.includes(c.job)) continue;
-        const existing = byName.get(c.name);
+        const personKey = c.id || c.name;
+        const existing = byName.get(personKey);
         if (existing) {
           if (!existing.roles.includes(role)) existing.roles.push(role);
         } else {
-          byName.set(c.name, {
+          byName.set(personKey, {
+            personId: c.id,
             name: c.name,
             roles: [role],
             profileUrl: c.profile_path ? posterUrl(c.profile_path, 'w185') : '',
@@ -332,5 +350,5 @@ const TMDB = (() => {
     return `${IMG_BASE}/${size}${path}`;
   }
 
-  return { getApiKey, setApiKey, extractCast, extractCrew, searchMovies, getMovieDetails, searchPerson, searchActor, getPersonMovieCredits, getMovieRecommendations, getMovieVideos, pickBestTrailer, fetchOmdbData, getGenreList, discoverByGenres, getMovieBackdrops, posterUrl, profileUrl };
+  return { getApiKey, setApiKey, extractCast, extractCrew, extractDirectors, getPersonDetails, searchMovies, getMovieDetails, searchPerson, searchActor, getPersonMovieCredits, getMovieRecommendations, getMovieVideos, pickBestTrailer, fetchOmdbData, getGenreList, discoverByGenres, getMovieBackdrops, posterUrl, profileUrl };
 })();

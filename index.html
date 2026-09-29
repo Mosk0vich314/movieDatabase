@@ -11,19 +11,20 @@
   <link rel="apple-touch-icon" href="icons/logo.jpg">
   <link rel="preload" href="fonts/Staatliches.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/Montserrat.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/styles.css?v=2026.09.29.2006">
+  <link rel="stylesheet" href="css/styles.css?v=2026.09.30.0007">
 </head>
 <body>
   <header class="app-header">
     <h1 class="app-title">Movie Catalogue</h1>
+    <a href="#add" class="btn btn-primary header-add" aria-label="Add a film">+ Add</a>
   </header>
 
   <nav class="app-nav">
     <a href="#catalogue" class="nav-link active" data-view="catalogue">
       <span class="nav-icon">&#9634;</span> Catalogue
     </a>
-    <a href="#add" class="nav-link" data-view="add">
-      <span class="nav-icon">+</span> Add
+    <a href="#directors" class="nav-link" data-view="directors">
+      <span class="nav-icon">&#127916;</span> Directors
     </a>
     <a href="#watchlist" class="nav-link" data-view="watchlist">
       <span class="nav-icon">&#9734;</span> Watchlist<span id="watchlist-nav-badge" class="nav-badge" style="display:none;"></span>
@@ -190,6 +191,10 @@
       </form>
     </section>
 
+    <section id="view-directors" class="view" style="display:none;">
+      <div id="directors-content"></div>
+    </section>
+
     <!-- Movie Detail View -->
     <section id="view-detail" class="view" style="display:none;">
       <div id="movie-detail" class="movie-detail"></div>
@@ -242,10 +247,11 @@
         <hr>
         <div class="stats-manage-section">
           <h3 class="stats-section-title">Backup & Restore</h3>
-          <p class="form-hint">Export your movie collection as a JSON file, or import a previously exported backup.</p>
+          <p class="form-hint">Back up your films, rankings, rating scale and favourite directors. Restores and cloud pulls keep a recovery copy of your previous collection.</p>
           <div class="settings-actions">
             <button id="export-data" class="btn btn-secondary">Export Backup</button>
             <button id="import-data" class="btn btn-secondary">Import Backup</button>
+            <button id="restore-recovery" class="btn btn-secondary">Recover previous collection</button>
             <input type="file" id="import-file" accept=".json" style="display:none;">
           </div>
         </div>
@@ -294,12 +300,13 @@
   <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <script src="js/db.js?v=2026.09.29.2006"></script>
-  <script src="js/api.js?v=2026.09.29.2006"></script>
-  <script src="js/ui.js?v=2026.09.29.2006"></script>
-  <script src="js/stats.js?v=2026.09.29.2006"></script>
-  <script src="js/sync.js?v=2026.09.29.2006"></script>
-  <script src="js/posters.js?v=2026.09.29.2006"></script>
-  <script src="js/app.js?v=2026.09.29.2006"></script>
+  <script src="js/db.js?v=2026.09.30.0007"></script>
+  <script src="js/api.js?v=2026.09.30.0007"></script>
+  <script src="js/ui.js?v=2026.09.30.0007"></script>
+  <script src="js/stats.js?v=2026.09.30.0007"></script>
+  <script src="js/sync.js?v=2026.09.30.0007"></script>
+  <script src="js/posters.js?v=2026.09.30.0007"></script>
+  <script src="js/directors.js?v=2026.09.30.0007"></script>
+  <script src="js/app.js?v=2026.09.30.0007"></script>
 </body>
 </html>
