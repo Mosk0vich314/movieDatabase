@@ -323,6 +323,7 @@ const Posters = (() => {
       await Promise.all([
         document.fonts.load(`800 300px Montserrat`),
         document.fonts.load(`600 26px Montserrat`),
+        document.fonts.load(`400 120px Staatliches`),
       ]);
       await document.fonts.ready;
     } catch (_) { /* system fallback is fine */ }
@@ -573,8 +574,106 @@ const Posters = (() => {
     return cut + '…';
   }
 
+  // One photographic print for a short ranking: the winner leads, then each
+  // remaining film has its own frame. Incomplete lists fill the same sheet.
+  async function generateMosaic(list) {
+    const arts = await Promise.all(list.map(async m =>
+      await tryImage(m.backdrop || '') || await tryImage(chipSrc(m.poster || ''))));
+    const pal = arts[0] ? samplePalette(arts[0]) : fallbackPalette();
+    const canvas = document.createElement('canvas');
+    canvas.width = BW; canvas.height = BH;
+    const ctx = canvas.getContext('2d');
+    const display = 'Staatliches, Impact, sans-serif';
+    const paper = '#eff2fb';
+    const margin = 36, gap = 12, width = BW - margin * 2;
+    ctx.fillStyle = css(pal.ground);
+    ctx.fillRect(0, 0, BW, BH);
+
+    ctx.fillStyle = paper;
+    ctx.font = `400 112px ${display}`;
+    ctx.fillText(`MY TOP ${list.length}`, margin, 132);
+    ctx.fillStyle = css(pal.accent);
+    ctx.fillRect(margin, 158, width, 5);
+
+    const frame = (index, x, y, w, h) => {
+      const m = list[index];
+      const hero = index === 0;
+      const pad = hero ? 32 : 20;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x, y, w, h);
+      ctx.clip();
+      ctx.fillStyle = css(pal.groundHi);
+      ctx.fillRect(x, y, w, h);
+      if (arts[index]) drawCover(ctx, arts[index], x, y, w, h, 0.42);
+      const shade = ctx.createLinearGradient(0, y, 0, y + h);
+      shade.addColorStop(0, 'rgba(0,0,0,0.48)');
+      shade.addColorStop(0.32, 'rgba(0,0,0,0.02)');
+      shade.addColorStop(0.6, 'rgba(0,0,0,0.18)');
+      shade.addColorStop(1, 'rgba(0,0,0,0.92)');
+      ctx.fillStyle = shade;
+      ctx.fillRect(x, y, w, h);
+
+      ctx.fillStyle = paper;
+      const rankSize = hero ? 180 : 88;
+      ctx.font = `400 ${rankSize}px ${display}`;
+      ctx.fillText(String(index + 1).padStart(2, '0'), x + pad, y + pad + rankSize * 0.76);
+
+      const title = (m.title || 'Untitled').toUpperCase();
+      const maxW = w - pad * 2;
+      const maxSize = hero ? 72 : 38;
+      const minSize = hero ? 48 : 30;
+      let lines, size;
+      for (size = maxSize; size >= minSize; size -= 2) {
+        ctx.font = `400 ${size}px ${display}`;
+        lines = wrapSpaced(ctx, title, maxW, 0, 2);
+        if (lines.every(line => spacedWidth(ctx, line, 0) <= maxW) &&
+            !lines.some(line => line.endsWith('…'))) break;
+      }
+      size = Math.max(minSize, size);
+      ctx.font = `400 ${size}px ${display}`;
+      lines = wrapSpaced(ctx, title, maxW, 0, 2).map(line => clipToWidth(ctx, line, maxW, 0));
+      const baseline = y + h - pad - 32;
+      lines.forEach((line, i) => ctx.fillText(line, x + pad,
+        baseline - (lines.length - 1 - i) * size * 1.05));
+      ctx.font = `500 ${hero ? 24 : 18}px ${FACE}`;
+      ctx.fillStyle = paper;
+      const meta = [m.year, (m.directors || [])[0]].filter(Boolean).join(' / ');
+      ctx.fillText(clipToWidth(ctx, meta, maxW, 0), x + pad, y + h - pad);
+      ctx.restore();
+    };
+
+    const remaining = list.length - 1;
+    const columns = remaining > 4 ? 3 : 2;
+    const rows = Math.ceil(remaining / columns);
+    const top = 188, bottom = BH - 72;
+    const heroH = remaining ? (rows === 3 ? 540 : 700) : bottom - top;
+    frame(0, margin, top, width, heroH);
+    if (remaining) {
+      const gridTop = top + heroH + gap;
+      const rowH = (bottom - gridTop - gap * (rows - 1)) / rows;
+      let index = 1;
+      for (let row = 0; row < rows; row++) {
+        const count = Math.min(columns, list.length - index);
+        const cellW = (width - gap * (count - 1)) / count;
+        for (let col = 0; col < count; col++, index++) {
+          frame(index, margin + col * (cellW + gap), gridTop + row * (rowH + gap), cellW, rowH);
+        }
+      }
+    }
+    ctx.save();
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.globalAlpha = 0.1;
+    ctx.fillStyle = grainPattern(ctx);
+    ctx.fillRect(0, 0, BW, BH);
+    ctx.restore();
+    return canvas;
+  }
+
   async function generateBoard(entries) {
     const list = entries.slice(0, BOARD_MAX);
+    if (!list.length) throw new Error('Pick at least one film first.');
+    if (list.length <= 10) return generateMosaic(list);
     const heroSrc = hiRes(list[0].backdrop || list[0].poster || '');
     const heroImg = await tryImage(heroSrc);
     const arts = await Promise.all(list.map(m => tryImage(chipSrc(m.poster || m.backdrop || ''))));
@@ -743,7 +842,11 @@ const Posters = (() => {
     const deck = mountDeck(`Printing your top ${list.length}`, false);
     deck.progress(0.15);
     await ensureFonts();
-    await ensureBackdrop(list[0]); // the hero still sets the whole palette
+    for (let i = 0; i < (list.length <= 10 ? list.length : 1); i++) {
+      if (deck.closed()) return;
+      await ensureBackdrop(list[i]);
+      deck.progress(0.15 + 0.3 * ((i + 1) / list.length));
+    }
     if (deck.closed()) return;
     deck.progress(0.45);
 
@@ -757,7 +860,7 @@ const Posters = (() => {
       blob,
       url: URL.createObjectURL(blob),
       name: `my-top-${list.length}.png`,
-      alt: 'The board',
+      alt: `My top ${list.length}: ${list.map((m, i) => `${i + 1}. ${m.title}`).join(', ')}`,
     });
     // Letterboxing a 1:3 print into the stage would leave it unreadable, so a
     // long board scrolls at full width instead.
