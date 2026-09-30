@@ -38,6 +38,19 @@ async function main() {
   await page.addInitScript(()=>localStorage.setItem('ratingMigrated10','1'));
   await page.goto(origin);await page.waitForSelector('.custom-select-trigger',{state:'attached'});
   assert.deepEqual(errors,[],'Startup errors');
+  for(const width of [320,390,1280]) {
+    await page.setViewportSize({width,height:844});await page.evaluate(()=>location.hash='#catalogue');
+    await page.waitForSelector('#view-catalogue',{state:'visible'});
+    const header=await page.evaluate(()=>{
+      const title=document.querySelector('.app-title').getBoundingClientRect(),add=document.querySelector('.header-add').getBoundingClientRect();
+      const hit=document.elementFromPoint(add.left+add.width/2,add.top+add.height/2);
+      const links=document.querySelectorAll('.nav-link'),first=links[0].getBoundingClientRect(),last=links[links.length-1].getBoundingClientRect();
+      return {vertical:Math.abs((title.top+title.height/2)-(add.top+add.height/2)),titleCentre:Math.abs((title.left+title.width/2)-innerWidth/2),hit:!!hit.closest('.header-add'),navFits:first.left>=0 && last.right<=innerWidth};
+    });
+    assert.equal(header.hit,true,`Add control receives taps at ${width}px`);assert.ok(header.vertical<2,`Add alignment at ${width}px`);assert.ok(header.titleCentre<2,`Title centring at ${width}px`);assert.equal(header.navFits,true,`Navigation fits at ${width}px`);
+    await page.click('.header-add');await page.waitForSelector('#view-add',{state:'visible'});assert.equal(await page.evaluate(()=>location.hash),'#add');
+  }
+  console.log('PASS: header Add control alignment, hit target and routing');
   const dataChecks=await page.evaluate(async()=>{
     const checks={};
     await MovieDB.importData(JSON.stringify([{title:'Original',tmdbId:100,year:'2000',genres:['Drama'],directors:['Test Director'],rating:8,
@@ -103,7 +116,7 @@ async function main() {
   await context.setOffline(true);await page.click('.director-card-main');await page.waitForSelector('#director-progress');
   await context.setOffline(false);
   console.log('PASS: Directors statistics, complete rare-film credits, filters, quick add, return navigation and offline cache');
-  if(process.env.SCREENSHOT_DIR){fs.mkdirSync(process.env.SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'directors-mobile.png'),fullPage:true});}
+  if(process.env.SCREENSHOT_DIR){fs.mkdirSync(process.env.SCREENSHOT_DIR,{recursive:true});await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'directors-mobile.png'),fullPage:true});}
 
   assert.equal(await page.evaluate(()=>{
     const node=document.createElement('div');node.innerHTML=Stats.render(Stats.compute([{title:'Test',year:'2000',genres:['<img src=x onerror="window.xss=1">'],directors:['<img src=x onerror="window.xss=1">'],rating:8}]));

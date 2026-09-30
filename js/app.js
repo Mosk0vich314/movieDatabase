@@ -3562,6 +3562,11 @@ const App = (() => {
   // --- Event Listeners ---
 
   function setupEventListeners() {
+    document.querySelector('.header-add').addEventListener('click', e => {
+      e.preventDefault();
+      if (window.location.hash === '#add') navigate('#add');
+      else window.location.hash = '#add';
+    });
     document.getElementById('tmdb-search-btn').addEventListener('click', () => {
       if (searchMode === 'director') searchDirector();
       else if (searchMode === 'actor') searchActor();
