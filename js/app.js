@@ -2145,7 +2145,6 @@ const App = (() => {
     setupPosterLift(movie);
   }
 
-  // Drag the poster sideways to reveal director/cast bubbles.
   // The poster is taped to the page at its top edge, so it lifts rather than
   // slides: drag up (or tap) and it pivots about the tape while the credits
   // sheet unfolds from underneath. It latches open — with a dozen-odd people
@@ -2157,16 +2156,72 @@ const App = (() => {
     if (!lift || !card || !sheet) return;
     const lede = lift.closest('.dt-lede');
 
-    const MAX_ANGLE = 72;      // degrees the poster peels back
+    const MAX_ANGLE = 78;      // bottom edge peels toward the viewer
     const THRESHOLD = 34;      // px of upward drag that latches it open
-    const TILT = 'rotate(-1.8deg)';
+    const inner = sheet.querySelector('.credits-sheet-inner');
+    const restingMargin = lede ? parseFloat(getComputedStyle(lede).marginBottom) || 0 : 0;
     let open = false, startY = 0, tracking = false, dragging = false;
+    let suppressClick = false;
+    let angle = 0, motionFrame = 0;
 
     const setAngle = (deg, animate) => {
-      card.style.transition = animate
-        ? 'transform 0.42s cubic-bezier(0.22, 1, 0.36, 1)' : 'none';
-      card.style.transform = `${TILT} rotateX(${-deg}deg)`;
-      lift.classList.toggle('is-lifting', deg > 2);
+      cancelAnimationFrame(motionFrame);
+      motionFrame = 0;
+      if (deg > 0) sheet.hidden = false;
+      sheet.inert = !open;
+      const sheetHeight = inner ? inner.offsetHeight : sheet.scrollHeight;
+      const height = card.offsetHeight;
+      const liftStyle = getComputedStyle(lift);
+      const perspective = parseFloat(liftStyle.perspective) || 2000;
+      const facts = lede && lede.querySelector('.dt-facts');
+      const spare = facts ? Math.max(0, lede.offsetHeight - facts.offsetHeight - 8) : 0;
+
+      // Drive all parts from the same angle. A CSS margin transition would
+      // shrink the gap linearly while the poster's projection follows a cosine,
+      // letting the credits cross the paper halfway through the animation.
+      lift.classList.add('is-moving');
+      sheet.classList.add('is-moving');
+      if (lede) lede.classList.add('is-moving');
+      const paint = (next) => {
+        angle = next;
+        const progress = next / MAX_ANGLE;
+        card.style.transform = `rotateX(${next}deg)`;
+        lift.style.setProperty('--lift-progress', progress);
+        lift.classList.toggle('is-lifting', next > 2);
+        sheet.style.height = (sheetHeight * progress) + 'px';
+        sheet.style.opacity = progress;
+        if (lede) {
+          const radians = next * Math.PI / 180;
+          const projected = height * Math.cos(radians) / (1 - height * Math.sin(radians) / perspective);
+          const vacated = Math.max(0, height - projected);
+          lede.style.marginBottom = (restingMargin - Math.min(vacated, spare)) + 'px';
+        }
+      };
+      const finish = () => {
+        lift.classList.remove('is-moving');
+        sheet.classList.remove('is-moving');
+        if (lede) lede.classList.remove('is-moving');
+        if (open) sheet.style.height = 'auto';
+        else sheet.hidden = true;
+      };
+
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!animate || reducedMotion || angle === deg) {
+        paint(deg);
+        if (animate) finish();
+        return;
+      }
+      const from = angle;
+      const duration = parseFloat(liftStyle.getPropertyValue('--lift-duration')) || 460;
+      const started = performance.now();
+      const frame = (now) => {
+        if (!lift.isConnected) { motionFrame = 0; return; }
+        const t = Math.min(1, (now - started) / duration);
+        paint(from + (deg - from) * (1 - Math.pow(1 - t, 3)));
+        if (t < 1) motionFrame = requestAnimationFrame(frame);
+        else { motionFrame = 0; finish(); }
+      };
+      motionFrame = requestAnimationFrame(frame);
     };
 
     function openSheet() {
@@ -2174,31 +2229,7 @@ const App = (() => {
       open = true;
       lift.classList.add('is-open');
       card.setAttribute('aria-expanded', 'true');
-      sheet.hidden = false;
-      // measure, then animate to that height so the page below moves with it
-      const h = sheet.scrollHeight;
-      sheet.style.height = '0px';
-      requestAnimationFrame(() => {
-        sheet.style.transition = 'height 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease';
-        sheet.style.height = h + 'px';
-        sheet.style.opacity = '1';
-      });
-      sheet.addEventListener('transitionend', function done(e) {
-        if (e.propertyName !== 'height') return;
-        sheet.removeEventListener('transitionend', done);
-        sheet.style.height = 'auto';   // so it reflows if the viewport changes
-      });
-      // The poster keeps its full layout box while it is tilted, which would
-      // leave a tall gap where it used to lie. Pull the page up by what the
-      // tilt vacates (at 72deg the poster projects to about a third of its
-      // height) — but never past the facts column beside it, or the sheet
-      // rides up over the genre chips.
-      if (lede) {
-        const facts = lede.querySelector('.dt-facts');
-        const spare = facts ? Math.max(0, lede.offsetHeight - facts.offsetHeight - 8) : 0;
-        const vacated = Math.round(card.offsetHeight * 0.58);
-        lede.style.marginBottom = `-${Math.min(vacated, spare)}px`;
-      }
+      card.setAttribute('aria-label', 'Lower the poster to hide cast and crew');
       setAngle(MAX_ANGLE, true);
       haptic(12);
     }
@@ -2208,25 +2239,20 @@ const App = (() => {
       open = false;
       lift.classList.remove('is-open');
       card.setAttribute('aria-expanded', 'false');
-      sheet.style.height = sheet.scrollHeight + 'px';
-      requestAnimationFrame(() => {
-        sheet.style.transition = 'height 0.34s ease, opacity 0.22s ease';
-        sheet.style.height = '0px';
-        sheet.style.opacity = '0';
-      });
-      sheet.addEventListener('transitionend', function done(e) {
-        if (e.propertyName !== 'height') return;
-        sheet.removeEventListener('transitionend', done);
-        if (!open) sheet.hidden = true;
-      });
-      if (lede) lede.style.marginBottom = '';
+      card.setAttribute('aria-label', 'Lift the poster to see cast and crew');
       setAngle(0, true);
     }
 
     const toggle = () => (open ? closeSheet() : openSheet());
 
     // Tap works too — the drag is the flourish, not the only way in.
-    card.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
+    card.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Touch browsers can synthesize a click after a drag; keep it latched.
+      if (suppressClick && e.detail !== 0) { suppressClick = false; return; }
+      suppressClick = false;
+      toggle();
+    });
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
     card.setAttribute('aria-controls', 'credits-sheet');
@@ -2238,6 +2264,7 @@ const App = (() => {
     });
 
     card.addEventListener('touchstart', (e) => {
+      suppressClick = false;
       startY = e.touches[0].clientY;
       tracking = true; dragging = false;
     }, { passive: true });
@@ -2261,6 +2288,7 @@ const App = (() => {
     const release = (dy) => {
       if (!dragging) { tracking = false; return; }
       tracking = false; dragging = false;
+      suppressClick = true;
       if (!open && -dy >= THRESHOLD) openSheet();
       else if (open && dy >= THRESHOLD) closeSheet();
       else setAngle(open ? MAX_ANGLE : 0, true);

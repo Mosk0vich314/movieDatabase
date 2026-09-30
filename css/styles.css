@@ -7433,18 +7433,23 @@ body {
    tape stuck to the poster would swing away with it.
    ─────────────────────────────────────────────────────────────────── */
 .dt .poster-lift {
+  --lift-progress: 0;
+  --lift-duration: 460ms;
+  --lift-ease: cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
   flex: 0 0 clamp(108px, 30vw, 158px);
   transform: rotate(-1.8deg);
-  perspective: 900px;
+  perspective: 2000px;
+  perspective-origin: top center;
 }
 /* the wrapper now carries the layout, so the poster itself resets */
 .dt .poster-lift .detail-poster-drag {
   position: relative;
   flex: none;
-  transform: rotate(-1.8deg) rotateX(0deg);
+  transform: rotateX(0deg);
   transform-origin: top center;
   transform-style: preserve-3d;
+  transition: transform var(--lift-duration) var(--lift-ease);
   border-radius: var(--r-xs);
   cursor: pointer;
   touch-action: pan-y;
@@ -7467,14 +7472,37 @@ body {
   pointer-events: none;
   z-index: 3;
 }
-/* the shadow deepens as the poster peels away from the page */
+/* A shadow stays on the page as the paper's lower edge comes toward us. */
+.dt .poster-lift::before {
+  content: '';
+  position: absolute;
+  inset: var(--s-2) 0;
+  border-radius: var(--r-xs);
+  background: rgba(var(--bg-rgb), 0.6);
+  box-shadow: var(--e-3);
+  transform-origin: top center;
+  transform: translateY(calc(var(--lift-progress) * var(--s-4)))
+             scaleY(calc(1 - var(--lift-progress) * 0.6));
+  opacity: var(--lift-progress);
+  transition: transform var(--lift-duration) var(--lift-ease),
+              opacity var(--lift-duration) var(--lift-ease);
+  pointer-events: none;
+}
 .dt .poster-lift .detail-poster-drag .detail-poster {
-  transition: box-shadow 0.35s ease, filter 0.35s ease;
+  /* Override the generic hover translation: the taped edge must stay put. */
+  transform: none;
+  filter: none;
+  box-shadow: var(--e-2);
+  transition: box-shadow var(--lift-duration) var(--lift-ease);
 }
 .dt .poster-lift.is-lifting .detail-poster-drag .detail-poster {
-  box-shadow: 0 26px 46px rgba(0, 0, 0, 0.85);
-  filter: brightness(0.86);
+  box-shadow: var(--e-3);
 }
+.dt .poster-lift.is-moving .detail-poster-drag,
+.dt .poster-lift.is-moving .detail-poster,
+.dt .poster-lift.is-moving::before,
+.credits-sheet.is-moving,
+.dt .dt-lede.is-moving { transition: none; }
 
 /* the affordance — visible until you've lifted it once */
 .poster-lift-hint {
@@ -7500,6 +7528,8 @@ body {
   height: 0;
   opacity: 0;
   margin: 0 0 var(--s-4);
+  transition: height 460ms cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 460ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .credits-sheet-inner {
   padding: var(--s-4) 0 var(--s-2);
@@ -7575,7 +7605,7 @@ body {
 }
 
 /* the lede slides up as the poster tilts off it */
-.dt .dt-lede { transition: margin-bottom 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
+.dt .dt-lede { transition: margin-bottom 460ms cubic-bezier(0.22, 1, 0.36, 1); }
 /* names of different lengths would stagger the roles below them */
 .cs-name { min-height: 2.4em; display: flex; align-items: flex-start; justify-content: center; }
 
