@@ -435,8 +435,6 @@ const Stats = (() => {
       ${stats.total === 0 ? '<p class="stats-empty">Add some movies to see your stats!</p>' : `
         ${renderChallenges(stats.challenges)}
 
-        <div id="director-marathons-wrap"></div>
-
         ${renderDecadePassport(stats.decadePassport)}
 
         ${hasAchievements ? `

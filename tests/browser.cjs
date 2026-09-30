@@ -84,6 +84,10 @@ async function main() {
     return checks;
   });
   for(const [name,ok] of Object.entries(dataChecks))assert.equal(ok,true,name);
+  await page.evaluate(()=>location.hash='#stats');await page.waitForSelector('#view-stats',{state:'visible'});
+  assert.equal(await page.locator('#director-marathons-wrap, .director-marathons').count(),0);
+  assert.doesNotMatch(await page.locator('#stats-container').innerText(),/Complete the Director/i);
+  console.log('PASS: Stats no longer renders Complete the Director');
   assert.equal(await page.evaluate(async()=>{
     const backup=await MovieDB.exportData();
     const results=await Promise.allSettled([MovieDB.mergeData(backup),MovieDB.addMovie({title:'Concurrent addition'})]);

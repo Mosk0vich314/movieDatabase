@@ -4937,7 +4937,7 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
 
 /* ============================================================
    === Phase 2 features ===
-   Hidden Gems toggle, Complete the Director marathons.
+   Hidden Gems toggle.
    ============================================================ */
 
 /* --- Hidden Gems toggle --- */
@@ -4967,230 +4967,6 @@ body::after { opacity: 0.16; } /* dial up the existing grain a touch */
 @keyframes gemGlow {
   0%, 100% { box-shadow: 0 0 0 2px rgba(var(--gold-rgb), 0.75), 0 0 18px rgba(var(--gold-rgb), 0.25); }
   50%      { box-shadow: 0 0 0 2px rgba(var(--gold-rgb), 1.00), 0 0 32px rgba(var(--gold-rgb), 0.50); }
-}
-
-/* --- Complete the Director --- */
-.director-marathons {
-  margin-bottom: 32px;
-  padding: 16px 18px 18px;
-  border-radius: var(--r-lg);
-  background:
-    linear-gradient(135deg, rgba(var(--accent-rgb), 0.06), rgba(var(--accent2-rgb), 0.05)),
-    var(--bg-card);
-  border: 1px solid var(--border);
-  position: relative;
-  overflow: hidden;
-  backdrop-filter: blur(10px);
-}
-.director-marathons::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
-  opacity: 0.6;
-}
-.dm-section-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-display);
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: #fff;
-  margin-bottom: 2px;
-}
-.dm-icon { font-size: 1.05rem; filter: drop-shadow(0 0 6px rgba(var(--accent-rgb), 0.6)); }
-.dm-section-sub {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  letter-spacing: 0.06em;
-  margin-bottom: 16px;
-}
-.dm-loading {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  font-style: italic;
-  padding: 12px 0;
-}
-.dm-director {
-  margin-bottom: 22px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--border);
-}
-.dm-director:last-child {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
-}
-.dm-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.dm-photo {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid rgba(var(--accent-rgb), 0.4);
-  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.2);
-  flex-shrink: 0;
-}
-.dm-photo-placeholder {
-  background: var(--bg-input);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-.dm-meta {
-  flex: 1;
-  min-width: 0;
-}
-.dm-name-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
-}
-.dm-name {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: -0.01em;
-  flex: 1;
-  min-width: 0;
-}
-.dm-refresh-btn {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  line-height: 1;
-  padding: 2px 4px;
-  cursor: pointer;
-  border-radius: var(--r-sm);
-  transition: color 0.15s, background 0.15s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.dm-refresh-btn:hover:not(:disabled) {
-  color: var(--accent);
-  background: rgba(255,255,255,0.06);
-}
-.dm-refresh-btn:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-@keyframes dm-spin {
-  to { transform: rotate(360deg); }
-}
-.dm-refresh-btn--spinning {
-  animation: dm-spin 0.7s linear infinite;
-}
-.dm-progress-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.dm-progress-bar {
-  flex: 1;
-  height: 4px;
-  background: rgba(255,255,255,0.08);
-  border-radius: var(--r-xs);
-  overflow: hidden;
-  max-width: 200px;
-}
-.dm-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  border-radius: var(--r-xs);
-  transition: width 0.5s ease;
-}
-.dm-progress-text {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-.dm-films-scroll {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-bottom: 4px;
-  scroll-snap-type: x mandatory;
-}
-.dm-films-scroll::-webkit-scrollbar { display: none; }
-.dm-film {
-  flex: 0 0 110px;
-  cursor: pointer;
-  scroll-snap-align: start;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.dm-film-poster {
-  width: 100%;
-  aspect-ratio: 2/3;
-  object-fit: cover;
-  border-radius: var(--r-md);
-  background: var(--bg-input);
-  display: block;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
-}
-.dm-film:hover .dm-film-poster {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.6), 0 0 18px rgba(var(--accent-rgb), 0.25);
-}
-.dm-film-poster-empty {
-  background: linear-gradient(135deg, var(--bg-input), #0a0a14);
-}
-.dm-film-title {
-  font-size: 0.74rem;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: 2px;
-}
-.dm-film-year { font-size: 0.66rem; color: var(--text-muted); }
-.dm-add-btn {
-  margin-top: 4px;
-  padding: 5px 8px;
-  font-size: 0.66rem;
-  font-weight: 700;
-  background: rgba(var(--accent-rgb), 0.12);
-  border: 1px solid rgba(var(--accent-rgb), 0.4);
-  color: var(--accent);
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  font-family: inherit;
-  letter-spacing: 0.04em;
-  transition: all 0.18s ease;
-}
-.dm-add-btn:hover {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.4);
-}
-.dm-add-btn:active { transform: scale(0.94); }
-.dm-add-btn:disabled { opacity: 0.7; cursor: default; }
-.dm-add-btn--added {
-  background: rgba(64, 188, 121, 0.15);
-  border-color: rgba(64, 188, 121, 0.5);
-  color: #40bc79;
 }
 
 /* ============================================================
@@ -6753,7 +6529,7 @@ body { font-family: var(--font-text); }
 
 .btn, .btn-primary, .btn-secondary, .btn-danger, .btn-sm,
 .decade-reshuffle-btn, .decade-download-btn, .decade-showall-btn,
-.chart-toplist-btn, .dm-refresh-btn, .resume-set-btn, .search-back-btn,
+.chart-toplist-btn, .resume-set-btn, .search-back-btn,
 .trailer-play-btn, .rp-filter-btn, .rp-clear-btn, .rp-roll-btn,
 .tournament-go-btn, .filter-toggle-btn, .search-cancel-btn,
 .watchlist-card-btn, .search-result-watchlist-btn, .suggestion-wl-btn,
@@ -6788,7 +6564,7 @@ body { font-family: var(--font-text); }
 
 /* 2. Secondary — everything else */
 .btn-secondary, .decade-reshuffle-btn, .decade-download-btn, .decade-showall-btn,
-.chart-toplist-btn, .dm-refresh-btn, .resume-set-btn, .search-back-btn,
+.chart-toplist-btn, .resume-set-btn, .search-back-btn,
 .trailer-play-btn, .rp-filter-btn, .rp-clear-btn, .filter-toggle-btn,
 .search-cancel-btn, .watchlist-card-btn, .search-result-watchlist-btn,
 .suggestion-wl-btn, .blind-spot-wl-btn, .resume-mini-btn, .t10-picker-close,
@@ -6798,7 +6574,7 @@ body { font-family: var(--font-text); }
   color: var(--text);
 }
 .btn-secondary:hover, .decade-reshuffle-btn:hover, .decade-download-btn:hover,
-.decade-showall-btn:hover, .chart-toplist-btn:hover, .dm-refresh-btn:hover,
+.decade-showall-btn:hover, .chart-toplist-btn:hover,
 .resume-set-btn:hover, .search-back-btn:hover, .trailer-play-btn:hover,
 .rp-filter-btn:hover, .rp-clear-btn:hover, .filter-toggle-btn:hover,
 .watchlist-card-btn:hover, .search-result-watchlist-btn:hover,
@@ -6818,7 +6594,7 @@ body { font-family: var(--font-text); }
 
 /* 4. Icon — square footprint, pill shape, one size */
 .filter-clear-btn, .gems-toggle-btn, .scale-toggle-btn, .random-pick-btn,
-.t10-btn, .watchlist-pin-btn, .tag-chip-remove, .like-btn, .dm-add-btn, .director-favourite,
+.t10-btn, .watchlist-pin-btn, .tag-chip-remove, .like-btn, .director-favourite,
 #inventory-open-btn {
   display: inline-flex;
   align-items: center;
@@ -6837,7 +6613,7 @@ body { font-family: var(--font-text); }
 }
 .filter-clear-btn:hover, .gems-toggle-btn:hover, .scale-toggle-btn:hover,
 .random-pick-btn:hover, .t10-btn:hover, .watchlist-pin-btn:hover,
-.like-btn:hover, .dm-add-btn:hover, .director-favourite:hover, #inventory-open-btn:hover {
+.like-btn:hover, .director-favourite:hover, #inventory-open-btn:hover {
   background: rgba(255,255,255,0.05); color: var(--text); border-color: var(--accent-line);
 }
 .gems-toggle-btn.active, .scale-toggle-btn.active, .watchlist-pin-btn.pinned {
@@ -6919,7 +6695,7 @@ body { font-family: var(--font-text); }
 .stat-card, .activity-card, .taste-dna-card, .now-playing, .tonight-screening,
 .bluray-detail, .search-result, .t10-row, .fs-card, .top-item,
 .yir-launch-btn, .tournament-launch-btn, .koth-launch-btn, .detail-ticket-btn,
-.rank-card, .blind-spot-card, .dm-card {
+.rank-card, .blind-spot-card {
   border-radius: var(--r-lg);
   box-shadow: var(--e-1);
 }
