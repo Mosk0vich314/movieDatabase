@@ -1256,5 +1256,6 @@ const Posters = (() => {
   return {
     generate, openTop10, pickTop, manualTop10,
     generateBoard, openBoard, generateCarouselPage, openCarousel,
+    loadImage: tryImage,
   };
 })();

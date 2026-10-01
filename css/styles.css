@@ -7439,12 +7439,17 @@ body {
   position: relative;
   flex: 0 0 clamp(108px, 30vw, 158px);
   transform: rotate(-1.8deg);
+  perspective: 640px;
+  perspective-origin: top center;
+  overflow: visible;
 }
+.dt .dt-lede:has(.poster-lift) { gap: var(--s-6); }
 /* the wrapper now carries the layout, so the poster itself resets */
 .dt .poster-lift .detail-poster-drag {
   position: relative;
   flex: none;
   transform: none;
+  transform-origin: top center;
   border-radius: var(--r-xs);
   cursor: pointer;
   touch-action: pan-y;
@@ -7480,14 +7485,29 @@ body {
 }
 .poster-paper {
   position: absolute;
-  inset: 0;
+  left: -40%;
+  top: -20%;
   display: block;
+  width: 180%;
+  height: 140%;
+  cursor: pointer;
+}
+.paper-shadow,
+.paper-focus {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   overflow: visible;
-  filter: drop-shadow(var(--e-2));
   pointer-events: none;
 }
+.paper-shadow {
+  filter: blur(calc(var(--s-1) + var(--lift-progress) * var(--s-2)));
+  opacity: calc(0.35 + var(--lift-progress) * 0.5);
+}
+.paper-focus { opacity: 0; }
+.dt .has-paper-curl:focus-visible { outline: none; }
+.dt .has-paper-curl:focus-visible .paper-focus { opacity: 1; }
 .dt .poster-lift.is-moving .detail-poster-drag,
 .dt .poster-lift.is-moving .detail-poster,
 .credits-sheet.is-moving,
