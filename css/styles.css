@@ -7428,32 +7428,26 @@ body {
 
 /* ── The taped poster lifts ─────────────────────────────────────────
    The poster is taped to the page at its top edge, so the gesture is a
-   lift, not a slide: it pivots about the tape while the credits sheet
+   lift, not a slide: the free edge curls while the credits sheet
    unfolds underneath. The tape sits on the wrapper, not on the poster —
    tape stuck to the poster would swing away with it.
    ─────────────────────────────────────────────────────────────────── */
 .dt .poster-lift {
   --lift-progress: 0;
-  --lift-duration: 460ms;
+  --lift-duration: 620ms;
   --lift-ease: cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
   flex: 0 0 clamp(108px, 30vw, 158px);
   transform: rotate(-1.8deg);
-  perspective: 2000px;
-  perspective-origin: top center;
 }
 /* the wrapper now carries the layout, so the poster itself resets */
 .dt .poster-lift .detail-poster-drag {
   position: relative;
   flex: none;
-  transform: rotateX(0deg);
-  transform-origin: top center;
-  transform-style: preserve-3d;
-  transition: transform var(--lift-duration) var(--lift-ease);
+  transform: none;
   border-radius: var(--r-xs);
   cursor: pointer;
   touch-action: pan-y;
-  will-change: transform;
 }
 .dt .poster-lift .detail-poster-drag::after { content: none; }  /* old tape */
 
@@ -7472,22 +7466,6 @@ body {
   pointer-events: none;
   z-index: 3;
 }
-/* A shadow stays on the page as the paper's lower edge comes toward us. */
-.dt .poster-lift::before {
-  content: '';
-  position: absolute;
-  inset: var(--s-2) 0;
-  border-radius: var(--r-xs);
-  background: rgba(var(--bg-rgb), 0.6);
-  box-shadow: var(--e-3);
-  transform-origin: top center;
-  transform: translateY(calc(var(--lift-progress) * var(--s-4)))
-             scaleY(calc(1 - var(--lift-progress) * 0.6));
-  opacity: var(--lift-progress);
-  transition: transform var(--lift-duration) var(--lift-ease),
-              opacity var(--lift-duration) var(--lift-ease);
-  pointer-events: none;
-}
 .dt .poster-lift .detail-poster-drag .detail-poster {
   /* Override the generic hover translation: the taped edge must stay put. */
   transform: none;
@@ -7495,12 +7473,23 @@ body {
   box-shadow: var(--e-2);
   transition: box-shadow var(--lift-duration) var(--lift-ease);
 }
-.dt .poster-lift.is-lifting .detail-poster-drag .detail-poster {
-  box-shadow: var(--e-3);
+.dt .poster-lift .has-paper-curl .detail-poster {
+  opacity: 0;
+  box-shadow: none;
+  border-color: transparent;
+}
+.poster-paper {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(var(--e-2));
+  pointer-events: none;
 }
 .dt .poster-lift.is-moving .detail-poster-drag,
 .dt .poster-lift.is-moving .detail-poster,
-.dt .poster-lift.is-moving::before,
 .credits-sheet.is-moving,
 .dt .dt-lede.is-moving { transition: none; }
 

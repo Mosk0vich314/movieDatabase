@@ -2146,7 +2146,7 @@ const App = (() => {
   }
 
   // The poster is taped to the page at its top edge, so it lifts rather than
-  // slides: drag up (or tap) and it pivots about the tape while the credits
+  // slides: drag up (or tap) and the loose bottom curls while the credits
   // sheet unfolds from underneath. It latches open — with a dozen-odd people
   // to tap, springing shut the moment you let go would be useless.
   function setupPosterLift(movie) {
@@ -2156,44 +2156,41 @@ const App = (() => {
     if (!lift || !card || !sheet) return;
     const lede = lift.closest('.dt-lede');
 
-    const MAX_ANGLE = 78;      // bottom edge peels toward the viewer
+    const FULL_PEEL = 1;
     const THRESHOLD = 34;      // px of upward drag that latches it open
     const inner = sheet.querySelector('.credits-sheet-inner');
+    const paper = PaperCurl.create(card);
     const restingMargin = lede ? parseFloat(getComputedStyle(lede).marginBottom) || 0 : 0;
     let open = false, startY = 0, tracking = false, dragging = false;
     let suppressClick = false;
-    let angle = 0, motionFrame = 0;
+    let peel = 0, motionFrame = 0;
 
-    const setAngle = (deg, animate) => {
+    const setPeel = (target, animate) => {
       cancelAnimationFrame(motionFrame);
       motionFrame = 0;
-      if (deg > 0) sheet.hidden = false;
+      if (target > 0) sheet.hidden = false;
       sheet.inert = !open;
       const sheetHeight = inner ? inner.offsetHeight : sheet.scrollHeight;
       const height = card.offsetHeight;
       const liftStyle = getComputedStyle(lift);
-      const perspective = parseFloat(liftStyle.perspective) || 2000;
       const facts = lede && lede.querySelector('.dt-facts');
       const spare = facts ? Math.max(0, lede.offsetHeight - facts.offsetHeight - 8) : 0;
 
-      // Drive all parts from the same angle. A CSS margin transition would
-      // shrink the gap linearly while the poster's projection follows a cosine,
-      // letting the credits cross the paper halfway through the animation.
+      // Drive the page from the actual curved edge, rather than reclaiming the
+      // layout box of a rigidly rotated rectangle.
       lift.classList.add('is-moving');
       sheet.classList.add('is-moving');
       if (lede) lede.classList.add('is-moving');
       const paint = (next) => {
-        angle = next;
-        const progress = next / MAX_ANGLE;
-        card.style.transform = `rotateX(${next}deg)`;
+        peel = next;
+        const progress = next;
+        const visible = paper ? paper.setProgress(progress) : 1;
         lift.style.setProperty('--lift-progress', progress);
-        lift.classList.toggle('is-lifting', next > 2);
+        lift.classList.toggle('is-lifting', progress > 0.02);
         sheet.style.height = (sheetHeight * progress) + 'px';
         sheet.style.opacity = progress;
         if (lede) {
-          const radians = next * Math.PI / 180;
-          const projected = height * Math.cos(radians) / (1 - height * Math.sin(radians) / perspective);
-          const vacated = Math.max(0, height - projected);
+          const vacated = height * (1 - visible);
           lede.style.marginBottom = (restingMargin - Math.min(vacated, spare)) + 'px';
         }
       };
@@ -2206,18 +2203,18 @@ const App = (() => {
       };
 
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (!animate || reducedMotion || angle === deg) {
-        paint(deg);
+      if (!animate || reducedMotion || peel === target) {
+        paint(target);
         if (animate) finish();
         return;
       }
-      const from = angle;
-      const duration = parseFloat(liftStyle.getPropertyValue('--lift-duration')) || 460;
+      const from = peel;
+      const duration = parseFloat(liftStyle.getPropertyValue('--lift-duration')) || 620;
       const started = performance.now();
       const frame = (now) => {
         if (!lift.isConnected) { motionFrame = 0; return; }
         const t = Math.min(1, (now - started) / duration);
-        paint(from + (deg - from) * (1 - Math.pow(1 - t, 3)));
+        paint(from + (target - from) * (1 - Math.pow(1 - t, 3)));
         if (t < 1) motionFrame = requestAnimationFrame(frame);
         else { motionFrame = 0; finish(); }
       };
@@ -2230,7 +2227,7 @@ const App = (() => {
       lift.classList.add('is-open');
       card.setAttribute('aria-expanded', 'true');
       card.setAttribute('aria-label', 'Lower the poster to hide cast and crew');
-      setAngle(MAX_ANGLE, true);
+      setPeel(FULL_PEEL, true);
       haptic(12);
     }
 
@@ -2240,7 +2237,7 @@ const App = (() => {
       lift.classList.remove('is-open');
       card.setAttribute('aria-expanded', 'false');
       card.setAttribute('aria-label', 'Lift the poster to see cast and crew');
-      setAngle(0, true);
+      setPeel(0, true);
     }
 
     const toggle = () => (open ? closeSheet() : openSheet());
@@ -2280,9 +2277,9 @@ const App = (() => {
       }
       e.preventDefault();
       // dragging up peels it open; dragging down while open puts it back
-      const lifted = open ? MAX_ANGLE : 0;
-      const deg = Math.max(0, Math.min(MAX_ANGLE, lifted + (-dy * 0.9)));
-      setAngle(deg, false);
+      const lifted = open ? FULL_PEEL : 0;
+      const progress = Math.max(0, Math.min(FULL_PEEL, lifted - dy / 90));
+      setPeel(progress, false);
     }, { passive: false });
 
     const release = (dy) => {
@@ -2291,7 +2288,7 @@ const App = (() => {
       suppressClick = true;
       if (!open && -dy >= THRESHOLD) openSheet();
       else if (open && dy >= THRESHOLD) closeSheet();
-      else setAngle(open ? MAX_ANGLE : 0, true);
+      else setPeel(open ? FULL_PEEL : 0, true);
     };
     card.addEventListener('touchend', (e) => release(e.changedTouches[0].clientY - startY));
     card.addEventListener('touchcancel', () => release(0));

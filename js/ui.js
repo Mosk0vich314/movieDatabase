@@ -433,7 +433,7 @@ const UI = (() => {
 
     const hasPeople = (movie.directors || []).length > 0
       || (movie.cast || []).length > 0 || (movie.crew || []).length > 0;
-    // The tape lives on the wrapper, not on the poster: the poster pivots
+    // The tape lives on the wrapper, not on the poster: the paper curls
     // under it, so a tape stuck to the poster would swing away with it.
     const posterSlideHtml = hasPeople
       ? `<div class="poster-lift" id="poster-lift">
