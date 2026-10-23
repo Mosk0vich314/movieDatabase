@@ -1956,6 +1956,88 @@ const App = (() => {
     });
   }
 
+  function setupWatchingNotes(movie) {
+    const root = document.getElementById('watching-notes-root');
+    if (!root) return;
+    let editing = null, busy = false;
+    const find = selector => root.querySelector(selector);
+    const status = text => { find('.watching-note-status').textContent = text; };
+    const redraw = () => {
+      root.innerHTML = UI.renderWatchingNotes(movie);
+      find('details').open = true;
+      find('[data-note-action="add"]').focus();
+      editing = null;
+    };
+    const setBusy = value => {
+      busy = value;
+      root.querySelectorAll('button, input, textarea').forEach(el => { el.disabled = value; });
+    };
+    root.addEventListener('click', async e => {
+      const button = e.target.closest('[data-note-action]');
+      if (!button || busy) return;
+      const action = button.dataset.noteAction;
+      const note = (movie.watchingNotes || []).find(item => item.id === button.closest('[data-note-id]')?.dataset.noteId);
+      if (action === 'add' || action === 'edit') {
+        // Keep a draft intact until it is saved or explicitly cancelled.
+        if (!find('form').hidden) { find('textarea').focus(); return; }
+        editing = action === 'edit' ? note : null;
+        find('form').hidden = false;
+        find('[data-note-action="add"]').hidden = true;
+        find('textarea').value = editing?.text || '';
+        find('input').value = editing?.seconds !== undefined ? UI.formatTimecode(editing.seconds) : '';
+        status('');
+        find('textarea').focus();
+      } else if (action === 'cancel') {
+        find('form').hidden = true;
+        find('[data-note-action="add"]').hidden = false;
+        find('[data-note-action="add"]').focus();
+        editing = null;
+        status('');
+      } else if (action === 'delete' && note) {
+        if (!find('form').hidden) { status('Save or cancel your draft before deleting a note.'); return; }
+        if (!confirm('Delete this watching note?')) return;
+        setBusy(true);
+        try {
+          movie.watchingNotes = await MovieDB.saveWatchingNote(movie.id, note, true);
+          redraw();
+          status('Note deleted.');
+        } catch (_) { status('Could not delete the note. Try again.'); }
+        finally { setBusy(false); }
+      }
+    });
+    root.addEventListener('submit', async e => {
+      e.preventDefault();
+      if (busy) return;
+      const text = find('textarea').value.trim(), time = find('input').value.trim();
+      if (!text) { status('Write a note first.'); find('textarea').focus(); return; }
+      const seconds = time ? UI.parseTimecode(time) : undefined;
+      if (time && (!/^\d+(?::[0-5]\d){1,2}$|^\d+$/.test(time) || !Number.isSafeInteger(seconds) || seconds < 0)) {
+        status('Use a film time like 42:15, 1:02:30, or a number of minutes.');
+        find('input').focus();
+        return;
+      }
+      const note = { id: editing?.id || crypto.randomUUID(), text, createdAt: editing?.createdAt || new Date().toISOString() };
+      if (seconds !== undefined) note.seconds = seconds;
+      setBusy(true);
+      try {
+        movie.watchingNotes = await MovieDB.saveWatchingNote(movie.id, note);
+        redraw();
+        status('Note saved.');
+      } catch (_) { status('Could not save your note. Your draft is still here; try again.'); }
+      finally { setBusy(false); }
+    });
+    root.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && e.target.closest('form')) {
+        e.preventDefault();
+        find('form').requestSubmit();
+      }
+      if (e.key === 'Escape') {
+        find('#detail-watching-notes').open = false;
+        find('.watching-notes-toggle').focus();
+      }
+    });
+  }
+
   async function loadMovieDetail(id) {
     const [movie, allMovies] = await Promise.all([MovieDB.getMovie(id), MovieDB.getAllMovies()]);
     if (!movie) {
@@ -2010,6 +2092,7 @@ const App = (() => {
     const ctx = { allMovies: allMovies.filter(m => !m.watchlist) };
     if (window.location.hash !== `#detail/${id}`) return;
     document.getElementById('movie-detail').innerHTML = UI.renderMovieDetail(movie, ctx);
+    setupWatchingNotes(movie);
 
     setupTrailerButton(movie);
 

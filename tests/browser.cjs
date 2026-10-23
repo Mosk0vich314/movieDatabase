@@ -103,6 +103,82 @@ async function main() {
   assert.equal(await page.evaluate(async()=>{const [m]=await MovieDB.getAllMovies();return m.notes==='Edited from form' && m.rewatches===3 && m.crew.length===1 && m.voteCount===3000;}),true);
   console.log('PASS: actual edit form preserves metadata');
 
+  const noteMovieId = await page.evaluate(async () => {
+    const id = await MovieDB.addMovie({title:'Notes test', year:'2000', watchlist:true, notes:'Existing review'});
+    location.hash = '#detail/' + id;
+    return id;
+  });
+  await page.waitForSelector('#detail-watching-notes');
+  assert.equal(await page.locator('#detail-watching-notes').getAttribute('open'), null);
+  await page.click('.watching-notes-toggle');
+  await page.click('[data-note-action="add"]');
+  await page.fill('#watching-note-text', 'The reflection changes.\n<img src=x onerror="window.xss=1">');
+  await page.fill('#watching-note-time', '1:99');
+  await page.click('.watching-note-form [type="submit"]');
+  assert.match(await page.locator('.watching-note-status').innerText(), /Use a film time/);
+  await page.fill('#watching-note-time', '42:15');
+  await page.locator('#watching-note-text').press('Escape');
+  await page.click('.watching-notes-toggle');
+  assert.match(await page.inputValue('#watching-note-text'), /reflection/);
+  await page.locator('#watching-note-text').press('Control+Enter');
+  await page.waitForFunction(() => document.querySelector('.watching-notes-count').textContent === '1');
+  assert.equal(await page.locator('.watching-note-content').isVisible(), false);
+  await page.click('.watching-note > summary');
+  assert.match(await page.locator('.watching-note-content').innerText(), /reflection/);
+  assert.equal(await page.locator('.watching-note-content img').count(), 0);
+  assert.equal(await page.locator('.watching-note-time').innerText(), '42:15');
+  await page.click('[data-note-action="edit"]');
+  await page.fill('#watching-note-text', 'The reflection changes twice.');
+  await page.fill('#watching-note-time', '');
+  await page.click('.watching-note-form [type="submit"]');
+  await page.waitForFunction(() => document.querySelector('.watching-note-status').textContent === 'Note saved.');
+  assert.equal(await page.locator('.watching-note-time').count(), 0);
+  // Failed writes leave the draft available for retry.
+  await page.click('[data-note-action="add"]');
+  await page.fill('#watching-note-text', 'Keep this draft');
+  await page.evaluate(() => { window.realSaveWatchingNote = MovieDB.saveWatchingNote; MovieDB.saveWatchingNote = async () => { throw new Error('Storage unavailable'); }; });
+  await page.click('.watching-note-form [type="submit"]');
+  await page.waitForFunction(() => document.querySelector('.watching-note-status').textContent.includes('Could not save'));
+  assert.equal(await page.inputValue('#watching-note-text'), 'Keep this draft');
+  await page.evaluate(() => { MovieDB.saveWatchingNote = window.realSaveWatchingNote; delete window.realSaveWatchingNote; });
+  await page.click('.watching-note-form [type="submit"]');
+  await page.waitForFunction(() => document.querySelector('.watching-notes-count').textContent === '2');
+  await page.locator('.watching-note > summary').last().click();
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('[data-note-action="delete"]').last().click();
+  await page.waitForFunction(() => document.querySelector('.watching-notes-count').textContent === '1');
+  await page.reload(); await page.waitForSelector('#detail-watching-notes');
+  assert.equal(await page.locator('#detail-watching-notes').getAttribute('open'), null);
+  await page.click('.watching-notes-toggle');
+  await page.locator('.watching-note > summary').focus(); await page.keyboard.press('Enter');
+  assert.equal(await page.locator('.watching-note-content').isVisible(), true);
+  for (const width of [320,390,1280]) {
+    await page.setViewportSize({width,height:844});
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'Watching notes fit ' + width);
+  }
+  if (process.env.SCREENSHOT_DIR) {
+    await page.setViewportSize({width:390,height:844});
+    await page.locator('#detail-watching-notes').screenshot({path:path.join(process.env.SCREENSHOT_DIR,'watching-notes-mobile.png')});
+  }
+  await page.click('#detail-mark-watched');
+  await page.waitForSelector('#movie-form', {state:'visible'});
+  await page.locator('#movie-form').evaluate(f => f.requestSubmit());
+  await page.waitForFunction(() => location.hash === '#catalogue');
+  assert.equal(await page.evaluate(async id => {
+    let movie = await MovieDB.getMovie(id);
+    if (movie.watchlist || movie.watchingNotes.length !== 1 || movie.notes !== 'Existing review') return false;
+    await Promise.all(['parallel-a','parallel-b'].map(id => MovieDB.saveWatchingNote(movie.id, {id,text:id,createdAt:new Date().toISOString(),seconds:0})));
+    movie = await MovieDB.getMovie(id);
+    const backup = await MovieDB.exportData(), parsed = MovieDB.parseData(backup);
+    if (movie.watchingNotes.length !== 3 || parsed.movies.find(m => m.id === id).watchingNotes.length !== 3) return false;
+    await MovieDB.importData(backup);
+    if ((await MovieDB.getMovie(id)).watchingNotes.length !== 3) return false;
+    try { MovieDB.parseData([{title:'Invalid',watchingNotes:[{id:'bad',text:'x',createdAt:'today',seconds:-1}]}]); return false; } catch (_) {}
+    await MovieDB.deleteMovie(id);
+    return true;
+  }, noteMovieId), true, 'Watching notes survive conversion, parallel additions and backup validation');
+  console.log('PASS: watching note CRUD, timestamps, safe text, drafts after failure, reload, keyboard, layouts and persistence');
+
   await page.evaluate(()=>location.hash='#directors');await page.waitForSelector('.director-card');
   await page.click('.director-card-main');await page.waitForSelector('#director-progress');
   assert.equal(await page.locator('#director-progress').getAttribute('max'),'3');
@@ -181,6 +257,14 @@ async function main() {
   await offline.setOffline(true);await offlinePage.reload();await offlinePage.waitForSelector('.custom-select-trigger',{state:'attached'});
   await offlinePage.locator('.nav-link[data-view="directors"]').click();await offlinePage.waitForSelector('.director-card');
   assert.match(await offlinePage.locator('.director-card').innerText(),/Offline Director/i);
+  await offlinePage.evaluate(async () => { const [movie] = await MovieDB.getAllMovies(); location.hash = '#detail/' + movie.id; });
+  await offlinePage.waitForSelector('#detail-watching-notes');
+  await offlinePage.click('.watching-notes-toggle'); await offlinePage.click('[data-note-action="add"]');
+  await offlinePage.fill('#watching-note-text', 'Written offline');
+  await offlinePage.click('.watching-note-form [type="submit"]');
+  await offlinePage.waitForFunction(() => document.querySelector('.watching-notes-count').textContent === '1');
+  await offlinePage.reload(); await offlinePage.waitForSelector('#detail-watching-notes');
+  assert.equal(await offlinePage.locator('.watching-notes-count').innerText(), '1');
   await offline.close();console.log('PASS: service worker reloads the complete app and new Directors script offline');
 }
 main().then(async()=>{await browser?.close();server.close();}).catch(async error=>{console.error(error);await browser?.close();server.close();process.exitCode=1;});

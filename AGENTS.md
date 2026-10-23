@@ -79,6 +79,7 @@ The poster on the detail page is taped to the page at its top edge, so the gestu
   poster,      // full TMDB image URL
   rating,      // 1–10 number (slider), or 0/undefined (absent on watchlist movies)
   notes,       // string (absent on watchlist movies)
+  watchingNotes, // [{id, text, createdAt, seconds?}] — collapsible comments, available on all saved films
   cast,        // [{name, character, profileUrl}] — up to 14, for the credits sheet
   crew,        // [{name, roles[], profileUrl}] — director, writer, DoP, composer, editor
   tags,        // string[] (user-defined freeform tags)
@@ -90,6 +91,8 @@ The poster on the detail page is taped to the page at its top edge, so the gestu
 ```
 
 ## Key patterns
+
+- **Watching notes**: `UI.renderWatchingNotes(movie)` renders the closed comment pill near the top of each saved film's detail page; each note expands independently and may carry a film time. `setupWatchingNotes(movie)` handles adding, editing and deleting, keeps drafts intact on collapse or save failure, and uses `MovieDB.saveWatchingNote` to mutate the latest stored list atomically. `watchingNotes` is separate from the existing review string `notes`, survives marking a film watched, and travels in backup/sync movie records. Preview pages have no notes control.
 
 - **Filter toggle**: The catalogue filter dropdowns are hidden by default. `#filter-panel` gets class `open` when `#filter-toggle` is clicked. A `filter-badge` span shows the count of active filters. A `#filter-clear-all` button (`.filter-clear-btn`) appears next to the toggle whenever filters are active; it resets all selects, `pendingPersonFilter`, and `dirFilterSetByJump` in one tap.
 - **Director/person filter jump**: Clicking a `.director-link` or `.cast-name-link` calls `filterByPerson(name)`. If the name is in `#filter-director`'s options it sets `dirSelect.value` and `dirFilterSetByJump = true`; otherwise it sets module-level `pendingPersonFilter`. When not already on `#catalogue`, it sets `personFilterJump = true` before changing the hash so `navigate()` knows not to clear the filter on that load. On any subsequent catalogue navigation (back button, nav tap), `navigate()` clears `pendingPersonFilter` and resets the director select if `dirFilterSetByJump` is set.

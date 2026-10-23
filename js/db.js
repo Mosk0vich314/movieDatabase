@@ -106,6 +106,17 @@ const MovieDB = (() => {
       if (m[field] !== undefined && (!Number.isFinite(m[field]) || m[field] < 0)) throw new Error(`Invalid ${field} for ${m.title}`);
     }
     if ((m.rating || 0) > 10) throw new Error(`Invalid rating for ${m.title}`);
+    if (m.watchingNotes !== undefined) {
+      const ids = new Set();
+      if (!Array.isArray(m.watchingNotes) || m.watchingNotes.some(note => {
+        if (!note || typeof note !== 'object' || typeof note.id !== 'string' || !note.id || ids.has(note.id) ||
+            typeof note.text !== 'string' || !note.text.trim() ||
+            typeof note.createdAt !== 'string' || !Number.isFinite(Date.parse(note.createdAt)) ||
+            (note.seconds !== undefined && (!Number.isSafeInteger(note.seconds) || note.seconds < 0))) return true;
+        ids.add(note.id);
+        return false;
+      })) throw new Error(`Invalid watching notes for ${m.title}`);
+    }
     if (m.year !== undefined && !/^(\d{4})?$/.test(String(m.year))) throw new Error(`Invalid year for ${m.title}`);
     for (const field of ['notes','overview','imdbVotes','rtScore']) if (m[field] !== undefined && typeof m[field] !== 'string') throw new Error(`Invalid ${field} for ${m.title}`);
     m.imdbId = /^tt\d+$/.test(m.imdbId || '') ? m.imdbId : '';
@@ -142,6 +153,27 @@ const MovieDB = (() => {
       };
     });
   }
+  // Read and modify within one transaction so concurrent comments cannot overwrite each other.
+  function saveWatchingNote(id, note, remove = false) {
+    return transaction(['movies'], 'readwrite', (tx, done) => {
+      const store = tx.objectStore('movies'), request = store.get(id);
+      request.onsuccess = () => {
+        try {
+          if (!request.result) { tx.abort(); return; }
+          const movie = request.result, notes = movie.watchingNotes || [];
+          const index = notes.findIndex(item => item.id === note.id);
+          if (remove) { if (index !== -1) notes.splice(index, 1); }
+          else if (index === -1) notes.push(note);
+          else notes[index] = note;
+          movie.watchingNotes = notes;
+          movie.updatedAt = now();
+          store.put(validateMovie(movie));
+          done(notes);
+        } catch (_) { tx.abort(); }
+      };
+    });
+  }
+
   function deleteMovie(id) {
     return transaction(['movies','metadata'],'readwrite',tx=>{
       const store=tx.objectStore('movies'),req=store.get(id);
@@ -256,5 +288,5 @@ const MovieDB = (() => {
     const backup=await read('metadata','recoveryBackup');if(!backup)throw new Error('There is no recovery backup yet.');
     return importData(backup);
   }
-  return {open,addMovie,updateMovie,deleteMovie,getMovie,getAllMovies,exportData,importData,parseData,mergeData,clearData,restoreRecovery,getDirector,getDirectors,putDirector,getDirectorFavourites,setDirectorFavourite,preferenceChanged,movieKey};
+  return {open,addMovie,updateMovie,saveWatchingNote,deleteMovie,getMovie,getAllMovies,exportData,importData,parseData,mergeData,clearData,restoreRecovery,getDirector,getDirectors,putDirector,getDirectorFavourites,setDirectorFavourite,preferenceChanged,movieKey};
 })();

@@ -375,6 +375,32 @@ const UI = (() => {
     </div>`;
   }
 
+  function renderWatchingNotes(movie) {
+    const notes = movie.watchingNotes || [];
+    const icon = '<svg class="watching-notes-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6 4V6a2 2 0 0 1 2-2Z"/><path d="M7 9h10M7 13h7"/></svg>';
+    return `<details class="watching-notes" id="detail-watching-notes">
+      <summary class="btn btn-secondary watching-notes-toggle">${icon} Watching notes <span class="watching-notes-count">${notes.length}</span></summary>
+      <div class="watching-notes-panel">
+        <p class="watching-notes-hint">Thoughts as you watch. Tap a comment to read it.</p>
+        <div class="watching-notes-list">${notes.map((note, index) => `<details class="watching-note" data-note-id="${escapeHtml(note.id)}">
+          <summary>${icon}<span>Note ${index + 1}</span>${note.seconds !== undefined ? `<span class="watching-note-time">${formatTimecode(note.seconds)}</span>` : ''}<span class="watching-note-chevron" aria-hidden="true">⌄</span></summary>
+          <div class="watching-note-content"><p>${escapeHtml(note.text)}</p>
+            <div class="watching-note-actions"><button type="button" class="btn btn-secondary" data-note-action="edit">Edit</button><button type="button" class="btn btn-danger" data-note-action="delete">Delete</button></div>
+          </div></details>`).join('')}</div>
+        <button type="button" class="btn btn-secondary" data-note-action="add">+ Add note</button>
+        <form class="watching-note-form" hidden>
+          <label for="watching-note-text">Your note</label>
+          <textarea id="watching-note-text" rows="4" required maxlength="10000" placeholder="A detail, a thought, a question…"></textarea>
+          <label for="watching-note-time">Film time <span>(optional)</span></label>
+          <input id="watching-note-time" type="text" placeholder="42:15 or 1:02:30" autocomplete="off" aria-describedby="watching-note-time-hint">
+          <p id="watching-note-time-hint" class="watching-notes-hint">Minutes alone work too.</p>
+          <div class="watching-note-actions"><button type="submit" class="btn btn-primary">Save note</button><button type="button" class="btn btn-secondary" data-note-action="cancel">Cancel</button></div>
+        </form>
+        <p class="watching-note-status" role="status"></p>
+      </div>
+    </details>`;
+  }
+
   function renderMovieDetail(movie, ctx = {}) {
     const preview = !!ctx.preview;
     const owned = !preview && !movie.watchlist;
@@ -526,6 +552,7 @@ const UI = (() => {
             </div>
           </div>
           ${hasPeople ? renderCreditsSheet(movie) : ''}
+          ${preview ? '' : `<div id="watching-notes-root">${renderWatchingNotes(movie)}</div>`}
           ${preview ? actionsHtml : ''}
           ${dtSection('Synopsis', movie.overview ? `<p class="detail-overview">${escapeHtml(movie.overview)}</p>` : '')}
           ${dtSection('Elsewhere', buildExtBadgesHtml(movie, false))}
@@ -1523,5 +1550,5 @@ const UI = (() => {
       </div>`;
   }
 
-  return { showToast, focusDialog, ratingColor, ratingColorRGB, ratingInk, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderCreditsSheet, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderFiveStarClub, renderTop10Builder, renderDuelIntro, renderDuelMatch, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, safeUrl, imgSrc, cssUrl, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
+  return { renderWatchingNotes, showToast, focusDialog, ratingColor, ratingColorRGB, ratingInk, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderCreditsSheet, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderFiveStarClub, renderTop10Builder, renderDuelIntro, renderDuelMatch, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, safeUrl, imgSrc, cssUrl, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
 })();

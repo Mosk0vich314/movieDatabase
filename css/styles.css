@@ -7716,3 +7716,33 @@ body {
   .director-film-strip { gap: var(--s-1); }
   .director-card-count { font-size: var(--fs-sm); }
 }
+
+/* Watching notes: compact comment markers, with the text revealed on demand. */
+.watching-notes { margin: var(--s-4) 0; }
+.watching-notes-toggle { width: fit-content; gap: var(--s-2); list-style: none; }
+.watching-notes summary::-webkit-details-marker { display: none; }
+.watching-notes-icon { width: 20px; height: 20px; flex-shrink: 0; }
+.watching-notes-count { color: var(--accent); font-variant-numeric: tabular-nums; }
+.watching-notes[open] > summary { border-color: var(--accent); }
+.watching-notes-panel { margin-top: var(--s-3); padding: var(--s-4); background: var(--surface-1); border: 1px solid var(--line-strong); border-radius: var(--r-lg); }
+.watching-notes-hint { color: var(--text-muted); font-size: var(--fs-sm); line-height: 1.6; margin: 0 0 var(--s-3); }
+.watching-note { border-left: 3px solid var(--accent); background: var(--surface-2); border-radius: var(--r-md); margin-bottom: var(--s-3); overflow: hidden; }
+.watching-note > summary { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-3); min-height: 44px; color: var(--text); font-size: var(--fs-md); cursor: pointer; list-style: none; }
+.watching-note > summary .watching-notes-icon, .watching-note-time { color: var(--accent); }
+.watching-note-time { margin-left: auto; font-variant-numeric: tabular-nums; }
+.watching-note-chevron { margin-left: auto; }
+.watching-note[open] .watching-note-chevron { transform: rotate(180deg); }
+.watching-note-content { padding: 0 var(--s-3) var(--s-3); }
+.watching-note-content > p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.7; margin: 0 0 var(--s-3); max-width: 70ch; }
+.watching-note-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.watching-note-actions .btn { font-size: var(--fs-sm); padding: var(--s-2) var(--s-3); min-height: 44px; }
+.watching-note-form { display: grid; gap: var(--s-2); }
+.watching-note-form[hidden], .watching-notes-panel button[hidden] { display: none; }
+.watching-note-form label { font-size: var(--fs-md); font-weight: 600; }
+.watching-note-form label span { color: var(--text-muted); font-weight: 400; }
+.watching-note-form textarea, .watching-note-form input { box-sizing: border-box; width: 100%; min-width: 0; padding: var(--s-3); color: var(--text); background: var(--surface-2); border: 1px solid var(--line-strong); font: inherit; }
+.watching-note-form textarea { border-radius: var(--r-lg); resize: vertical; min-height: 110px; }
+.watching-note-form input { border-radius: var(--r-pill); }
+.watching-note-status { margin: var(--s-3) 0 0; color: var(--text-muted); font-size: var(--fs-sm); line-height: 1.6; }
+.watching-note-status:empty { display: none; }
+.watching-notes :is(summary, button, input, textarea):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
