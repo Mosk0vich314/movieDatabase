@@ -169,20 +169,22 @@ const Stats = (() => {
   }
 
   function getRank(total) {
+    // No colour per tier: the banner wears the one accent and a tier is told
+    // apart by its name and the progress bar. These were eight hues (violet,
+    // blue, green, red...), the last rainbow left in the app.
     const tiers = [
-      { min: 1000, name: 'Auteur',     color: '#f5c518' },
-      { min: 500,  name: 'Curator',    color: '#c084fc', next: 'Auteur',     nextAt: 1000 },
-      { min: 200,  name: 'Archivist',  color: '#60a5fa', next: 'Curator',    nextAt: 500  },
-      { min: 100,  name: 'Cinephile',  color: '#34d399', next: 'Archivist',  nextAt: 200  },
-      { min: 50,   name: 'Enthusiast', color: '#e94560', next: 'Cinephile',  nextAt: 100  },
-      { min: 25,   name: 'Buff',       color: '#7c5cfc', next: 'Enthusiast', nextAt: 50   },
-      { min: 10,   name: 'Viewer',     color: '#94a3b8', next: 'Buff',       nextAt: 25   },
-      { min: 0,    name: 'Initiate',   color: '#64748b', next: 'Viewer',     nextAt: 10   },
+      { min: 1000, name: 'Auteur' },
+      { min: 500,  name: 'Curator',    next: 'Auteur',     nextAt: 1000 },
+      { min: 200,  name: 'Archivist',  next: 'Curator',    nextAt: 500  },
+      { min: 100,  name: 'Cinephile',  next: 'Archivist',  nextAt: 200  },
+      { min: 50,   name: 'Enthusiast', next: 'Cinephile',  nextAt: 100  },
+      { min: 25,   name: 'Buff',       next: 'Enthusiast', nextAt: 50   },
+      { min: 10,   name: 'Viewer',     next: 'Buff',       nextAt: 25   },
+      { min: 0,    name: 'Initiate',   next: 'Viewer',     nextAt: 10   },
     ];
     const t = tiers.find(r => total >= r.min);
     return {
       name: t.name,
-      color: t.color,
       next: t.next || null,
       nextAt: t.nextAt || null,
       progress: t.nextAt ? ((total - t.min) / (t.nextAt - t.min)) * 100 : 100,
@@ -341,7 +343,7 @@ const Stats = (() => {
           ${recent.monthAvgRating ? `
           <div class="recent-stat-card">
             <div class="recent-stat-value">${UI.isFiveStar() ? (recent.monthAvgRating / 2).toFixed(1) : recent.monthAvgRating}</div>
-            <div class="recent-stat-label">Avg rating</div>
+            <div class="recent-stat-label">Avg in ${monthName}</div>
           </div>` : ''}
           ${recent.monthTopGenre ? `
           <div class="recent-stat-card">
@@ -381,7 +383,7 @@ const Stats = (() => {
     const hasAchievements = stats.milestones.some(m => m.achieved) || stats.genreBadges.length || stats.auteurBadges.length;
 
     return `
-      <div class="rank-banner" style="--rank-color:${stats.rank.color}">
+      <div class="rank-banner">
         <div class="rank-inner">
           <div>
             <div class="rank-label">Collector Rank</div>

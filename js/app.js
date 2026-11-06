@@ -889,7 +889,7 @@ const App = (() => {
     document.querySelectorAll('.smt-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.mode === 'movie')
     );
-    document.getElementById('tmdb-search').placeholder = 'Search or paste a themoviedb.org URL...';
+    document.getElementById('tmdb-search').placeholder = 'Film title or TMDB URL…';
   }
 
   // --- Autocomplete ---
@@ -3557,7 +3557,7 @@ const App = (() => {
       document.getElementById('tmdb-search').placeholder =
         searchMode === 'director' ? 'Search for a director...' :
         searchMode === 'actor' ? 'Search for an actor...' :
-        'Search or paste a themoviedb.org URL...';
+        'Film title or TMDB URL…';
       document.getElementById('tmdb-search').focus();
     });
 

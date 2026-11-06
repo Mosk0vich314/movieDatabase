@@ -402,8 +402,11 @@ a:hover { color: var(--accent-hover); }
 
 /* === Views === */
 .view { padding-top: 16px; }
-/* Prevent negative-margin backdrop hero from causing horizontal scroll */
-#view-detail { overflow-x: clip; }
+/* Prevent negative-margin backdrop hero from causing horizontal scroll.
+   The clip box is widened to the main column's padding box: the hero bleeds
+   16px past the view on each side, and clipping at the view itself cut the
+   first letter of the title band off. */
+#view-detail { overflow-x: clip; margin-inline: -16px; padding-inline: 16px; }
 
 /* === Catalogue Controls === */
 .catalogue-controls { margin-bottom: 24px; }
@@ -1803,9 +1806,12 @@ a:hover { color: var(--accent-hover); }
 }
 
 .mosaic-rating {
-  font-size: 0.65rem;
+  align-self: flex-start;
+  padding: 2px 6px;
+  border-radius: var(--r-xs);
+  font-size: var(--fs-xs);
   font-weight: 800;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+  line-height: 1.2;
 }
 
 .film-card {

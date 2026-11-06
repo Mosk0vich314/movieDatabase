@@ -709,9 +709,13 @@ const UI = (() => {
   }
 
   function mosaicSizeByRank(rank, total) {
-    // Mathematically flawless packing for 3 columns:
-    // This exact ratio guarantees the grid never leaves empty holes at the end.
-    if (total >= 10) { if (rank < 1) return 'sz-xl'; if (rank < 3) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 2 LG, 7 SM = 15 cells (✓)
+    // These ratios make the cell count a multiple of 3, so the grid *can* close
+    // every row. Whether it does depends on the order — see packMosaic().
+    if (total >= 10) {
+      // 1 XL, then 3, 2 or 1 LG so the cell count (total + 3 + LG) closes.
+      const lg = [3, 2, 1][total % 3];
+      if (rank < 1) return 'sz-xl'; if (rank < 1 + lg) return 'sz-lg'; return 'sz-sm';
+    }
     if (total === 9) { if (rank < 1) return 'sz-xl'; if (rank < 4) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 3 LG, 5 SM = 15 cells (✓)
     if (total === 8) { if (rank < 1) return 'sz-xl'; if (rank < 2) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 1 LG, 6 SM = 12 cells (✓)
     if (total === 7) { if (rank < 1) return 'sz-xl'; if (rank < 3) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 2 LG, 4 SM = 12 cells (✓)
@@ -719,8 +723,50 @@ const UI = (() => {
     if (total === 5) { if (rank < 1) return 'sz-xl'; if (rank < 2) return 'sz-lg'; return 'sz-sm'; } // 1 XL, 1 LG, 3 SM = 9 cells (✓)
     if (total === 4) { if (rank < 2) return 'sz-lg'; return 'sz-sm'; }                               // 0 XL, 2 LG, 2 SM = 6 cells (✓)
     if (total === 3) { return 'sz-sm'; }                                                             // 0 XL, 0 LG, 3 SM = 3 cells (✓)
-    if (total === 2) { if (rank < 1) return 'sz-lg'; return 'sz-sm'; }                               // 0 XL, 1 LG, 1 SM = 3 cells (✓)
+    if (total === 2) { if (rank < 1) return 'sz-xl'; return 'sz-lg'; }                               // 1 XL, 1 LG = 6 cells (✓) — an LG and an SM can't share one row
     return 'sz-sm'; // For 1 movie (just a SM, self-contained shape, doesn't leave gaps)
+  }
+
+  const MOSAIC_SPANS = { 'sz-xl': [2, 2], 'sz-lg': [1, 2], 'sz-sm': [1, 1] };
+
+  // Plays out `grid-auto-flow: row dense` on the 3-column mosaic and returns
+  // how many cells the order leaves empty. A right cell count is not enough:
+  // SM, LG, SM, LG puts the second LG under the first SM and strands three
+  // cells, which is the hole the 1970s lane used to show.
+  function mosaicHoles(items) {
+    const taken = [];
+    const free = (r, c) => !(taken[r] && taken[r][c]);
+    let used = 0, depth = 0;
+    for (const { sz } of items) {
+      const [w, h] = MOSAIC_SPANS[sz];
+      let placed = false;
+      for (let r = 0; !placed; r++) {
+        for (let c = 0; c + w <= 3 && !placed; c++) {
+          let fits = true;
+          for (let dr = 0; dr < h && fits; dr++) for (let dc = 0; dc < w && fits; dc++) fits = free(r + dr, c + dc);
+          if (!fits) continue;
+          for (let dr = 0; dr < h; dr++) {
+            taken[r + dr] = taken[r + dr] || [];
+            for (let dc = 0; dc < w; dc++) taken[r + dr][c + dc] = true;
+          }
+          used += w * h; depth = Math.max(depth, r + h); placed = true;
+        }
+      }
+    }
+    return depth * 3 - used;
+  }
+
+  // The shuffled order for this seed, re-drawn until it packs as tightly as
+  // the cell count allows. Rank order (XL, then LG, then SM) always packs, so
+  // it is the fallback; the same seed still gives the same layout.
+  function packMosaic(items, seed) {
+    const cells = items.reduce((n, { sz }) => n + MOSAIC_SPANS[sz][0] * MOSAIC_SPANS[sz][1], 0);
+    const least = (3 - cells % 3) % 3;
+    for (let i = 0; i < 40; i++) {
+      const order = seededShuffle(items, seed + i);
+      if (mosaicHoles(order) <= least) return order;
+    }
+    return items;
   }
 
   // Deterministic shuffle — same seed always produces same order (per decade)
@@ -741,8 +787,10 @@ const UI = (() => {
     const imgHtml = img
       ? `<img src="${imgSrc(img)}" alt="${escapeHtml(movie.title)}" loading="lazy">`
       : `<div class="mosaic-no-img">${escapeHtml(movie.title)}</div>`;
+    // A toned plate, like the film-card badge: bare coloured digits vanished on
+    // pale stills. Fill and ink come from the same pair, so every band reads.
     const ratingHtml = movie.rating
-      ? `<span class="mosaic-rating" style="color:${ratingColor(movie.rating)}">${formatRating(movie.rating)}</span>`
+      ? `<span class="mosaic-rating rating-badge--tone" style="background:${ratingColor(movie.rating)};color:${ratingInk(movie.rating)}">${formatRating(movie.rating)}</span>`
       : '';
     return `<div class="mosaic-item ${sizeClass}" data-id="${movie.id}">
       ${imgHtml}
@@ -784,7 +832,7 @@ const UI = (() => {
       const total = sorted.length;
       const withSizes = sorted.map((m, rank) => ({ m, sz: mosaicSizeByRank(rank, total) }));
       const seed = getDecadeSeed(k);
-      const shuffled = seededShuffle(withSizes, seed);
+      const shuffled = packMosaic(withSizes, seed);
       const totalCount = groups[k].length;
       return `<div class="decade-section">
         <div class="decade-header">
