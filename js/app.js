@@ -83,47 +83,41 @@ const App = (() => {
     if (!wrap) return;
     const movie = await pickTonightsScreening(false);
     if (!movie) { wrap.innerHTML = ''; return; }
-    // NB: both go through UI.imgSrc() — these come from the DB, which can be
-    // filled by an imported backup. See the URL-sanitising invariant.
-    const backdrop = UI.imgSrc(movie.backdrop || movie.poster || '');
-    const poster = UI.imgSrc(movie.poster || movie.backdrop || '');
-    const dirLine = (movie.directors || []).length > 0
-      ? `<div class="ts-director">${UI.escapeHtml(movie.directors[0])}</div>` : '';
-    const yearLine = movie.year ? `<span class="ts-year">${UI.escapeHtml(movie.year)}</span>` : '';
-    const showtime = '20:00'; // Doors open at 8pm
+    // The opening frame of the catalogue: tonight's watchlist pick, full bleed.
+    // NB: the still goes through UI.imgSrc() — it comes from the DB, which can
+    // be filled by an imported backup. See the URL-sanitising invariant.
+    const still = UI.imgSrc(movie.backdrop || movie.poster || '');
+    const credit = [(movie.directors || [])[0], movie.year].filter(Boolean).map(UI.escapeHtml).join(', ');
+    const resume = movie.resumeSeconds
+      ? `<p class="tp-resume">Stopped at ${UI.formatTimecode(movie.resumeSeconds)}${movie.runtime ? ` of ${UI.formatTimecode(movie.runtime * 60)}` : ''}</p>`
+      : '';
+    const titleClass = (movie.title || '').length > 22 ? 'tp-title tp-title--long' : 'tp-title';
     wrap.innerHTML = `
-      <div class="tonight-screening" data-id="${movie.id}">
-        ${backdrop ? `<img src="${backdrop}" class="ts-backdrop" alt="">` : ''}
-        <div class="ts-overlay"></div>
-        ${poster ? `<div class="ts-poster"><img src="${poster}" alt="" loading="lazy"></div>` : ''}
-        <div class="ts-content">
-          <div class="ts-label">
-            <span class="ts-bulb"></span> TONIGHT'S SCREENING <span class="ts-bulb"></span>
-          </div>
-          <div class="ts-title">${UI.escapeHtml(movie.title)} ${yearLine}</div>
-          ${dirLine}
-          <div class="ts-meta">
-            <span class="ts-showtime">Doors open at ${showtime}</span>
-            <span class="ts-countdown" id="ts-countdown"></span>
-          </div>
-          <div class="ts-actions">
-            <button class="btn btn-primary ts-watched" type="button">&#10003; I watched it</button>
-            <button class="btn btn-secondary ts-reroll" type="button" title="New pick">&#8634;</button>
+      <section class="tonight-pick${still ? '' : ' tonight-pick--blank'}" data-id="${movie.id}" aria-label="Tonight's screening">
+        ${still ? `<img src="${still}" class="tp-still" alt="">` : ''}
+        <div class="tp-body">
+          <p class="tp-when">Tonight at 20:00<span class="tp-countdown" id="tp-countdown"></span></p>
+          <h2 class="${titleClass}"><a href="#detail/${movie.id}">${UI.escapeHtml(movie.title)}</a></h2>
+          ${credit ? `<p class="tp-meta">${credit}</p>` : ''}
+          ${resume}
+          <div class="tp-actions">
+            <button class="btn btn-primary tp-watched" type="button">&#10003; I watched it</button>
+            <button class="btn btn-secondary tp-reroll" type="button">&#8635; Another pick</button>
           </div>
         </div>
-      </div>`;
-    const card = wrap.querySelector('.tonight-screening');
+      </section>`;
+    const card = wrap.querySelector('.tonight-pick');
     card.addEventListener('click', (e) => {
-      if (e.target.closest('button')) return;
+      if (e.target.closest('button, a')) return;
       window.location.hash = `#detail/${movie.id}`;
     });
-    wrap.querySelector('.ts-watched').addEventListener('click', async (e) => {
+    wrap.querySelector('.tp-watched').addEventListener('click', async (e) => {
       e.stopPropagation();
       haptic([10, 30, 10]);
       await markAsWatched(movie.id);
       localStorage.removeItem(TONIGHT_KEY);
     });
-    wrap.querySelector('.ts-reroll').addEventListener('click', async (e) => {
+    wrap.querySelector('.tp-reroll').addEventListener('click', async (e) => {
       e.stopPropagation();
       haptic(8);
       await pickTonightsScreening(true);
@@ -132,21 +126,39 @@ const App = (() => {
     startCountdownTicker();
   }
 
+  // The per-decade "⋯" menu. One open at a time; a tap outside or Escape
+  // closes it, and Escape hands focus back to the button that opened it.
+  function closeDecadeMenus(returnFocus = false) {
+    document.querySelectorAll('.decade-menu.open').forEach(menu => {
+      menu.classList.remove('open');
+      const btn = menu.querySelector('.decade-menu-btn');
+      btn.setAttribute('aria-expanded', 'false');
+      menu.querySelector('.decade-menu-list').hidden = true;
+      if (returnFocus) btn.focus();
+    });
+  }
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.decade-menu')) closeDecadeMenus();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.querySelector('.decade-menu.open')) closeDecadeMenus(true);
+  });
+
   let countdownIv = null;
   function startCountdownTicker() {
     if (countdownIv) clearInterval(countdownIv);
     const tick = () => {
-      const el = document.getElementById('ts-countdown');
+      const el = document.getElementById('tp-countdown');
       if (!el) { clearInterval(countdownIv); countdownIv = null; return; }
       const now = new Date();
       const target = new Date();
       target.setHours(20, 0, 0, 0);
       let diff = target - now;
-      if (diff <= 0) { el.textContent = '· Showing now'; return; }
+      if (diff <= 0) { el.textContent = ', showing now'; return; }
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
-      el.textContent = `· in ${h ? h + 'h ' : ''}${m}m ${h ? '' : s + 's'}`.trim();
+      el.textContent = `, in ${h ? h + 'h ' : ''}${m}m${h ? '' : ' ' + s + 's'}`;
     };
     tick();
     countdownIv = setInterval(tick, 1000);
@@ -187,7 +199,7 @@ const App = (() => {
       if (t.closest('.nav-link')) return haptic(6);
       if (t.closest('.btn-primary')) return haptic(10);
       if (t.closest('.btn, .filter-toggle-btn, .view-toggle-btn, .smt-btn')) return haptic(5);
-      if (t.closest('.movie-card, .film-card, .now-playing, .tonight-screening')) return haptic(4);
+      if (t.closest('.movie-card, .film-card, .just-added, .tonight-pick')) return haptic(4);
       if (t.closest('.fcs')) return haptic(8);
     }, true);
   }
@@ -387,9 +399,11 @@ const App = (() => {
     populateDirectorFilter(movies);
     populateTagFilter(movies);
 
-    document.getElementById('view-array-btn').classList.toggle('active', viewMode === 'array');
-    document.getElementById('view-decades-btn').classList.toggle('active', viewMode === 'decades');
-    document.getElementById('view-library-btn').classList.toggle('active', viewMode === 'library');
+    [['view-array-btn', 'array'], ['view-decades-btn', 'decades'], ['view-library-btn', 'library']].forEach(([id, mode]) => {
+      const b = document.getElementById(id);
+      b.classList.toggle('active', viewMode === mode);
+      b.setAttribute('aria-pressed', viewMode === mode ? 'true' : 'false');
+    });
 
     renderTonightsScreening();
 
@@ -402,9 +416,6 @@ const App = (() => {
         return db > da ? 1 : db < da ? -1 : (b.id || 0) - (a.id || 0);
       })[0];
       npWrap.innerHTML = UI.renderNowPlaying(newest);
-      npWrap.querySelector('.now-playing').addEventListener('click', () => {
-        window.location.hash = `#detail/${newest.id}`;
-      });
     } else {
       npWrap.innerHTML = '';
     }
@@ -541,6 +552,8 @@ const App = (() => {
       pendingPersonFilter = name;
     }
     document.getElementById('filter-panel').classList.add('open');
+    document.getElementById('filter-toggle').classList.add('open');
+    document.getElementById('filter-toggle').setAttribute('aria-expanded', 'true');
     if (window.location.hash === '#catalogue') {
       loadCatalogue();
     } else {
@@ -785,7 +798,7 @@ const App = (() => {
     if (watchlistViewMode === 'array') {
       container.innerHTML = UI.renderPosterGrid(movies);
     } else if (watchlistViewMode === 'decades') {
-      container.innerHTML = UI.renderDecadeLanes(movies, 'desc', decadeShowAll);
+      container.innerHTML = UI.renderDecadeLanes(movies, 'desc', decadeShowAll, false);
     } else {
       container.innerHTML = UI.renderBlurayShelf(movies);
       lazyLoadCasePosters(container);
@@ -1193,12 +1206,11 @@ const App = (() => {
   function syncRatingScaleUI() {
     const five = UI.isFiveStar();
 
-    const btn = document.getElementById('scale-toggle');
-    if (btn) {
-      btn.textContent = five ? '★' : '10';
-      btn.classList.toggle('active', five);
-      btn.title = five ? 'Rating scale: 5 stars — tap for /10' : 'Rating scale: out of 10 — tap for stars';
-    }
+    document.querySelectorAll('#scale-toggle [data-scale]').forEach(b => {
+      const on = b.dataset.scale === (five ? 'five' : 'ten');
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
 
     const rankedTab = document.querySelector('#chart-tabs .chart-tab[data-tab="ranked"]');
     if (rankedTab) rankedTab.textContent = five ? 'Five Star' : 'Ranked';
@@ -3695,6 +3707,21 @@ const App = (() => {
         return;
       }
 
+      const menuBtn = e.target.closest('.decade-menu-btn');
+      if (menuBtn) {
+        e.stopPropagation();
+        const menu = menuBtn.closest('.decade-menu');
+        const opening = !menu.classList.contains('open');
+        closeDecadeMenus();
+        if (opening) {
+          menu.classList.add('open');
+          menuBtn.setAttribute('aria-expanded', 'true');
+          menu.querySelector('.decade-menu-list').hidden = false;
+          menu.querySelector('.decade-menu-list button').focus();
+        }
+        return;
+      }
+
       const reshuffleBtn = e.target.closest('.decade-reshuffle-btn');
       if (reshuffleBtn) {
         e.stopPropagation();
@@ -3787,6 +3814,7 @@ const App = (() => {
           downloadBtn.innerHTML = btnOriginalText;
           downloadBtn.style.opacity = '1';
           downloadBtn.style.pointerEvents = 'auto';
+          closeDecadeMenus();
         }
         return;
       }
@@ -3881,8 +3909,9 @@ const App = (() => {
     document.getElementById('filter-toggle').addEventListener('click', () => {
       const panel = document.getElementById('filter-panel');
       const btn = document.getElementById('filter-toggle');
-      panel.classList.toggle('open');
-      btn.classList.toggle('open');
+      const open = panel.classList.toggle('open');
+      btn.classList.toggle('open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
 
     document.getElementById('filter-clear-all').addEventListener('click', () => {
@@ -3893,6 +3922,8 @@ const App = (() => {
       document.getElementById('filter-rating').value = '';
       document.getElementById('filter-tag').value = '';
       document.getElementById('filter-panel').classList.remove('open');
+      document.getElementById('filter-toggle').classList.remove('open');
+      document.getElementById('filter-toggle').setAttribute('aria-expanded', 'false');
       loadCatalogue();
       updateFilterBadge();
     });
@@ -3900,10 +3931,12 @@ const App = (() => {
     const gemsBtn = document.getElementById('gems-toggle');
     if (gemsBtn) {
       gemsBtn.classList.toggle('active', gemsLens);
+      gemsBtn.setAttribute('aria-pressed', gemsLens ? 'true' : 'false');
       gemsBtn.addEventListener('click', () => {
         gemsLens = !gemsLens;
         localStorage.setItem('gemsLens', gemsLens ? '1' : '0');
         gemsBtn.classList.toggle('active', gemsLens);
+        gemsBtn.setAttribute('aria-pressed', gemsLens ? 'true' : 'false');
         haptic(8);
         loadCatalogue();
         if (gemsLens) UI.showToast('✦ Gems highlighted — your discoveries the world hasn’t found yet');
@@ -3911,10 +3944,13 @@ const App = (() => {
       });
     }
 
-    const scaleBtn = document.getElementById('scale-toggle');
-    if (scaleBtn) {
-      scaleBtn.addEventListener('click', () => {
-        const next = UI.isFiveStar() ? 'ten' : 'five';
+    const scaleToggle = document.getElementById('scale-toggle');
+    if (scaleToggle) {
+      scaleToggle.addEventListener('click', (e) => {
+        const choice = e.target.closest('[data-scale]');
+        if (!choice) return;
+        const next = choice.dataset.scale;
+        if (next === (UI.isFiveStar() ? 'five' : 'ten')) return;
         UI.setRatingScale(next);
         haptic(8);
         syncRatingScaleUI();
@@ -3934,7 +3970,7 @@ const App = (() => {
       const badge = document.getElementById('filter-badge');
       const btn = document.getElementById('filter-toggle');
       badge.textContent = active;
-      badge.style.display = active > 0 ? 'inline' : 'none';
+      badge.style.display = active > 0 ? 'inline-flex' : 'none';
       btn.classList.toggle('active', active > 0);
       const clearAllBtn = document.getElementById('filter-clear-all');
       if (clearAllBtn) clearAllBtn.style.display = active > 0 ? 'inline-flex' : 'none';

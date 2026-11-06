@@ -44,13 +44,43 @@ async function main() {
     const header=await page.evaluate(()=>{
       const title=document.querySelector('.app-title').getBoundingClientRect(),add=document.querySelector('.header-add').getBoundingClientRect();
       const hit=document.elementFromPoint(add.left+add.width/2,add.top+add.height/2);
-      const links=document.querySelectorAll('.nav-link'),first=links[0].getBoundingClientRect(),last=links[links.length-1].getBoundingClientRect();
-      return {vertical:Math.abs((title.top+title.height/2)-(add.top+add.height/2)),titleCentre:Math.abs((title.left+title.width/2)-innerWidth/2),hit:!!hit.closest('.header-add'),navFits:first.left>=0 && last.right<=innerWidth};
+      const main=document.querySelector('.app-main'),column=main.getBoundingClientRect().left+parseFloat(getComputedStyle(main).paddingLeft);
+      const nav=document.querySelector('.app-nav').getBoundingClientRect(),links=[...document.querySelectorAll('.nav-link')];
+      const first=links[0].getBoundingClientRect(),last=links[links.length-1].getBoundingClientRect();
+      const lastHit=document.elementFromPoint(last.left+last.width/2,last.top+last.height/2);
+      const search=document.querySelector('#view-catalogue .input-wrap').getBoundingClientRect(),filters=document.getElementById('filter-toggle').getBoundingClientRect();
+      return {vertical:Math.abs((title.top+title.height/2)-(add.top+add.height/2)),titleColumn:Math.abs(title.left-column),hit:!!hit.closest('.header-add'),
+        navFits:first.left>=0 && last.right<=innerWidth,navBottom:Math.abs(nav.bottom-innerHeight),navTop:nav.top,
+        tapTargets:links.every(l=>l.getBoundingClientRect().height>=44),labelsFit:links.every(l=>l.scrollWidth<=l.clientWidth+1),lastHit:!!lastHit?.closest('.nav-link'),
+        toolbarRow:Math.abs(search.top-filters.top)<2,searchWidth:search.width};
     });
-    assert.equal(header.hit,true,`Add control receives taps at ${width}px`);assert.ok(header.vertical<2,`Add alignment at ${width}px`);assert.ok(header.titleCentre<2,`Title centring at ${width}px`);assert.equal(header.navFits,true,`Navigation fits at ${width}px`);
+    assert.equal(header.hit,true,`Add control receives taps at ${width}px`);assert.ok(header.vertical<2,`Add alignment at ${width}px`);
+    assert.ok(header.titleColumn<2,`Title lines up with the content column at ${width}px`);assert.equal(header.navFits,true,`Navigation fits at ${width}px`);
+    assert.equal(header.tapTargets,true,`Navigation tap targets at ${width}px`);assert.equal(header.labelsFit,true,`Navigation labels fit at ${width}px`);
+    assert.equal(header.lastHit,true,`Last tab receives taps at ${width}px`);
+    if(width<720) assert.ok(header.navBottom<1,`Tab bar sits on the bottom edge at ${width}px`);
+    else assert.ok(header.navTop<200,`Tabs sit under the header at ${width}px`);
+    assert.equal(header.toolbarRow,true,`Search and Filters share one row at ${width}px`);assert.ok(header.searchWidth>=140,`Search keeps its width at ${width}px`);
     await page.click('.header-add');await page.waitForSelector('#view-add',{state:'visible'});assert.equal(await page.evaluate(()=>location.hash),'#add');
   }
   console.log('PASS: header Add control alignment, hit target and routing');
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(async()=>{await MovieDB.importData(JSON.stringify([{title:'Menu film',year:'1975',rating:8},{title:'Other film',year:'1977',rating:7}]));location.hash='#catalogue';});
+  await page.waitForSelector('.decade-menu-btn');
+  await page.click('.decade-menu-btn');
+  assert.equal(await page.getAttribute('.decade-menu-btn','aria-expanded'),'true','Decade menu opens');
+  assert.equal(await page.evaluate(()=>document.activeElement.classList.contains('decade-reshuffle-btn')),true,'Decade menu focuses its first item');
+  await page.keyboard.press('Escape');
+  assert.equal(await page.evaluate(()=>document.querySelector('.decade-menu-list').hidden && document.activeElement.classList.contains('decade-menu-btn')),true,'Escape closes the decade menu and returns focus');
+  await page.click('.decade-menu-btn');await page.click('.app-title');
+  assert.equal(await page.getAttribute('.decade-menu-btn','aria-expanded'),'false','A tap outside closes the decade menu');
+  await page.click('#filter-toggle');
+  assert.equal(await page.getAttribute('#filter-toggle','aria-expanded'),'true','Filters reports its panel as open');
+  await page.click('#scale-toggle [data-scale="five"]');
+  assert.equal(await page.evaluate(()=>UI.isFiveStar() && document.querySelector('#scale-toggle [data-scale="five"]').getAttribute('aria-pressed')==='true'),true,'Rating scale switches from the Filters panel');
+  await page.click('#scale-toggle [data-scale="ten"]');await page.click('#filter-toggle');
+  await page.evaluate(async()=>{await MovieDB.clearData();localStorage.removeItem('ratingScale');});
+  console.log('PASS: tab bar, catalogue toolbar, Filters panel and decade menu');
   const dataChecks=await page.evaluate(async()=>{
     const checks={};
     await MovieDB.importData(JSON.stringify([{title:'Original',tmdbId:100,year:'2000',genres:['Drama'],directors:['Test Director'],rating:8,

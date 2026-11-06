@@ -647,26 +647,25 @@ const UI = (() => {
     `;
   }
 
+  // "Just added": one compact row under tonight's pick — routine news, so it
+  // gets a line, not a second hero card.
   function renderNowPlaying(movie) {
-    const backdrop = movie.backdrop || movie.poster || '';
+    const poster = movie.poster || movie.backdrop || '';
     const rating = movie.rating
-      ? `<span class="np-rating" style="color:${ratingColor(movie.rating)}">${formatRating(movie.rating)}</span>`
+      ? `<span class="ja-rating rating-badge--tone" style="background:${ratingColor(movie.rating)};color:${ratingInk(movie.rating)}">${formatRating(movie.rating)}</span>`
       : '';
-    const dirLine = (movie.directors || []).length > 0
-      ? `<div class="np-director">${escapeHtml(movie.directors[0])}</div>` : '';
-    const rewatchLine = movie.rewatches
-      ? `<div class="np-rewatch">&#8634; ${movie.rewatches}× watched</div>` : '';
+    const meta = [(movie.directors || [])[0], movie.year].filter(Boolean).map(escapeHtml).join(', ');
+    const rewatch = movie.rewatches ? `, watched ${movie.rewatches}&times;` : '';
     return `
-      <div class="now-playing" data-id="${movie.id}">
-        ${backdrop ? `<img src="${imgSrc(backdrop)}" class="np-backdrop" alt="">` : ''}
-        <div class="np-overlay"></div>
-        <div class="np-content">
-          <div class="np-label">JUST ADDED</div>
-          <div class="np-title">${escapeHtml(movie.title)}<span class="np-year"> ${movie.year || ''}</span></div>
-          ${dirLine}
-          <div class="np-meta">${rating}${rewatchLine}</div>
-        </div>
-      </div>`;
+      <a class="just-added" href="#detail/${movie.id}">
+        ${poster ? `<img src="${imgSrc(poster)}" class="ja-poster" alt="" loading="lazy">` : '<span class="ja-poster ja-poster--blank"></span>'}
+        <span class="ja-text">
+          <span class="ja-label">Just added</span>
+          <span class="ja-title">${escapeHtml(movie.title)}</span>
+          ${meta || rewatch ? `<span class="ja-meta">${meta}${rewatch}</span>` : ''}
+        </span>
+        ${rating}
+      </a>`;
   }
 
   function renderSuggestionsPanel(movieTitle, results) {
@@ -803,7 +802,9 @@ const UI = (() => {
 
   const DECADE_LANE_LIMIT = 10;
 
-  function renderDecadeLanes(movies, dir = 'desc', showAll = false) {
+  // withActions: the Reshuffle / Save-as-poster menu. Only the catalogue wires
+  // those two up, so the watchlist's decades view leaves the menu out.
+  function renderDecadeLanes(movies, dir = 'desc', showAll = false, withActions = true) {
     const groups = {};
     movies.forEach(m => {
       const yr = parseInt(m.year);
@@ -836,22 +837,19 @@ const UI = (() => {
       const totalCount = groups[k].length;
       return `<div class="decade-section">
         <div class="decade-header">
-          <div class="decade-label-group">
-            <span class="decade-label">${k}</span>
-            <span class="decade-count">${totalCount} film${totalCount !== 1 ? 's' : ''}</span>
-          </div>
-          <div class="decade-header-actions">
-            <button class="decade-reshuffle-btn" data-decade="${k}" title="Try different layout">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
-              Reshuffle
+          <h3 class="decade-label">${k}</h3>
+          <span class="decade-count">${totalCount} film${totalCount !== 1 ? 's' : ''}</span>
+          ${withActions ? `<div class="decade-menu">
+            <button class="decade-menu-btn" type="button" aria-expanded="false" aria-controls="decade-menu-${k}" aria-label="Options for the ${k}">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
             </button>
-            <button class="decade-download-btn" data-decade="${k}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              Save Poster
-            </button>
-          </div>
+            <div class="decade-menu-list" id="decade-menu-${k}" hidden>
+              <button class="decade-reshuffle-btn" type="button" data-decade="${k}">Reshuffle layout</button>
+              <button class="decade-download-btn" type="button" data-decade="${k}">Save as poster</button>
+            </div>
+          </div>` : ''}
         </div>
-        <div class="decade-mosaic">${shuffled.map(({ m, sz }) => renderMosaicItem(m, sz)).join('')}</div>
+        <div class="decade-strip"><div class="decade-mosaic">${shuffled.map(({ m, sz }) => renderMosaicItem(m, sz)).join('')}</div></div>
       </div>`;
     }).join('')}</div>`;
   }
