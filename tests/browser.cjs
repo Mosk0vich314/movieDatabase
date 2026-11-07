@@ -65,22 +65,41 @@ async function main() {
   }
   console.log('PASS: header Add control alignment, hit target and routing');
   await page.setViewportSize({width:390,height:844});
-  await page.evaluate(async()=>{await MovieDB.importData(JSON.stringify([{title:'Menu film',year:'1975',rating:8},{title:'Other film',year:'1977',rating:7}]));location.hash='#catalogue';});
-  await page.waitForSelector('.decade-menu-btn');
-  await page.click('.decade-menu-btn');
-  assert.equal(await page.getAttribute('.decade-menu-btn','aria-expanded'),'true','Decade menu opens');
+  await page.evaluate(async()=>{await MovieDB.importData(JSON.stringify([{title:'Menu film',year:'1975',rating:8},{title:'Other film',year:'1977',rating:7},{title:'Third film',year:'1979',rating:6},{title:'Fourth film',year:'1980',rating:5}]));location.hash='#catalogue';});
+  await page.waitForSelector('.decade-header .more-menu-btn');
+  await page.click('.decade-header .more-menu-btn');
+  assert.equal(await page.getAttribute('.decade-header .more-menu-btn','aria-expanded'),'true','Decade menu opens');
   assert.equal(await page.evaluate(()=>document.activeElement.classList.contains('decade-reshuffle-btn')),true,'Decade menu focuses its first item');
   await page.keyboard.press('Escape');
-  assert.equal(await page.evaluate(()=>document.querySelector('.decade-menu-list').hidden && document.activeElement.classList.contains('decade-menu-btn')),true,'Escape closes the decade menu and returns focus');
-  await page.click('.decade-menu-btn');await page.click('.app-title');
-  assert.equal(await page.getAttribute('.decade-menu-btn','aria-expanded'),'false','A tap outside closes the decade menu');
+  assert.equal(await page.evaluate(()=>document.querySelector('.decade-header .more-menu-list').hidden && document.activeElement.classList.contains('more-menu-btn')),true,'Escape closes the decade menu and returns focus');
+  await page.click('.decade-header .more-menu-btn');await page.click('.app-title');
+  assert.equal(await page.getAttribute('.decade-header .more-menu-btn','aria-expanded'),'false','A tap outside closes the decade menu');
   await page.click('#filter-toggle');
   assert.equal(await page.getAttribute('#filter-toggle','aria-expanded'),'true','Filters reports its panel as open');
   await page.click('#scale-toggle [data-scale="five"]');
   assert.equal(await page.evaluate(()=>UI.isFiveStar() && document.querySelector('#scale-toggle [data-scale="five"]').getAttribute('aria-pressed')==='true'),true,'Rating scale switches from the Filters panel');
   await page.click('#scale-toggle [data-scale="ten"]');await page.click('#filter-toggle');
+  // detail page: verdict beside the poster, Delete behind the menu, Back names its target
+  await page.evaluate(async()=>{const m=(await MovieDB.getAllMovies()).find(x=>x.title==='Menu film');location.hash='#detail/'+m.id;});
+  await page.waitForSelector('.dt-verdict');
+  const detail=await page.evaluate(()=>({score:document.querySelector('.dt-verdict-score').textContent.trim(),inFacts:!!document.querySelector('.dt-facts .dt-verdict'),
+    delta:document.querySelector('.dt-verdict-delta')?.textContent.trim(),deleteHidden:document.querySelector('#detail-delete').offsetParent===null,
+    header:getComputedStyle(document.querySelector('.app-header')).display,back:document.querySelector('#detail-back .btn-back-label').textContent}));
+  assert.equal(detail.score,'8/10','Your rating leads the detail page');assert.equal(detail.inFacts,true,'Your rating sits beside the poster');
+  assert.equal(detail.delta,'2.0 above your average','Rating is compared with your average');
+  assert.equal(detail.deleteHidden,true,'Delete waits behind the more menu');assert.equal(detail.header,'none','Detail page drops the header');
+  assert.equal(detail.back,'Catalogue','Back says where it returns');
+  await page.click('.dt-actions .more-menu-btn');
+  assert.equal(await page.evaluate(()=>document.activeElement.id),'detail-ticket','More menu focuses its first item');
+  await page.keyboard.press('Escape');
+  assert.equal(await page.evaluate(()=>document.querySelector('#detail-more').hidden),true,'Escape closes the detail menu');
+  await page.evaluate(()=>location.hash='#chart');await page.waitForSelector('#view-chart',{state:'visible'});
+  await page.evaluate(async()=>{const m=(await MovieDB.getAllMovies()).find(x=>x.title==='Menu film');location.hash='#detail/'+m.id;});
+  await page.waitForSelector('.dt-verdict');
+  assert.equal(await page.locator('#detail-back .btn-back-label').textContent(),'Chart','Back from a chart visit says Chart');
+  await page.click('#detail-back');await page.waitForFunction(()=>location.hash==='#chart');
   await page.evaluate(async()=>{await MovieDB.clearData();localStorage.removeItem('ratingScale');});
-  console.log('PASS: tab bar, catalogue toolbar, Filters panel and decade menu');
+  console.log('PASS: tab bar, catalogue toolbar, Filters panel, decade menu and detail verdict/actions/back');
   const dataChecks=await page.evaluate(async()=>{
     const checks={};
     await MovieDB.importData(JSON.stringify([{title:'Original',tmdbId:100,year:'2000',genres:['Drama'],directors:['Test Director'],rating:8,

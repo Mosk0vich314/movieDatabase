@@ -20,6 +20,12 @@ const App = (() => {
   // Search preview (#preview/:tmdbId) state
   let previewBackHash = '#add';
   let detailBackHash = '';
+  // Where the detail page's Back can return to, and what its label says.
+  const BACK_TARGETS = { '#catalogue': 'Catalogue', '#watchlist': 'Watchlist', '#chart': 'Chart', '#stats': 'Stats', '#directors': 'Directors', '#add': 'Search' };
+  function labelBack(hash) {
+    const label = document.querySelector('#detail-back .btn-back-label');
+    if (label) label.textContent = hash.startsWith('#director/') ? 'Director' : (BACK_TARGETS[hash] || 'Back');
+  }
   let pendingFormTmdbId = null;
   let lastHash = '';
   // Scroll offset per view hash. showView() only toggles display:none, so
@@ -126,22 +132,38 @@ const App = (() => {
     startCountdownTicker();
   }
 
-  // The per-decade "⋯" menu. One open at a time; a tap outside or Escape
-  // closes it, and Escape hands focus back to the button that opened it.
-  function closeDecadeMenus(returnFocus = false) {
-    document.querySelectorAll('.decade-menu.open').forEach(menu => {
+  // The "⋯" menus (one per decade, one on the detail page). A disclosure,
+  // not an ARIA menu: Tab walks the items. One open at a time; a tap outside
+  // or Escape closes it, and Escape hands focus back to the button.
+  function closeMoreMenus(returnFocus = false) {
+    document.querySelectorAll('.more-menu.open').forEach(menu => {
       menu.classList.remove('open');
-      const btn = menu.querySelector('.decade-menu-btn');
+      const btn = menu.querySelector('.more-menu-btn');
       btn.setAttribute('aria-expanded', 'false');
-      menu.querySelector('.decade-menu-list').hidden = true;
+      menu.querySelector('.more-menu-list').hidden = true;
       if (returnFocus) btn.focus();
     });
   }
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('.decade-menu')) closeDecadeMenus();
+    const btn = e.target.closest('.more-menu-btn');
+    if (btn) {
+      const menu = btn.closest('.more-menu');
+      const opening = !menu.classList.contains('open');
+      closeMoreMenus();
+      if (opening) {
+        menu.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+        const list = menu.querySelector('.more-menu-list');
+        list.hidden = false;
+        const first = list.querySelector('button, a');
+        if (first) first.focus();
+      }
+      return;
+    }
+    if (!e.target.closest('.more-menu')) closeMoreMenus();
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.querySelector('.decade-menu.open')) closeDecadeMenus(true);
+    if (e.key === 'Escape' && document.querySelector('.more-menu.open')) closeMoreMenus(true);
   });
 
   let countdownIv = null;
@@ -279,7 +301,7 @@ const App = (() => {
       return;
     }
     if (hash.startsWith('#detail/')) {
-      if (prevHash?.startsWith('#director/')) detailBackHash = prevHash;
+      if (prevHash && (prevHash.startsWith('#director/') || BACK_TARGETS[prevHash])) detailBackHash = prevHash;
       else if (!prevHash?.startsWith('#detail/')) detailBackHash = '';
       const id = parseInt(hash.split('/')[1], 10);
       showView('detail');
@@ -346,6 +368,7 @@ const App = (() => {
 
   function showView(name) {
     currentView = name;
+    document.body.dataset.view = name;
     document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
     const el = document.getElementById(`view-${name}`);
     if (el) el.style.display = 'block';
@@ -1942,6 +1965,7 @@ const App = (() => {
     setupTrailerButton(movie);
     setupPosterLift(movie);
 
+    labelBack(previewBackHash);
     document.getElementById('detail-back').addEventListener('click', () => {
       window.location.hash = previewBackHash;
     });
@@ -2108,8 +2132,10 @@ const App = (() => {
 
     setupTrailerButton(movie);
 
+    const backTo = detailBackHash || (movie.watchlist ? '#watchlist' : '#catalogue');
+    labelBack(backTo);
     document.getElementById('detail-back').addEventListener('click', () => {
-      window.location.hash = detailBackHash || (movie.watchlist ? '#watchlist' : '#catalogue');
+      window.location.hash = backTo;
     });
 
     document.querySelectorAll('.mlt-item[data-id]').forEach(item => {
@@ -2220,12 +2246,14 @@ const App = (() => {
     const ticketBtn = document.getElementById('detail-ticket');
     if (ticketBtn) {
       ticketBtn.addEventListener('click', async () => {
+        closeMoreMenus();
         haptic(12);
         await openTicketStub(movie);
       });
     }
 
     document.getElementById('detail-delete').addEventListener('click', async () => {
+      closeMoreMenus();
       const msg = movie.watchlist
         ? 'Remove this movie from your watchlist?'
         : 'Delete this movie from your catalogue?';
@@ -2244,6 +2272,8 @@ const App = (() => {
   // slides: drag up (or tap) and the loose bottom curls while the credits
   // sheet unfolds from underneath. It latches open — with a dozen-odd people
   // to tap, springing shut the moment you let go would be useless.
+  const LIFT_HINT_KEY = 'posterLiftHints';
+  const LIFT_HINTS = 3;
   function setupPosterLift(movie) {
     const lift = document.getElementById('poster-lift');
     const card = document.getElementById('detail-poster-drag');
@@ -2319,6 +2349,7 @@ const App = (() => {
     function openSheet() {
       if (open) return;
       open = true;
+      localStorage.setItem(LIFT_HINT_KEY, String(LIFT_HINTS));   // found it; stop hinting
       lift.classList.add('is-open');
       card.setAttribute('aria-expanded', 'true');
       card.setAttribute('aria-label', 'Lower the poster to hide cast and crew');
@@ -2336,6 +2367,18 @@ const App = (() => {
     }
 
     const toggle = () => (open ? closeSheet() : openSheet());
+
+    // The poster used to carry a "↑ lift" label. Instead, on the first few
+    // visits it peeks: the same curl, a fraction of the way, and back down.
+    const hintsShown = parseInt(localStorage.getItem(LIFT_HINT_KEY) || '0', 10) || 0;
+    if (hintsShown < LIFT_HINTS && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      localStorage.setItem(LIFT_HINT_KEY, String(hintsShown + 1));
+      setTimeout(() => {
+        if (!lift.isConnected || open || dragging) return;
+        setPeel(0.16, true);
+        setTimeout(() => { if (lift.isConnected && !open && !dragging) setPeel(0, true); }, 760);
+      }, 900);
+    }
 
     // Tap works too — the drag is the flourish, not the only way in.
     card.addEventListener('click', (e) => {
@@ -3707,21 +3750,6 @@ const App = (() => {
         return;
       }
 
-      const menuBtn = e.target.closest('.decade-menu-btn');
-      if (menuBtn) {
-        e.stopPropagation();
-        const menu = menuBtn.closest('.decade-menu');
-        const opening = !menu.classList.contains('open');
-        closeDecadeMenus();
-        if (opening) {
-          menu.classList.add('open');
-          menuBtn.setAttribute('aria-expanded', 'true');
-          menu.querySelector('.decade-menu-list').hidden = false;
-          menu.querySelector('.decade-menu-list button').focus();
-        }
-        return;
-      }
-
       const reshuffleBtn = e.target.closest('.decade-reshuffle-btn');
       if (reshuffleBtn) {
         e.stopPropagation();
@@ -3814,7 +3842,7 @@ const App = (() => {
           downloadBtn.innerHTML = btnOriginalText;
           downloadBtn.style.opacity = '1';
           downloadBtn.style.pointerEvents = 'auto';
-          closeDecadeMenus();
+          closeMoreMenus();
         }
         return;
       }

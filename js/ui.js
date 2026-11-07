@@ -266,6 +266,22 @@ const UI = (() => {
       : row;
   }
 
+  // The detail page's outside scores: one quiet line of links under the
+  // synopsis. They are worth a glance, not the page's second-biggest block.
+  // Ids come from the DB (an imported backup can set them), so they are
+  // URL-encoded before they go into an href.
+  function buildScoreLine(movie) {
+    const id = v => encodeURIComponent(String(v));
+    const link = (href, name, score, full = '') =>
+      `<a href="${href}" target="_blank" rel="noopener" class="dt-score"${full ? ` title="${full}" aria-label="${full}${score ? ' ' + score : ''}"` : ''}>${name}${score ? ` <b>${score}</b>` : ''}</a>`;
+    const items = [];
+    if (movie.voteAverage && movie.tmdbId) items.push(link(`https://www.themoviedb.org/movie/${id(movie.tmdbId)}`, 'TMDb', formatScore(movie.voteAverage)));
+    if (movie.imdbId) items.push(link(`https://www.imdb.com/title/${id(movie.imdbId)}/`, 'IMDb', movie.imdbRating ? Number(movie.imdbRating).toFixed(1) : ''));
+    if (movie.rtScore) items.push(link(`https://www.rottentomatoes.com/search?search=${encodeURIComponent(movie.title || '')}`, 'RT', escapeHtml(movie.rtScore), 'Rotten Tomatoes'));
+    if (movie.tmdbId) items.push(link(`https://letterboxd.com/tmdb/${id(movie.tmdbId)}/`, 'Letterboxd', ''));
+    return items.length ? `<p class="dt-scoreline">${items.join('')}</p>` : '';
+  }
+
   // ---- Resume point (watchlist) ----
   // Movies store `resumeSeconds` (total seconds) for where the user stopped watching.
   function formatTimecode(totalSeconds) {
@@ -416,7 +432,7 @@ const UI = (() => {
     }).join('');
 
     const pal = getGenrePalette(movie.genres);
-    const backBtn = `<button class="btn-back" id="detail-back"><span class="btn-back-arrow">&#8249;</span> Back</button>`;
+    const backBtn = `<button class="btn-back" id="detail-back" type="button"><span class="btn-back-arrow">&#8249;</span> <span class="btn-back-label">Back</span></button>`;
 
     // --- Hero: torn photo panel with the title band struck across it ---
     const heroHtml = movie.backdrop
@@ -464,7 +480,6 @@ const UI = (() => {
     const posterSlideHtml = hasPeople
       ? `<div class="poster-lift" id="poster-lift">
            <div class="detail-poster-drag" id="detail-poster-drag">${poster}</div>
-           <span class="poster-lift-hint" aria-hidden="true">&#8593; lift</span>
          </div>`
       : `<div class="detail-poster-wrap">${poster}</div>`;
 
@@ -495,18 +510,6 @@ const UI = (() => {
         }
       }
 
-      // Rating vs avg
-      const ratedOthers = ctx.allMovies.filter(m => m.id !== movie.id && m.rating > 0);
-      if (movie.rating > 0 && ratedOthers.length >= 3) {
-        const avg = ratedOthers.reduce((s, m) => s + m.rating, 0) / ratedOthers.length;
-        const diff = movie.rating - avg;
-        if (Math.abs(diff) >= 0.5) {
-          const sign = diff > 0 ? '+' : '';
-          // In star mode the gap is quoted in stars, not rating points.
-          const shown = isFiveStar() ? (diff / 2).toFixed(1) : diff.toFixed(1);
-          chips.push(`${sign}${shown} vs your avg`);
-        }
-      }
 
       // Year peers
       if (movie.year) {
@@ -515,10 +518,37 @@ const UI = (() => {
       }
     }
 
+    // Your rating is the page's headline: it sits beside the poster, set in
+    // the display face, with how far it is from your average under it.
+    let verdictHtml = '';
+    if (owned && movie.rating > 0) {
+      const five = isFiveStar();
+      let delta = '';
+      const ratedOthers = (ctx.allMovies || []).filter(m => m.id !== movie.id && m.rating > 0);
+      if (ratedOthers.length >= 3) {
+        const diff = movie.rating - ratedOthers.reduce((sum, m) => sum + m.rating, 0) / ratedOthers.length;
+        if (Math.abs(diff) >= 0.5) {
+          // In star mode the gap is quoted in stars, not rating points.
+          const gap = five ? `${(Math.abs(diff) / 2).toFixed(1)} stars` : Math.abs(diff).toFixed(1);
+          delta = `<span class="dt-verdict-delta">${gap} ${diff > 0 ? 'above' : 'below'} your average</span>`;
+        }
+      }
+      verdictHtml = `<div class="dt-verdict${five ? ' dt-verdict--stars' : ''}">
+        <span class="dt-verdict-label">Your rating</span>
+        <span class="dt-verdict-score">${formatRating(movie.rating)}${five ? '' : '<small>/10</small>'}</span>
+        ${delta}
+      </div>`;
+    }
+
     const contextHtml = chips.length
       ? `<div class="detail-context">${chips.map(c => `<span class="detail-chip">${escapeHtml(c)}</span>`).join('')}</div>`
       : '';
 
+    const moreIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
+    const moreItems = movie.watchlist
+      ? `<button type="button" class="more-menu-item--danger" id="detail-delete" data-id="${movie.id}">Remove from watchlist</button>`
+      : `${owned && (movie.rating || 0) > 0 ? '<button type="button" id="detail-ticket">Make a ticket stub</button>' : ''}
+         <button type="button" class="more-menu-item--danger" id="detail-delete" data-id="${movie.id}">Delete film</button>`;
     const actionsHtml = preview
       ? `<div class="detail-actions dt-actions dt-actions--preview">
           <button class="btn btn-primary" id="preview-watchlist" type="button">&#43; Add to watchlist</button>
@@ -526,17 +556,19 @@ const UI = (() => {
         </div>`
       : `<div class="detail-actions dt-actions">
           ${movie.watchlist
-            ? `<button class="btn btn-primary" id="detail-mark-watched">&#10003; Mark as Watched</button>
-               <button class="btn btn-secondary watchlist-pin-btn${movie.pinned ? ' pinned' : ''}" id="detail-pin" data-id="${movie.id}" title="${movie.pinned ? 'Unpin' : 'Pin to top'}">&#128204; ${movie.pinned ? 'Unpin' : 'Pin'}</button>`
-            : `<button class="btn btn-primary" id="detail-edit" data-id="${movie.id}">Edit</button>
-               <button class="btn btn-secondary" id="detail-rewatch">&#8634; Rewatch</button>`
+            ? `<button class="btn btn-primary" id="detail-mark-watched" type="button">&#10003; Mark as Watched</button>
+               <button class="btn btn-secondary watchlist-pin-btn${movie.pinned ? ' pinned' : ''}" id="detail-pin" type="button" data-id="${movie.id}" title="${movie.pinned ? 'Unpin' : 'Pin to top'}">&#128204; ${movie.pinned ? 'Unpin' : 'Pin'}</button>`
+            : `<button class="btn btn-primary" id="detail-edit" type="button" data-id="${movie.id}">Edit</button>
+               <button class="btn btn-secondary" id="detail-rewatch" type="button">&#8634; Rewatch</button>`
           }
-          <button class="btn btn-danger" id="detail-delete" data-id="${movie.id}">Delete</button>
+          <div class="more-menu">
+            <button class="more-menu-btn" type="button" aria-expanded="false" aria-controls="detail-more" aria-label="More actions">${moreIcon}</button>
+            <div class="more-menu-list" id="detail-more" hidden>${moreItems}</div>
+          </div>
         </div>`;
 
-    const ticketHtml = owned && (movie.rating || 0) > 0
-      ? `<div class="detail-ticket-strip"><button class="detail-ticket-btn" id="detail-ticket" type="button"><span class="detail-ticket-btn-icon">&#127903;</span><span class="detail-ticket-btn-label">Generate Ticket Stub</span><span class="detail-ticket-btn-arrow">&#8599;</span></button></div>`
-      : '';
+    const overviewHtml = movie.overview ? `<p class="detail-overview">${escapeHtml(movie.overview)}</p>` : '';
+    const scoreLine = buildScoreLine(movie);
 
     return `
       <div class="dt${preview ? ' dt--preview' : ''}">
@@ -545,6 +577,7 @@ const UI = (() => {
           <div class="dt-lede">
             ${posterSlideHtml}
             <div class="dt-facts">
+              ${verdictHtml}
               <div class="detail-directors">${renderDirectorBadge(movie.directors)}</div>
               ${specsHtml}
               <div class="detail-genres">${genres}</div>
@@ -552,15 +585,11 @@ const UI = (() => {
             </div>
           </div>
           ${hasPeople ? renderCreditsSheet(movie) : ''}
-          ${preview ? '' : `<div id="watching-notes-root">${renderWatchingNotes(movie)}</div>`}
-          ${preview ? actionsHtml : ''}
-          ${dtSection('Synopsis', movie.overview ? `<p class="detail-overview">${escapeHtml(movie.overview)}</p>` : '')}
-          ${dtSection('Elsewhere', buildExtBadgesHtml(movie, false))}
-          ${dtSection('Your rating', (movie.rating || 0) > 0 ? `<div class="detail-rating">${renderRatingBadge(movie.rating)}</div>` : '')}
-          ${dtSection('Your notes', movie.notes ? `<p class="detail-notes-body">${escapeHtml(movie.notes)}</p>` : '')}
+          ${actionsHtml}
           ${!preview && movie.watchlist ? `<div class="detail-resume" id="detail-resume">${renderResumeSection(movie)}</div>` : ''}
-          ${preview ? '' : actionsHtml}
-          ${ticketHtml}
+          ${preview ? '' : `<div id="watching-notes-root">${renderWatchingNotes(movie)}</div>`}
+          ${overviewHtml ? dtSection('Synopsis', overviewHtml + scoreLine) : scoreLine}
+          ${dtSection('Your notes', movie.notes ? `<p class="detail-notes-body">${escapeHtml(movie.notes)}</p>` : '')}
         </div>
         ${castHtml}
         ${renderMoreLikeThis(movie, ctx)}
@@ -839,11 +868,11 @@ const UI = (() => {
         <div class="decade-header">
           <h3 class="decade-label">${k}</h3>
           <span class="decade-count">${totalCount} film${totalCount !== 1 ? 's' : ''}</span>
-          ${withActions ? `<div class="decade-menu">
-            <button class="decade-menu-btn" type="button" aria-expanded="false" aria-controls="decade-menu-${k}" aria-label="Options for the ${k}">
+          ${withActions ? `<div class="more-menu decade-menu">
+            <button class="more-menu-btn" type="button" aria-expanded="false" aria-controls="decade-menu-${k}" aria-label="Options for the ${k}">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
             </button>
-            <div class="decade-menu-list" id="decade-menu-${k}" hidden>
+            <div class="more-menu-list" id="decade-menu-${k}" hidden>
               <button class="decade-reshuffle-btn" type="button" data-decade="${k}">Reshuffle layout</button>
               <button class="decade-download-btn" type="button" data-decade="${k}">Save as poster</button>
             </div>
