@@ -1991,7 +1991,6 @@ const App = (() => {
     container.innerHTML = UI.renderMovieDetail(movie, { allMovies, preview: true });
 
     setupTrailerButton(movie);
-    setupPosterLift(movie);
 
     labelBack(previewBackHash);
     document.getElementById('detail-back').addEventListener('click', () => {
@@ -2292,189 +2291,11 @@ const App = (() => {
         window.location.hash = movie.watchlist ? '#watchlist' : '#catalogue';
       }
     });
-
-    setupPosterLift(movie);
-  }
-
-  // The poster is taped to the page at its top edge, so it lifts rather than
-  // slides: drag up (or tap) and the loose bottom curls while the credits
-  // sheet unfolds from underneath. It latches open — with a dozen-odd people
-  // to tap, springing shut the moment you let go would be useless.
-  const LIFT_HINT_KEY = 'posterLiftHints';
-  const LIFT_HINTS = 3;
-  function setupPosterLift(movie) {
-    const lift = document.getElementById('poster-lift');
-    const card = document.getElementById('detail-poster-drag');
-    const sheet = document.getElementById('credits-sheet');
-    if (!lift || !card || !sheet) return;
-    const lede = lift.closest('.dt-lede');
-
-    const FULL_PEEL = 1;
-    const THRESHOLD = 34;      // px of upward drag that latches it open
-    const inner = sheet.querySelector('.credits-sheet-inner');
-    const paper = PaperCurl.create(card);
-    const restingMargin = lede ? parseFloat(getComputedStyle(lede).marginBottom) || 0 : 0;
-    let open = false, startY = 0, tracking = false, dragging = false;
-    let suppressClick = false;
-    let peel = 0, motionFrame = 0;
-
-    const setPeel = (target, animate) => {
-      cancelAnimationFrame(motionFrame);
-      motionFrame = 0;
-      if (target > 0) sheet.hidden = false;
-      sheet.inert = !open;
-      const sheetHeight = inner ? inner.offsetHeight : sheet.scrollHeight;
-      const height = card.offsetHeight;
-      const liftStyle = getComputedStyle(lift);
-      const facts = lede && lede.querySelector('.dt-facts');
-      const spare = facts ? Math.max(0, lede.offsetHeight - facts.offsetHeight - 8) : 0;
-
-      // Drive the page from the actual curved edge, rather than reclaiming the
-      // layout box of a rigidly rotated rectangle.
-      lift.classList.add('is-moving');
-      sheet.classList.add('is-moving');
-      if (lede) lede.classList.add('is-moving');
-      const paint = (next) => {
-        peel = next;
-        const progress = next;
-        const visible = paper ? paper.setProgress(progress) : 1;
-        lift.style.setProperty('--lift-progress', progress);
-        lift.classList.toggle('is-lifting', progress > 0.02);
-        sheet.style.height = (sheetHeight * progress) + 'px';
-        sheet.style.opacity = progress;
-        if (lede) {
-          const vacated = height * (1 - visible);
-          lede.style.marginBottom = (restingMargin - Math.min(vacated, spare)) + 'px';
-        }
-      };
-      const finish = () => {
-        lift.classList.remove('is-moving');
-        sheet.classList.remove('is-moving');
-        if (lede) lede.classList.remove('is-moving');
-        if (open) sheet.style.height = 'auto';
-        else sheet.hidden = true;
-      };
-
-      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (!animate || reducedMotion || peel === target) {
-        paint(target);
-        if (animate) finish();
-        return;
-      }
-      const from = peel;
-      const duration = parseFloat(liftStyle.getPropertyValue('--lift-duration')) || 620;
-      const started = performance.now();
-      const frame = (now) => {
-        if (!lift.isConnected) { motionFrame = 0; return; }
-        const t = Math.min(1, (now - started) / duration);
-        paint(from + (target - from) * (1 - Math.pow(1 - t, 3)));
-        if (t < 1) motionFrame = requestAnimationFrame(frame);
-        else { motionFrame = 0; finish(); }
-      };
-      motionFrame = requestAnimationFrame(frame);
-    };
-
-    function openSheet() {
-      if (open) return;
-      open = true;
-      localStorage.setItem(LIFT_HINT_KEY, String(LIFT_HINTS));   // found it; stop hinting
-      lift.classList.add('is-open');
-      card.setAttribute('aria-expanded', 'true');
-      card.setAttribute('aria-label', 'Lower the poster to hide cast and crew');
-      setPeel(FULL_PEEL, true);
-      haptic(12);
-    }
-
-    function closeSheet() {
-      if (!open) return;
-      open = false;
-      lift.classList.remove('is-open');
-      card.setAttribute('aria-expanded', 'false');
-      card.setAttribute('aria-label', 'Lift the poster to see cast and crew');
-      setPeel(0, true);
-    }
-
-    const toggle = () => (open ? closeSheet() : openSheet());
-
-    // The poster used to carry a "↑ lift" label. Instead, on the first few
-    // visits it peeks: the same curl, a fraction of the way, and back down.
-    const hintsShown = parseInt(localStorage.getItem(LIFT_HINT_KEY) || '0', 10) || 0;
-    if (hintsShown < LIFT_HINTS && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      localStorage.setItem(LIFT_HINT_KEY, String(hintsShown + 1));
-      setTimeout(() => {
-        if (!lift.isConnected || open || dragging) return;
-        setPeel(0.16, true);
-        setTimeout(() => { if (lift.isConnected && !open && !dragging) setPeel(0, true); }, 760);
-      }, 900);
-    }
-
-    // Tap works too — the drag is the flourish, not the only way in.
-    card.addEventListener('click', (e) => {
-      e.stopPropagation();
-      // Touch browsers can synthesize a click after a drag; keep it latched.
-      if (suppressClick && e.detail !== 0) { suppressClick = false; return; }
-      suppressClick = false;
-      toggle();
-    });
-    card.setAttribute('role', 'button');
-    card.setAttribute('tabindex', '0');
-    card.setAttribute('aria-controls', 'credits-sheet');
-    card.setAttribute('aria-expanded', 'false');
-    card.setAttribute('aria-label', 'Lift the poster to see cast and crew');
-    card.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
-      if (e.key === 'Escape' && open) closeSheet();
-    });
-
-    card.addEventListener('touchstart', (e) => {
-      suppressClick = false;
-      startY = e.touches[0].clientY;
-      tracking = true; dragging = false;
-    }, { passive: true });
-
-    card.addEventListener('touchmove', (e) => {
-      if (!tracking) return;
-      const dy = e.touches[0].clientY - startY;
-      if (!dragging) {
-        if (Math.abs(dy) < 8) return;
-        // downward intent while closed is a page scroll — let it go
-        if (dy > 0 && !open) { tracking = false; return; }
-        dragging = true;
-      }
-      e.preventDefault();
-      // dragging up peels it open; dragging down while open puts it back
-      const lifted = open ? FULL_PEEL : 0;
-      const progress = Math.max(0, Math.min(FULL_PEEL, lifted - dy / 90));
-      setPeel(progress, false);
-    }, { passive: false });
-
-    const release = (dy) => {
-      if (!dragging) { tracking = false; return; }
-      tracking = false; dragging = false;
-      suppressClick = true;
-      if (!open && -dy >= THRESHOLD) openSheet();
-      else if (open && dy >= THRESHOLD) closeSheet();
-      else setPeel(open ? FULL_PEEL : 0, true);
-    };
-    card.addEventListener('touchend', (e) => release(e.changedTouches[0].clientY - startY));
-    card.addEventListener('touchcancel', () => release(0));
-
-    // tapping a person goes to their filmography
-    sheet.addEventListener('click', (e) => {
-      const btn = e.target.closest('.cs-person');
-      if (!btn) return;
-      const mode = btn.dataset.personMode;
-      pendingPersonSearch = {
-        mode: mode === 'actor' ? 'actor' : 'director',
-        query: btn.dataset.personName,
-      };
-      window.location.hash = '#add';
-    });
   }
 
   async function setupTrailerButton(movie) {
     if (!movie.tmdbId) return;
-    const wrap = document.querySelector('.detail-backdrop-wrap') || document.querySelector('.detail-poster-wrap') || document.querySelector('.detail-poster-drag');
+    const wrap = document.querySelector('.detail-backdrop-wrap') || document.querySelector('.detail-poster-wrap');
     if (!wrap) return;
     let videos = [];
     try { videos = await TMDB.getMovieVideos(movie.tmdbId); } catch (_) { return; }
@@ -3764,8 +3585,8 @@ const App = (() => {
     document.addEventListener('click', (e) => {
       const dirLink = e.target.closest('.director-link');
       if (dirLink) { e.stopPropagation(); Directors.openByName(dirLink.dataset.director); return; }
-      const castName = e.target.closest('.cast-name-link');
-      if (castName) { e.stopPropagation(); filterByPerson(castName.dataset.personName); return; }
+      const castMember = e.target.closest('.dt-cast-member');
+      if (castMember) { e.stopPropagation(); filterByPerson(castMember.dataset.personName); return; }
     });
 
     document.getElementById('movie-grid').addEventListener('click', async (e) => {

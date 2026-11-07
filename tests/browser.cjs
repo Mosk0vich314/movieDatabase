@@ -70,7 +70,7 @@ async function main() {
   }
   console.log('PASS: header, tab row (13px labels, scrolls when too wide), Add control and routing');
   await page.setViewportSize({width:390,height:844});
-  await page.evaluate(async()=>{await MovieDB.importData(JSON.stringify([{title:'Menu film',year:'1975',rating:8},{title:'Other film',year:'1977',rating:7},{title:'Third film',year:'1979',rating:6},{title:'Fourth film',year:'1980',rating:5}]));location.hash='#catalogue';});
+  await page.evaluate(async()=>{await MovieDB.importData(JSON.stringify([{title:'Menu film',year:'1975',rating:8,directors:['Test Director'],crew:[{name:'Test Director',roles:['Director']},{name:'Test Writer',roles:['Screenplay']}],cast:[{name:'Lead Actor',character:'The Lead'}]},{title:'Other film',year:'1977',rating:7},{title:'Third film',year:'1979',rating:6},{title:'Fourth film',year:'1980',rating:5}]));location.hash='#catalogue';});
   await page.waitForSelector('.decade-header .more-menu-btn');
   await page.click('.decade-header .more-menu-btn');
   assert.equal(await page.getAttribute('.decade-header .more-menu-btn','aria-expanded'),'true','Decade menu opens');
@@ -94,6 +94,14 @@ async function main() {
   assert.equal(detail.delta,'2.0 above your average','Rating is compared with your average');
   assert.equal(detail.deleteHidden,true,'Delete waits behind the more menu');
   assert.equal(detail.back,'Catalogue','Back says where it returns');
+  const credits=await page.evaluate(()=>({sections:document.querySelectorAll('.dt-credits').length,sheet:!!document.querySelector('#credits-sheet, .poster-lift'),
+    rows:[...document.querySelectorAll('.dt-billing-row')].map(r=>r.querySelector('dt').textContent+':'+r.querySelector('dd').textContent),
+    directorLink:!!document.querySelector('.dt-billing dd .director-link'),writerLink:!!document.querySelectorAll('.dt-billing-row')[1]?.querySelector('button'),
+    cast:document.querySelectorAll('.dt-cast-member').length}));
+  assert.equal(credits.sections,1,'Cast and crew appear once on the page');assert.equal(credits.sheet,false,'No lift-to-reveal credits sheet');
+  assert.deepEqual(credits.rows,['Directed by:Test Director','Written by:Test Writer'],'Crew is set as a billing block');
+  assert.equal(credits.directorLink,true,'Directors link to their profile');assert.equal(credits.writerLink,false,'Other crew are plain text');
+  assert.equal(credits.cast,1,'Cast is one row of portraits');
   await page.click('.dt-actions .more-menu-btn');
   assert.equal(await page.evaluate(()=>document.activeElement.id),'detail-ticket','More menu focuses its first item');
   await page.keyboard.press('Escape');
@@ -104,7 +112,7 @@ async function main() {
   assert.equal(await page.locator('#detail-back .btn-back-label').textContent(),'Chart','Back from a chart visit says Chart');
   await page.click('#detail-back');await page.waitForFunction(()=>location.hash==='#chart');
   await page.evaluate(async()=>{await MovieDB.clearData();localStorage.removeItem('ratingScale');});
-  console.log('PASS: tab row, catalogue toolbar, Filters panel, decade menu and detail verdict/actions/back');
+  console.log('PASS: tab row, catalogue toolbar, Filters panel, decade menu and detail verdict/actions/back/credits');
   const dataChecks=await page.evaluate(async()=>{
     const checks={};
     await MovieDB.importData(JSON.stringify([{title:'Original',tmdbId:100,year:'2000',genres:['Drama'],directors:['Test Director'],rating:8,

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'movie-catalogue-v2026.11.07.1837';
+const CACHE_NAME = 'movie-catalogue-v2026.11.07.1853';
 const ASSETS = [
   './',
   './index.html',
@@ -10,7 +10,6 @@ const ASSETS = [
   './js/sync.js',
   './js/posters.js',
   './js/directors.js',
-  './js/paper-curl.js',
   './js/app.js',
   './manifest.json',
   './fonts/Staatliches.woff2',
