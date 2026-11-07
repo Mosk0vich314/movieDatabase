@@ -208,6 +208,14 @@ const App = (() => {
       syncRatingScaleUI();
       UI.initCustomSelects();
       navigate(window.location.hash || '#catalogue');
+      const nav = document.querySelector('.app-nav');
+      nav.addEventListener('scroll', () => syncNavOverflow(), { passive: true });
+      window.addEventListener('resize', () => syncNavOverflow());
+      // the row grows when the fonts land and when the watchlist badge fills in
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => syncNavOverflow(true));
+        nav.querySelectorAll('.nav-link').forEach(link => ro.observe(link));
+      }
       updateWatchlistBadge();
       registerServiceWorker();
     }).catch(error => UI.showToast(`Could not open your collection: ${error.message}`, 8000));
@@ -368,7 +376,6 @@ const App = (() => {
 
   function showView(name) {
     currentView = name;
-    document.body.dataset.view = name;
     document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
     const el = document.getElementById(`view-${name}`);
     if (el) el.style.display = 'block';
@@ -376,6 +383,27 @@ const App = (() => {
     document.querySelectorAll('.nav-link').forEach(link => {
       link.classList.toggle('active', link.dataset.view === name);
     });
+    syncNavOverflow(true);
+  }
+
+  // The tab row scrolls sideways when it is wider than the screen (it never
+  // shrinks its labels). Mark which edges have tabs behind them, for the
+  // fades, and bring the active tab into view when the view changes.
+  function syncNavOverflow(revealActive = false) {
+    const nav = document.querySelector('.app-nav');
+    if (!nav) return;
+    const over = nav.scrollWidth > nav.clientWidth + 1;
+    const active = nav.querySelector('.nav-link.active');
+    if (revealActive && over && active) {
+      const fade = 32;
+      if (active.offsetLeft < nav.scrollLeft + fade) nav.scrollLeft = Math.max(0, active.offsetLeft - fade);
+      else if (active.offsetLeft + active.offsetWidth > nav.scrollLeft + nav.clientWidth - fade) {
+        nav.scrollLeft = active.offsetLeft + active.offsetWidth - nav.clientWidth + fade;
+      }
+    }
+    nav.classList.toggle('is-overflowing', over);
+    nav.classList.toggle('is-scrolled', over && nav.scrollLeft > 1);
+    nav.classList.toggle('at-end', over && nav.scrollLeft + nav.clientWidth >= nav.scrollWidth - 1);
   }
 
   // --- Catalogue ---

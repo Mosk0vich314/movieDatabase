@@ -44,26 +44,31 @@ async function main() {
     const header=await page.evaluate(()=>{
       const title=document.querySelector('.app-title').getBoundingClientRect(),add=document.querySelector('.header-add').getBoundingClientRect();
       const hit=document.elementFromPoint(add.left+add.width/2,add.top+add.height/2);
-      const main=document.querySelector('.app-main'),column=main.getBoundingClientRect().left+parseFloat(getComputedStyle(main).paddingLeft);
-      const nav=document.querySelector('.app-nav').getBoundingClientRect(),links=[...document.querySelectorAll('.nav-link')];
-      const first=links[0].getBoundingClientRect(),last=links[links.length-1].getBoundingClientRect();
-      const lastHit=document.elementFromPoint(last.left+last.width/2,last.top+last.height/2);
+      const navEl=document.querySelector('.app-nav'),nav=navEl.getBoundingClientRect(),links=[...document.querySelectorAll('.nav-link')];
+      const first=links[0].getBoundingClientRect(),last=links[links.length-1].getBoundingClientRect(),active=navEl.querySelector('.nav-link.active').getBoundingClientRect();
       const search=document.querySelector('#view-catalogue .input-wrap').getBoundingClientRect(),filters=document.getElementById('filter-toggle').getBoundingClientRect();
-      return {vertical:Math.abs((title.top+title.height/2)-(add.top+add.height/2)),titleColumn:Math.abs(title.left-column),hit:!!hit.closest('.header-add'),
-        navFits:first.left>=0 && last.right<=innerWidth,navBottom:Math.abs(nav.bottom-innerHeight),navTop:nav.top,
-        tapTargets:links.every(l=>l.getBoundingClientRect().height>=44),labelsFit:links.every(l=>l.scrollWidth<=l.clientWidth+1),lastHit:!!lastHit?.closest('.nav-link'),
+      return {vertical:Math.abs((title.top+title.height/2)-(add.top+add.height/2)),titleCentre:Math.abs((title.left+title.width/2)-innerWidth/2),hit:!!hit.closest('.header-add'),
+        navFits:first.left>=0 && last.right<=innerWidth,scrolls:navEl.scrollWidth>navEl.clientWidth && getComputedStyle(navEl).overflowX==='auto',
+        activeVisible:active.left>=0 && active.right<=innerWidth,navTop:nav.top,
+        tapTargets:links.every(l=>l.getBoundingClientRect().height>=44),labelPx:Math.min(...links.map(l=>parseFloat(getComputedStyle(l).fontSize))),
+        labelsWhole:links.every(l=>l.scrollWidth<=l.clientWidth+1),
         toolbarRow:Math.abs(search.top-filters.top)<2,searchWidth:search.width};
     });
     assert.equal(header.hit,true,`Add control receives taps at ${width}px`);assert.ok(header.vertical<2,`Add alignment at ${width}px`);
-    assert.ok(header.titleColumn<2,`Title lines up with the content column at ${width}px`);assert.equal(header.navFits,true,`Navigation fits at ${width}px`);
-    assert.equal(header.tapTargets,true,`Navigation tap targets at ${width}px`);assert.equal(header.labelsFit,true,`Navigation labels fit at ${width}px`);
-    assert.equal(header.lastHit,true,`Last tab receives taps at ${width}px`);
-    if(width<720) assert.ok(header.navBottom<1,`Tab bar sits on the bottom edge at ${width}px`);
-    else assert.ok(header.navTop<200,`Tabs sit under the header at ${width}px`);
+    assert.ok(header.titleCentre<2,`Title centring at ${width}px`);assert.ok(header.navTop<200,`Tabs sit under the header at ${width}px`);
+    assert.equal(header.tapTargets,true,`Navigation tap targets at ${width}px`);assert.ok(header.labelPx>=13,`Tab labels stay at 13px or more at ${width}px`);
+    assert.equal(header.labelsWhole,true,`Tab labels are never cut at ${width}px`);assert.equal(header.activeVisible,true,`Active tab is in view at ${width}px`);
+    if(width>=375) assert.equal(header.navFits,true,`Navigation fits at ${width}px`);
+    else {
+      assert.equal(header.scrolls,true,`A row too wide scrolls instead of shrinking at ${width}px`);
+      const lastHit=await page.evaluate(()=>{const nav=document.querySelector('.app-nav');nav.scrollLeft=nav.scrollWidth;const r=[...nav.querySelectorAll('.nav-link')].pop().getBoundingClientRect();
+        return !!document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)?.closest('.nav-link[data-view="stats"]');});
+      assert.equal(lastHit,true,`Last tab is reachable by scrolling at ${width}px`);
+    }
     assert.equal(header.toolbarRow,true,`Search and Filters share one row at ${width}px`);assert.ok(header.searchWidth>=140,`Search keeps its width at ${width}px`);
     await page.click('.header-add');await page.waitForSelector('#view-add',{state:'visible'});assert.equal(await page.evaluate(()=>location.hash),'#add');
   }
-  console.log('PASS: header Add control alignment, hit target and routing');
+  console.log('PASS: header, tab row (13px labels, scrolls when too wide), Add control and routing');
   await page.setViewportSize({width:390,height:844});
   await page.evaluate(async()=>{await MovieDB.importData(JSON.stringify([{title:'Menu film',year:'1975',rating:8},{title:'Other film',year:'1977',rating:7},{title:'Third film',year:'1979',rating:6},{title:'Fourth film',year:'1980',rating:5}]));location.hash='#catalogue';});
   await page.waitForSelector('.decade-header .more-menu-btn');
@@ -84,10 +89,10 @@ async function main() {
   await page.waitForSelector('.dt-verdict');
   const detail=await page.evaluate(()=>({score:document.querySelector('.dt-verdict-score').textContent.trim(),inFacts:!!document.querySelector('.dt-facts .dt-verdict'),
     delta:document.querySelector('.dt-verdict-delta')?.textContent.trim(),deleteHidden:document.querySelector('#detail-delete').offsetParent===null,
-    header:getComputedStyle(document.querySelector('.app-header')).display,back:document.querySelector('#detail-back .btn-back-label').textContent}));
+    back:document.querySelector('#detail-back .btn-back-label').textContent}));
   assert.equal(detail.score,'8/10','Your rating leads the detail page');assert.equal(detail.inFacts,true,'Your rating sits beside the poster');
   assert.equal(detail.delta,'2.0 above your average','Rating is compared with your average');
-  assert.equal(detail.deleteHidden,true,'Delete waits behind the more menu');assert.equal(detail.header,'none','Detail page drops the header');
+  assert.equal(detail.deleteHidden,true,'Delete waits behind the more menu');
   assert.equal(detail.back,'Catalogue','Back says where it returns');
   await page.click('.dt-actions .more-menu-btn');
   assert.equal(await page.evaluate(()=>document.activeElement.id),'detail-ticket','More menu focuses its first item');
@@ -99,7 +104,7 @@ async function main() {
   assert.equal(await page.locator('#detail-back .btn-back-label').textContent(),'Chart','Back from a chart visit says Chart');
   await page.click('#detail-back');await page.waitForFunction(()=>location.hash==='#chart');
   await page.evaluate(async()=>{await MovieDB.clearData();localStorage.removeItem('ratingScale');});
-  console.log('PASS: tab bar, catalogue toolbar, Filters panel, decade menu and detail verdict/actions/back');
+  console.log('PASS: tab row, catalogue toolbar, Filters panel, decade menu and detail verdict/actions/back');
   const dataChecks=await page.evaluate(async()=>{
     const checks={};
     await MovieDB.importData(JSON.stringify([{title:'Original',tmdbId:100,year:'2000',genres:['Drama'],directors:['Test Director'],rating:8,
