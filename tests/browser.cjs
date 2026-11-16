@@ -25,6 +25,7 @@ async function main() {
     const u=new URL(route.request().url());
     if(u.origin===origin)return route.continue();
     if(u.hostname==='api.themoviedb.org') {
+      if(/\/person\/\d+\/external_ids$/.test(u.pathname))return route.fulfill({json:{imdb_id:'nm'+u.pathname.split('/').at(-2).padStart(7,'0')}});
       if(/\/person\/50$/.test(u.pathname))return route.fulfill({json:{id:50,name:'Test Director',biography:'A filmmaker.',place_of_birth:'Rome',movie_credits:{crew:[...films,films[0]]}}});
       if(u.pathname.endsWith('/search/person'))return route.fulfill({json:{results:[{id:50,name:'Test Director',known_for_department:'Directing'}]}});
       if(/\/movie\/\d+$/.test(u.pathname)) {
@@ -38,6 +39,16 @@ async function main() {
   await page.addInitScript(()=>localStorage.setItem('ratingMigrated10','1'));
   await page.goto(origin);await page.waitForSelector('.custom-select-trigger',{state:'attached'});
   assert.deepEqual(errors,[],'Startup errors');
+  // A cast portrait opens the actor's IMDb page, not a filter on the catalogue.
+  await page.evaluate(()=>location.hash='#preview/9100');
+  await page.waitForFunction(()=>document.querySelector('.dt-cast-member')?.href==='https://www.imdb.com/name/nm0000001/');
+  const castLinks=await page.evaluate(()=>({count:document.querySelectorAll('a.dt-cast-member[target="_blank"][rel~="noopener"]').length,
+    known:UI.imdbPersonUrl({name:'Some One',imdbId:'nm0000123'}),unknown:UI.imdbPersonUrl({name:'Some One'}),unsafe:UI.imdbPersonUrl({name:'Some One',imdbId:'"><script>'})}));
+  assert.equal(castLinks.count,14,'Every cast portrait is a link that opens outside the app');
+  assert.equal(castLinks.known,'https://www.imdb.com/name/nm0000123/','A known IMDb id links straight to the person');
+  assert.equal(castLinks.unknown,'https://www.imdb.com/find/?s=nm&q=Some%20One','Without an id the portrait searches IMDb for the name');
+  assert.equal(castLinks.unsafe,castLinks.unknown,'An IMDb id that is not an IMDb id never reaches the URL');
+  console.log('PASS: cast portraits link to IMDb');
   for(const width of [320,390,1280]) {
     await page.setViewportSize({width,height:844});await page.evaluate(()=>location.hash='#catalogue');
     await page.waitForSelector('#view-catalogue',{state:'visible'});
@@ -102,6 +113,7 @@ async function main() {
   assert.deepEqual(credits.rows,['Directed by:Test Director','Written by:Test Writer'],'Crew is set as a billing block');
   assert.equal(credits.directorLink,true,'Directors link to their profile');assert.equal(credits.writerLink,false,'Other crew are plain text');
   assert.equal(credits.cast,1,'Cast is one row of portraits');
+  assert.equal(await page.evaluate(()=>document.querySelector('.dt-cast-member').href),'https://www.imdb.com/find/?s=nm&q=Lead%20Actor','A stored cast member with no TMDB id still reaches IMDb');
   await page.click('.dt-actions .more-menu-btn');
   assert.equal(await page.evaluate(()=>document.activeElement.id),'detail-ticket','More menu focuses its first item');
   await page.keyboard.press('Escape');

@@ -21,13 +21,16 @@ const Stats = (() => {
 
   function generateChallenges(movies) {
     const msPerWeek = 7 * 24 * 3600000;
-    const weekNum = Math.floor(Date.now() / msPerWeek);
     const now = new Date();
     const dow = now.getDay();
     const weekStartMs = now.getTime() - (dow === 0 ? 6 : dow - 1) * 86400000;
     const weekStart = new Date(weekStartMs);
     weekStart.setHours(0, 0, 0, 0);
     const weekStartStr = dayKey(weekStart);
+    // Numbered from this week's Monday, the same Monday progress is counted
+    // from. Counting weeks from the epoch (a Thursday) swapped the decade and
+    // genre targets mid-week, under films already added towards the old ones.
+    const weekNum = Math.floor(weekStart.getTime() / msPerWeek);
 
     const addedThisWeek = movies.filter(m => m.dateAdded && dayKey(m.dateAdded) >= weekStartStr).length;
     const highRatedThisWeek = movies.filter(m => m.dateAdded && dayKey(m.dateAdded) >= weekStartStr && m.rating >= 8).length;
@@ -359,7 +362,7 @@ const Stats = (() => {
     const items = results.map(r => {
       const year = r.release_date ? r.release_date.substring(0, 4) : '';
       const img = r.poster_path
-        ? `<img src="${TMDB.posterUrl(r.poster_path, 'w154')}" alt="${UI.escapeHtml(r.title)}" loading="lazy">`
+        ? `<img src="${UI.imgSrc(TMDB.posterUrl(r.poster_path, 'w154'))}" alt="${UI.escapeHtml(r.title)}" loading="lazy">`
         : `<div class="blind-no-poster"></div>`;
       return `
         <div class="blind-spot-card" data-tmdb-id="${r.id}">
@@ -431,7 +434,7 @@ const Stats = (() => {
       ${stats.dna ? `
       <div class="taste-dna-card">
         <div class="taste-dna-label">Your Taste DNA</div>
-        <div class="taste-dna-value">${stats.dna}</div>
+        <div class="taste-dna-value">${UI.escapeHtml(stats.dna)}</div>
       </div>` : ''}
 
       ${stats.total === 0 ? '<p class="stats-empty">Add some movies to see your stats!</p>' : `

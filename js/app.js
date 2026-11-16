@@ -12,9 +12,6 @@ const App = (() => {
   let searchMode = 'movie';
   let selectedDirectorName = '';
   let pendingPersonSearch = null;
-  let pendingPersonFilter = '';
-  let personFilterJump = false;
-  let dirFilterSetByJump = false;
   let recentPickIds = [];
   let currentFilmography = null;
   // Search preview (#preview/:tmdbId) state
@@ -327,24 +324,18 @@ const App = (() => {
     const view = viewMap[hash] || 'catalogue';
     showView(view);
 
-    if (view === 'catalogue') {
-      if (!personFilterJump) {
-        pendingPersonFilter = '';
-        if (dirFilterSetByJump) {
-          document.getElementById('filter-director').value = '';
-          dirFilterSetByJump = false;
-        }
-      }
-      personFilterJump = false;
-      loadCatalogue().then(() => restoreScroll(hash));
-    }
+    // Every view restores its own scroll offset once it has rendered. Without
+    // this the window keeps the previous view's offset, so opening Stats from
+    // halfway down the catalogue landed halfway down Stats.
+    if (view === 'catalogue') loadCatalogue().then(() => restoreScroll(hash));
     if (view === 'watchlist') loadWatchlist().then(() => restoreScroll(hash));
-    if (view === 'chart') loadChart();
+    if (view === 'chart') loadChart().then(() => restoreScroll(hash));
     if (view !== 'chart') { tournament = null; koth = null; duel = null; }
-    if (view === 'stats') loadStats();
-    if (view === 'directors') Directors.loadLibrary();
-    if (view === 'inventory') loadInventory();
+    if (view === 'stats') loadStats().then(() => restoreScroll(hash));
+    if (view === 'directors') Directors.loadLibrary().then(() => restoreScroll(hash));
+    if (view === 'inventory') loadInventory().then(() => restoreScroll(hash));
     if (view === 'add') {
+      restoreScroll(hash);
       // Returning from a preview — keep the search results the user was browsing.
       if (!prevHash.startsWith('#preview/')) resetAddView();
       if (pendingFormTmdbId) {
@@ -591,28 +582,6 @@ const App = (() => {
     }).filter(Boolean);
   }
 
-  function filterByPerson(name) {
-    const dirSelect = document.getElementById('filter-director');
-    const dirOption = Array.from(dirSelect.options).find(o => o.value === name);
-    if (dirOption) {
-      dirSelect.value = name;
-      dirFilterSetByJump = true;
-      pendingPersonFilter = '';
-    } else {
-      dirSelect.value = '';
-      pendingPersonFilter = name;
-    }
-    document.getElementById('filter-panel').classList.add('open');
-    document.getElementById('filter-toggle').classList.add('open');
-    document.getElementById('filter-toggle').setAttribute('aria-expanded', 'true');
-    if (window.location.hash === '#catalogue') {
-      loadCatalogue();
-    } else {
-      personFilterJump = true;
-      window.location.hash = '#catalogue';
-    }
-  }
-
   function applyFilters(movies) {
     const genre = document.getElementById('filter-genre').value;
     const director = document.getElementById('filter-director').value;
@@ -625,8 +594,6 @@ const App = (() => {
       if (director && !(m.directors || []).includes(director)) return false;
       if (minRating && (m.rating || 0) < minRating) return false;
       if (tag && !(m.tags || []).includes(tag)) return false;
-      if (pendingPersonFilter && !(m.directors || []).includes(pendingPersonFilter) &&
-          !(m.cast || []).some(c => c.name === pendingPersonFilter)) return false;
       if (search && !m.title.toLowerCase().includes(search)) return false;
       return true;
     });
@@ -721,7 +688,7 @@ const App = (() => {
       box-shadow:0 20px 60px rgba(0,0,0,0.8),0 0 0 1px rgba(255,255,255,0.07);
       transition:opacity 0.13s ease-out,transform 0.13s ease-out;
     `;
-    if (movie.poster) cover.innerHTML = `<img src="${movie.poster}" style="width:100%;height:100%;object-fit:cover;display:block;" alt="">`;
+    if (movie.poster) cover.innerHTML = `<img src="${UI.imgSrc(movie.poster)}" style="width:100%;height:100%;object-fit:cover;display:block;" alt="">`;
     document.body.appendChild(cover);
     await wait(55);
     cover.style.opacity = '1';
@@ -804,7 +771,7 @@ const App = (() => {
             <div class="wl-pinned-list">
               ${pinned.map(m => {
                 const poster = m.poster
-                  ? `<img src="${UI.escapeHtml(m.poster)}" alt="${UI.escapeHtml(m.title)}" loading="lazy">`
+                  ? `<img src="${UI.imgSrc(m.poster)}" alt="${UI.escapeHtml(m.title)}" loading="lazy">`
                   : `<div class="wl-pinned-no-poster"></div>`;
                 return `<div class="wl-pinned-item" data-id="${m.id}">
                   <div class="wl-pinned-poster">${poster}</div>
@@ -1339,6 +1306,11 @@ const App = (() => {
       notes: document.getElementById('form-notes').value.trim(),
       tags: getFormTags(),
     };
+    // A tag typed but not yet committed with Enter still counts.
+    const tagInput = document.getElementById('form-tags-input');
+    const pendingTag = tagInput.value.replace(/,/g, '').trim();
+    if (pendingTag && !movie.tags.includes(pendingTag)) movie.tags.push(pendingTag);
+    tagInput.value = '';
 
     try {
       const existingId = document.getElementById('form-id').value;
@@ -1398,7 +1370,7 @@ const App = (() => {
   let chartTab = LISTS[localStorage.getItem('chartTab')] ? localStorage.getItem('chartTab') : 'ranked';
 
   function loadChart() {
-    setChartTab(chartTab, true);
+    return setChartTab(chartTab, true);
   }
 
   async function loadRankedChart() {
@@ -1458,12 +1430,13 @@ const App = (() => {
     // A duel in progress lives inside its own list pane - same deal as the
     // tournament below: don't wipe it just because the tabs were flipped.
     if (LISTS[chartTab]) {
-      if (!duel || duel.cfg.tab !== chartTab) loadList(LISTS[chartTab]);
-      return;
+      if (!duel || duel.cfg.tab !== chartTab) return loadList(LISTS[chartTab]);
+      return Promise.resolve();
     }
     // A tournament in progress lives inside #chart-list — flipping back to the
     // ranked tab must not wipe it, so only re-render when nothing is running.
-    if (force || (!tournament && !koth)) loadRankedChart();
+    if (force || (!tournament && !koth)) return loadRankedChart();
+    return Promise.resolve();
   }
 
   // --- Hand-ranked lists: My Top 10 and My Top 25 ---
@@ -1991,6 +1964,7 @@ const App = (() => {
     container.innerHTML = UI.renderMovieDetail(movie, { allMovies, preview: true });
 
     setupTrailerButton(movie);
+    linkCastToImdb(movie, `#preview/${tmdbId}`, false);
 
     labelBack(previewBackHash);
     document.getElementById('detail-back').addEventListener('click', () => {
@@ -2101,44 +2075,39 @@ const App = (() => {
     });
   }
 
-  async function loadMovieDetail(id) {
-    const [movie, allMovies] = await Promise.all([MovieDB.getMovie(id), MovieDB.getAllMovies()]);
-    if (!movie) {
-      UI.showToast('Movie not found');
-      window.location.hash = '#catalogue';
-      return;
-    }
-
-    // Backfill fields for movies saved before these fields existed
-    // `!movie.crew` and the short-cast test pull the fuller credits into films
-    // saved before the lift panel existed.
+  // Fills in fields a film was saved without (older saves, quick watchlist
+  // adds) from TMDB and OMDb. Mutates `movie`, persists what it found and
+  // resolves true when something the page shows has changed.
+  async function backfillMovieMetadata(movie) {
+    let changed = false;
+    // `creditsFetchedAt` marks a film whose credits came from the current
+    // extractCast/extractCrew; anything older gets the fuller set.
     if ((!movie.creditsFetchedAt || !movie.directorCredits) && movie.tmdbId) {
       try {
         const details = await TMDB.getMovieDetails(movie.tmdbId);
-        let updated = false;
-        if (!movie.overview && details.overview) { movie.overview = details.overview; updated = true; }
+        if (!movie.overview && details.overview) { movie.overview = details.overview; changed = true; }
         if ((movie.cast || []).length < 10 && details.credits?.cast?.length) {
           movie.cast = TMDB.extractCast(details.credits);
-          updated = true;
+          changed = true;
         }
         if (!(movie.crew || []).length && details.credits?.crew?.length) {
           movie.crew = TMDB.extractCrew(details.credits);
-          updated = true;
+          changed = true;
         }
         if (!movie.backdrop && details.backdrop_path) {
           movie.backdrop = TMDB.posterUrl(details.backdrop_path, 'w1280');
-          updated = true;
+          changed = true;
         }
-        if (!movie.runtime && details.runtime) { movie.runtime = details.runtime; updated = true; }
-        if (!movie.voteAverage && details.vote_average) { movie.voteAverage = details.vote_average; updated = true; }
-        if (!movie.voteCount && details.vote_count) { movie.voteCount = details.vote_count; updated = true; }
-        if (!movie.imdbId && details.imdb_id) { movie.imdbId = details.imdb_id; updated = true; }
+        if (!movie.runtime && details.runtime) { movie.runtime = details.runtime; changed = true; }
+        if (!movie.voteAverage && details.vote_average) { movie.voteAverage = details.vote_average; changed = true; }
+        if (!movie.voteCount && details.vote_count) { movie.voteCount = details.vote_count; changed = true; }
+        if (!movie.imdbId && details.imdb_id) { movie.imdbId = details.imdb_id; changed = true; }
         movie.directorCredits = TMDB.extractDirectors(details.credits);
         movie.creditsFetchedAt = new Date().toISOString();
         await MovieDB.updateMovie(movie, {metadataOnly:true});
       } catch (_) { /* best-effort */ }
     }
-    // Backfill IMDb/RT ratings from OMDB
+    // IMDb/RT ratings from OMDb
     if (movie.imdbId && !movie.imdbRating) {
       try {
         const omdb = await TMDB.fetchOmdbData(movie.imdbId);
@@ -2147,13 +2116,69 @@ const App = (() => {
           if (!movie.imdbRating && omdb.imdbRating) { movie.imdbRating = omdb.imdbRating; updated = true; }
           if (!movie.imdbVotes && omdb.imdbVotes) { movie.imdbVotes = omdb.imdbVotes; updated = true; }
           if (!movie.rtScore && omdb.rtScore) { movie.rtScore = omdb.rtScore; updated = true; }
-          if (updated) await MovieDB.updateMovie(movie, {metadataOnly:true});
+          if (updated) { await MovieDB.updateMovie(movie, {metadataOnly:true}); changed = true; }
         }
       } catch (_) { /* best-effort */ }
     }
+    return changed;
+  }
 
+  // Points each cast portrait at the actor's IMDb page. The link starts life
+  // as an IMDb name search (UI.imdbPersonUrl), which works with no lookup at
+  // all; this swaps in the exact /name/nm… page once TMDB has told us the id,
+  // and for a saved film (`persist`) stores the ids so it is asked only once.
+  // `routeHash` guards the DOM patch: the answers can arrive after the person
+  // has moved on to another film.
+  async function linkCastToImdb(movie, routeHash, persist) {
+    const pending = (movie.cast || []).filter(c => c && c.personId && c.imdbId === undefined);
+    if (!pending.length) return;
+    const ids = await Promise.all(pending.map(c => TMDB.getPersonImdbId(c.personId)));
+    let found = false;
+    pending.forEach((c, i) => { if (ids[i] !== undefined) { c.imdbId = ids[i]; found = true; } });
+    if (!found) return;
+    if (window.location.hash === routeHash) {
+      const byPerson = new Map(pending.map(c => [String(c.personId), c]));
+      document.querySelectorAll('#movie-detail .dt-cast-member[data-person-id]').forEach(link => {
+        const person = byPerson.get(link.dataset.personId);
+        if (person && person.imdbId) link.href = UI.imdbPersonUrl(person);
+      });
+    }
+    if (persist) {
+      try { await MovieDB.updateMovie({ id: movie.id, cast: movie.cast }, {metadataOnly:true}); } catch (_) { /* best-effort */ }
+    }
+  }
+
+  async function loadMovieDetail(id) {
+    if (!Number.isInteger(id)) { window.location.hash = '#catalogue'; return; }
+    const [movie, allMovies] = await Promise.all([MovieDB.getMovie(id), MovieDB.getAllMovies()]);
+    if (!movie) {
+      UI.showToast('Movie not found');
+      window.location.hash = '#catalogue';
+      return;
+    }
+    const routeHash = `#detail/${id}`;
+    if (window.location.hash !== routeHash) return;
+
+    // Paint from what is stored, then fetch what is missing. The page used to
+    // wait for TMDB/OMDb before showing anything — on every visit, for a film
+    // OMDb has no rating for — so on a slow connection the previous film sat
+    // on screen for seconds, and offline-first was only true for some films.
+    paintMovieDetail(movie, allMovies);
+    backfillMovieMetadata(movie).then(changed => {
+      if (changed && window.location.hash === routeHash) {
+        const page = document.getElementById('movie-detail');
+        // Don't redraw the page under someone who is typing or has a menu open;
+        // the new fields are saved and show on the next visit.
+        const busy = page.querySelector('.watching-notes[open], #resume-editor, .more-menu.open') ||
+          document.getElementById('trailer-modal') || document.getElementById('ticket-modal');
+        if (!busy) paintMovieDetail(movie, allMovies);
+      }
+      return linkCastToImdb(movie, routeHash, true);
+    });
+  }
+
+  function paintMovieDetail(movie, allMovies) {
     const ctx = { allMovies: allMovies.filter(m => !m.watchlist) };
-    if (window.location.hash !== `#detail/${id}`) return;
     document.getElementById('movie-detail').innerHTML = UI.renderMovieDetail(movie, ctx);
     setupWatchingNotes(movie);
 
@@ -2345,16 +2370,6 @@ const App = (() => {
   }
 
   // ---- Ticket Stub generator ----
-  function _loadImage(src) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = src;
-    });
-  }
-
   function _ticketSerial(movie) {
     const id = (movie.id || 0).toString().padStart(5, '0');
     const yr = movie.year || '----';
@@ -2408,8 +2423,11 @@ const App = (() => {
 
     // Poster
     if (movie.poster) {
-      try {
-        const img = await _loadImage(movie.poster);
+      // Posters.loadImage retries with a distinct URL: the page already shows
+      // this poster in a plain <img>, and the cached non-CORS copy can fail a
+      // crossOrigin load outright, which printed the stub with no poster.
+      const img = await Posters.loadImage(UI.safeUrl(movie.poster));
+      if (img) {
         const pH = H - 80;
         const pW = pH * (2 / 3);
         ctx.save();
@@ -2420,7 +2438,7 @@ const App = (() => {
         ctx.clip();
         ctx.drawImage(img, 50, 40, pW, pH);
         ctx.restore();
-      } catch (_) {}
+      }
     }
 
     // Text block
@@ -2562,10 +2580,11 @@ const App = (() => {
     dlBtn.disabled = false;
     shareBtn.disabled = false;
 
+    const fileName = `ticket-${(movie.title || 'movie').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`;
     dlBtn.addEventListener('click', () => {
       haptic(10);
       const link = document.createElement('a');
-      link.download = `ticket-${(movie.title || 'movie').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`;
+      link.download = fileName;
       link.href = canvas.toDataURL('image/png');
       link.click();
     });
@@ -2577,7 +2596,7 @@ const App = (() => {
         if (!blob) throw new Error('blob fail');
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], 'ticket.png', { type: 'image/png' })] })) {
           await navigator.share({
-            files: [new File([blob], `ticket-${movie.title}.png`, { type: 'image/png' })],
+            files: [new File([blob], fileName, { type: 'image/png' })],
             title: `Ticket Stub — ${movie.title}`,
             text: `Just watched ${movie.title} (${movie.year}) — ${UI.ratingText(movie.rating)}`,
           });
@@ -2749,7 +2768,7 @@ const App = (() => {
       const slide = slides[i];
       const stage = document.getElementById('yir-stage');
       const movie = slide.movie;
-      const backdrop = movie?.backdrop || movie?.poster || '';
+      const backdrop = UI.imgSrc(movie?.backdrop || movie?.poster || '');
       stage.innerHTML = `
         <div class="yir-slide yir-slide--${slide.kind}">
           ${backdrop ? `<img src="${backdrop}" class="yir-slide-bg" alt="">` : ''}
@@ -3175,7 +3194,7 @@ const App = (() => {
     const valDisplay = r > 0 ? UI.formatRating(r) : '-';
     const valColor = r > 0 ? UI.ratingColor(r) : '';
     const poster = movie.poster
-      ? `<img src="${movie.poster}" alt="" class="inv-poster" data-id="${movie.id}" loading="lazy">`
+      ? `<img src="${UI.imgSrc(movie.poster)}" alt="" class="inv-poster" data-id="${movie.id}" loading="lazy">`
       : `<div class="inv-poster inv-poster-empty" data-id="${movie.id}"></div>`;
     return `
       <div class="inventory-item${isFocus ? ' inventory-item--focus' : ''}" data-id="${movie.id}">
@@ -3554,7 +3573,12 @@ const App = (() => {
     });
     document.getElementById('form-cancel').addEventListener('click', () => {
       document.getElementById('movie-form').style.display = 'none';
+      const wasEditing = !!editingMovie;
       editingMovie = null;
+      // Edit and Mark-as-watched open this form without changing the route, so
+      // cancelling used to strand you on an empty search page. Go back to the
+      // page the form was opened from.
+      if (wasEditing && window.location.hash !== '#add') { navigate(window.location.hash); return; }
       if (currentFilmography) {
         const { personId, personName, mode } = currentFilmography;
         if (mode === 'actor') loadActorFilmography(personId, personName);
@@ -3581,12 +3605,11 @@ const App = (() => {
       renderTagChips(getFormTags().filter(t => t !== tagToRemove));
     });
 
-    // Director/cast link: filter catalogue by person
+    // A director's name opens their Directors profile. (Cast portraits are
+    // plain links to IMDb and need no handler.)
     document.addEventListener('click', (e) => {
       const dirLink = e.target.closest('.director-link');
-      if (dirLink) { e.stopPropagation(); Directors.openByName(dirLink.dataset.director); return; }
-      const castMember = e.target.closest('.dt-cast-member');
-      if (castMember) { e.stopPropagation(); filterByPerson(castMember.dataset.personName); return; }
+      if (dirLink) { e.stopPropagation(); Directors.openByName(dirLink.dataset.director); }
     });
 
     document.getElementById('movie-grid').addEventListener('click', async (e) => {
@@ -3617,10 +3640,19 @@ const App = (() => {
 
         try {
           if (!window.html2canvas) {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-            document.head.appendChild(script);
-            await new Promise(r => script.onload = r);
+            // Third-party code on a page whose localStorage holds a GitHub
+            // token: pin it to the exact file by hash. And reject on error —
+            // offline, the bare onload promise never settled and the menu
+            // item stayed on "Saving..." for good.
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+              script.integrity = 'sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==';
+              script.crossOrigin = 'anonymous';
+              script.onload = resolve;
+              script.onerror = () => { script.remove(); reject(new Error('html2canvas failed to load')); };
+              document.head.appendChild(script);
+            });
           }
 
           const originalContainer = downloadBtn.closest('.decade-section').querySelector('.decade-mosaic');
@@ -3792,8 +3824,6 @@ const App = (() => {
     });
 
     document.getElementById('filter-clear-all').addEventListener('click', () => {
-      pendingPersonFilter = '';
-      dirFilterSetByJump = false;
       document.getElementById('filter-director').value = '';
       document.getElementById('filter-genre').value = '';
       document.getElementById('filter-rating').value = '';
@@ -3843,7 +3873,7 @@ const App = (() => {
         document.getElementById('filter-director').value,
         document.getElementById('filter-rating').value,
         document.getElementById('filter-tag').value,
-      ].filter(Boolean).length + (pendingPersonFilter ? 1 : 0);
+      ].filter(Boolean).length;
       const badge = document.getElementById('filter-badge');
       const btn = document.getElementById('filter-toggle');
       badge.textContent = active;
@@ -3854,8 +3884,6 @@ const App = (() => {
     }
 
     function onFilterChange() {
-      pendingPersonFilter = '';
-      dirFilterSetByJump = false;
       loadCatalogue();
       updateFilterBadge();
     }
@@ -4009,7 +4037,7 @@ const App = (() => {
       a.href = url;
       a.download = `movie-catalogue-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
       UI.showToast('Data exported!');
     });
 

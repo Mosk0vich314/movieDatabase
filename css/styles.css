@@ -7009,6 +7009,7 @@ body {
   color: var(--text);
   font: inherit;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
 }
 .dt-cast-photo {

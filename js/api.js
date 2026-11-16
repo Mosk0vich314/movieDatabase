@@ -153,6 +153,26 @@ const TMDB = (() => {
     return res.json();
   }
 
+  // A cast portrait links to that person's IMDb page, and TMDB's credits don't
+  // carry the IMDb id — it is one small request per person. Returns 'nm…', ''
+  // when TMDB has no IMDb id on file, or undefined when the lookup failed (so
+  // the caller can tell "none" from "try again later"). Cached for the session:
+  // the same actors turn up film after film.
+  const personImdbIds = new Map();
+  async function getPersonImdbId(personId) {
+    const id = Number(personId);
+    if (!Number.isSafeInteger(id) || id <= 0) return undefined;
+    if (personImdbIds.has(id)) return personImdbIds.get(id);
+    try {
+      const res = await request(`${BASE_URL}/person/${id}/external_ids?api_key=${encodeURIComponent(getApiKey())}`);
+      if (!res.ok) return undefined;
+      const data = await res.json();
+      const imdbId = /^nm\d+$/.test(data.imdb_id || '') ? data.imdb_id : '';
+      personImdbIds.set(id, imdbId);
+      return imdbId;
+    } catch (_) { return undefined; }
+  }
+
   function extractDirectors(credits) {
     return (credits?.crew || []).filter(c => c.job === 'Director').map(c => ({
       personId:c.id, name:c.name, profileUrl:c.profile_path ? profileUrl(c.profile_path) : '',
@@ -350,5 +370,5 @@ const TMDB = (() => {
     return `${IMG_BASE}/${size}${path}`;
   }
 
-  return { getApiKey, setApiKey, extractCast, extractCrew, extractDirectors, getPersonDetails, searchMovies, getMovieDetails, searchPerson, searchActor, getPersonMovieCredits, getMovieRecommendations, getMovieVideos, pickBestTrailer, fetchOmdbData, getGenreList, discoverByGenres, getMovieBackdrops, posterUrl, profileUrl };
+  return { getApiKey, setApiKey, extractCast, extractCrew, extractDirectors, getPersonDetails, getPersonImdbId, searchMovies, getMovieDetails, searchPerson, searchActor, getPersonMovieCredits, getMovieRecommendations, getMovieVideos, pickBestTrailer, fetchOmdbData, getGenreList, discoverByGenres, getMovieBackdrops, posterUrl, profileUrl };
 })();

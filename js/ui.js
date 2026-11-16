@@ -8,11 +8,15 @@ const UI = (() => {
     decadeSeeds[key] = Math.random() * 0x7fffffff | 0;
   }
 
+  // One timer for the one toast: without clearing it, an earlier toast's
+  // timeout hides the next one early.
+  let toastTimer = null;
   function showToast(message, duration = 3000) {
     const toast = document.getElementById('toast');
     toast.textContent = message;
     toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), duration);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
   }
 
   function focusDialog(node, label, onEscape) {
@@ -355,8 +359,8 @@ const UI = (() => {
   // Cast & crew, once, in the page. Crew is set like the billing block at
   // the foot of a poster — role on the left, names on the right — and the
   // cast is a row of portraits. Built from stored cast/crew, so it needs no
-  // network. Directors open their profile; an actor filters your catalogue
-  // to their films, as the old cast row did; other crew are plain text.
+  // network. Directors open their profile; an actor is a link to their IMDb
+  // page (see imdbPersonUrl); other crew are plain text.
   const BILLING = [
     ['Director', 'Directed by'],
     ['Screenplay', 'Written by'],
@@ -364,6 +368,15 @@ const UI = (() => {
     ['Music', 'Music'],
     ['Editor', 'Editing'],
   ];
+  // Where a cast portrait goes: the person's IMDb page when their IMDb id is
+  // known, an IMDb name search until it is (or when TMDB has none on file).
+  // `imdbId` comes from the DB, so it is checked before it goes into a URL.
+  function imdbPersonUrl(person) {
+    return /^nm\d+$/.test(person.imdbId || '')
+      ? `https://www.imdb.com/name/${person.imdbId}/`
+      : `https://www.imdb.com/find/?s=nm&q=${encodeURIComponent(person.name || '')}`;
+  }
+
   function renderCredits(movie) {
     const crew = (movie.crew || []).length
       ? movie.crew
@@ -384,11 +397,12 @@ const UI = (() => {
       const photo = c.profileUrl
         ? `<img src="${imgSrc(c.profileUrl)}" alt="" loading="lazy">`
         : `<span class="dt-cast-initials">${escapeHtml(initials)}</span>`;
-      return `<li><button type="button" class="dt-cast-member" data-person-name="${escapeHtml(c.name)}" aria-label="Your films with ${escapeHtml(c.name)}">
+      const personId = /^[1-9]\d*$/.test(String(c.personId || '')) ? ` data-person-id="${c.personId}"` : '';
+      return `<li><a class="dt-cast-member" href="${escapeHtml(imdbPersonUrl(c))}" target="_blank" rel="noopener noreferrer"${personId} aria-label="${escapeHtml(c.name)} on IMDb">
         <span class="dt-cast-photo">${photo}</span>
         <span class="dt-cast-name">${escapeHtml(c.name)}</span>
         ${c.character ? `<span class="dt-cast-role">${escapeHtml(c.character)}</span>` : ''}
-      </button></li>`;
+      </a></li>`;
     }).join('')}</ul>` : '';
 
     if (!rows && !castHtml) return '';
@@ -477,7 +491,11 @@ const UI = (() => {
     // Context chips from collection
     const chips = [];
     if (ctx.allMovies && ctx.allMovies.length > 0) {
-      const ordinal = n => n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`;
+      const ordinal = n => {
+        const tens = n % 100, unit = n % 10;
+        if (tens >= 11 && tens <= 13) return `${n}th`;
+        return `${n}${unit === 1 ? 'st' : unit === 2 ? 'nd' : unit === 3 ? 'rd' : 'th'}`;
+      };
 
       // Director count
       const dir = (movie.directors || [])[0];
@@ -1605,5 +1623,5 @@ const UI = (() => {
       </div>`;
   }
 
-  return { renderWatchingNotes, showToast, focusDialog, ratingColor, ratingColorRGB, ratingInk, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderFiveStarClub, renderTop10Builder, renderDuelIntro, renderDuelMatch, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, safeUrl, imgSrc, cssUrl, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
+  return { imdbPersonUrl, renderWatchingNotes, showToast, focusDialog, ratingColor, ratingColorRGB, ratingInk, formatRating, formatScore, formatStars, ratingText, ratingThresholdLabel, getRatingScale, setRatingScale, isFiveStar, applyRatingScaleClass, renderRatingBadge, renderDirectorBadge, renderMovieCard, renderFilmCard, renderDecadeLanes, renderRatingLanes, renderTitleLanes, renderDirectorLanes, renderSearchResult, renderPersonResult, renderFilmographyResult, renderWatchlistCard, renderMovieDetail, renderDirectorGroup, renderPosterGrid, renderBlurayShelf, renderNowPlaying, renderSuggestionsPanel, renderChart, renderFiveStarClub, renderTop10Builder, renderDuelIntro, renderDuelMatch, renderTop10Picker, renderTop10PickerRows, renderTournamentStart, renderTournamentMatch, renderTournamentResults, renderKothMatch, renderKothResults, initCustomSelects, escapeHtml, safeUrl, imgSrc, cssUrl, getGenreAccent, buildExtBadgesHtml, reshuffleDecade, formatTimecode, parseTimecode, renderResumeSection, renderResumeEditor };
 })();
