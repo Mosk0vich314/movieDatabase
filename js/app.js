@@ -346,6 +346,7 @@ const App = (() => {
       if (pendingPersonSearch) {
         const { mode, query } = pendingPersonSearch;
         pendingPersonSearch = null;
+        resetAddView();
         searchMode = mode;
         document.querySelectorAll('.smt-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
         const inp = document.getElementById('tmdb-search');
@@ -1964,7 +1965,6 @@ const App = (() => {
     container.innerHTML = UI.renderMovieDetail(movie, { allMovies, preview: true });
 
     setupTrailerButton(movie);
-    linkCastToImdb(movie, `#preview/${tmdbId}`, false);
 
     labelBack(previewBackHash);
     document.getElementById('detail-back').addEventListener('click', () => {
@@ -2123,31 +2123,6 @@ const App = (() => {
     return changed;
   }
 
-  // Points each cast portrait at the actor's IMDb page. The link starts life
-  // as an IMDb name search (UI.imdbPersonUrl), which works with no lookup at
-  // all; this swaps in the exact /name/nm… page once TMDB has told us the id,
-  // and for a saved film (`persist`) stores the ids so it is asked only once.
-  // `routeHash` guards the DOM patch: the answers can arrive after the person
-  // has moved on to another film.
-  async function linkCastToImdb(movie, routeHash, persist) {
-    const pending = (movie.cast || []).filter(c => c && c.personId && c.imdbId === undefined);
-    if (!pending.length) return;
-    const ids = await Promise.all(pending.map(c => TMDB.getPersonImdbId(c.personId)));
-    let found = false;
-    pending.forEach((c, i) => { if (ids[i] !== undefined) { c.imdbId = ids[i]; found = true; } });
-    if (!found) return;
-    if (window.location.hash === routeHash) {
-      const byPerson = new Map(pending.map(c => [String(c.personId), c]));
-      document.querySelectorAll('#movie-detail .dt-cast-member[data-person-id]').forEach(link => {
-        const person = byPerson.get(link.dataset.personId);
-        if (person && person.imdbId) link.href = UI.imdbPersonUrl(person);
-      });
-    }
-    if (persist) {
-      try { await MovieDB.updateMovie({ id: movie.id, cast: movie.cast }, {metadataOnly:true}); } catch (_) { /* best-effort */ }
-    }
-  }
-
   async function loadMovieDetail(id) {
     if (!Number.isInteger(id)) { window.location.hash = '#catalogue'; return; }
     const [movie, allMovies] = await Promise.all([MovieDB.getMovie(id), MovieDB.getAllMovies()]);
@@ -2173,7 +2148,6 @@ const App = (() => {
           document.getElementById('trailer-modal') || document.getElementById('ticket-modal');
         if (!busy) paintMovieDetail(movie, allMovies);
       }
-      return linkCastToImdb(movie, routeHash, true);
     });
   }
 
@@ -3605,11 +3579,16 @@ const App = (() => {
       renderTagChips(getFormTags().filter(t => t !== tagToRemove));
     });
 
-    // A director's name opens their Directors profile. (Cast portraits are
-    // plain links to IMDb and need no handler.)
+    // A director's name opens their Directors profile. A cast portrait does
+    // what Add -> Actor -> typing the name does: an actor search in the Add view.
     document.addEventListener('click', (e) => {
       const dirLink = e.target.closest('.director-link');
-      if (dirLink) { e.stopPropagation(); Directors.openByName(dirLink.dataset.director); }
+      if (dirLink) { e.stopPropagation(); Directors.openByName(dirLink.dataset.director); return; }
+      const castMember = e.target.closest('.dt-cast-member[data-person-name]');
+      if (castMember) {
+        pendingPersonSearch = { mode: 'actor', query: castMember.dataset.personName };
+        window.location.hash = '#add';
+      }
     });
 
     document.getElementById('movie-grid').addEventListener('click', async (e) => {
