@@ -1836,6 +1836,90 @@ const App = (() => {
     }, 650);
   }
 
+  // --- Re-rating from a head-to-head ---
+  // Tournament, King of the Hill and Rank by duel show your rating under each
+  // card with a stepper: seeing two films side by side is exactly when a
+  // rating turns out to be in the wrong order. The movie objects held by the
+  // running game are the same ones the cards were drawn from, so the change is
+  // applied to them in place (the results screen shows it) and written through
+  // to the DB once the taps stop.
+  const rateSaveTimers = new Map();
+
+  function matchMovies(id) {
+    const all = [];
+    if (tournament) tournament.rounds.forEach(r => r.forEach(m => { all.push(m.a); if (m.b) all.push(m.b); }));
+    if (koth) all.push(koth.king, ...koth.challengers);
+    if (duel) all.push(...(duel.pool || []), ...(duel.sorted || []), duel.cur);
+    return all.filter(m => m && m.id === id);
+  }
+
+  function stepMatchRating(id, dir) {
+    const copies = matchMovies(id);
+    if (!copies.length) return;
+    const five = UI.isFiveStar();
+    const r = copies[0].rating || 0;
+    let next;
+    if (!r) next = 5;
+    // Star mode moves in whole half-stars, snapping an in-between score first.
+    else if (five) next = dir > 0 ? Math.floor(r) + 1 : Math.ceil(r) - 1;
+    else next = Math.round((r + dir * 0.1) * 10) / 10;
+    next = Math.min(10, Math.max(1, next));
+    if (next === r) return;
+    haptic(6);
+    copies.forEach(m => { m.rating = next; });
+    document.querySelectorAll(`.tm-rating[data-rate-id="${id}"] .tm-rate-val`)
+      .forEach(el => { el.innerHTML = UI.renderRatingBadge(next); });
+    clearTimeout(rateSaveTimers.get(id));
+    rateSaveTimers.set(id, setTimeout(() => {
+      rateSaveTimers.delete(id);
+      MovieDB.updateMovie({ id, rating: next })
+        .catch(() => UI.showToast('Could not save the new rating.'));
+    }, 500));
+  }
+
+  // Press and hold repeats, so a 7 can become an 8.5 without fifteen taps.
+  // The pointer drives the steps; a click only counts when it came from the
+  // keyboard (detail 0), otherwise every tap would step twice.
+  let rateHold = null;
+  function stopRateHold() {
+    if (!rateHold) return;
+    clearTimeout(rateHold.t); clearInterval(rateHold.i);
+    rateHold = null;
+  }
+  function setupMatchRating() {
+    document.addEventListener('pointerdown', (e) => {
+      const btn = e.target.closest('.tm-rate-btn');
+      if (!btn) return;
+      e.preventDefault();
+      stopRateHold();
+      const id = parseInt(btn.closest('.tm-rating').dataset.rateId, 10);
+      const dir = parseInt(btn.dataset.rateStep, 10);
+      stepMatchRating(id, dir);
+      rateHold = { t: setTimeout(() => {
+        if (rateHold) rateHold.i = setInterval(() => stepMatchRating(id, dir), 80);
+      }, 420) };
+    });
+    document.addEventListener('pointerup', stopRateHold);
+    document.addEventListener('pointercancel', stopRateHold);
+    document.addEventListener('pointerout', (e) => {
+      if (e.target.closest && e.target.closest('.tm-rate-btn')) stopRateHold();
+    });
+    window.addEventListener('blur', stopRateHold);
+    // A long press would otherwise open the phone's context menu.
+    document.addEventListener('contextmenu', (e) => {
+      if (e.target.closest && e.target.closest('.tm-rate-btn')) e.preventDefault();
+    });
+  }
+
+  // Taps anywhere on the rating block are swallowed so they never pick the card.
+  function onMatchRatingClick(e) {
+    const btn = e.target.closest('.tm-rate-btn');
+    if (btn && e.detail === 0) {
+      stepMatchRating(parseInt(btn.closest('.tm-rating').dataset.rateId, 10),
+        parseInt(btn.dataset.rateStep, 10));
+    }
+  }
+
   // --- King of the Hill ---
 
   async function startKoth() {
@@ -3712,6 +3796,8 @@ const App = (() => {
       if (card) window.location.hash = `#detail/${card.dataset.id}`;
     });
 
+    setupMatchRating();
+
     document.getElementById('chart-tabs').addEventListener('click', (e) => {
       const tab = e.target.closest('.chart-tab');
       if (tab) { haptic(8); setChartTab(tab.dataset.tab); }
@@ -3721,6 +3807,7 @@ const App = (() => {
     // list the tap is operating on.
     Object.values(LISTS).forEach(cfg => {
       document.getElementById(cfg.pane).addEventListener('click', (e) => {
+        if (e.target.closest('.tm-rating')) { onMatchRatingClick(e); return; }
         const act = e.target.closest('[data-act]');
         if (act) {
           const slot = parseInt(act.dataset.slot, 10);
@@ -3759,6 +3846,7 @@ const App = (() => {
     });
 
     document.getElementById('chart-list').addEventListener('click', (e) => {
+      if (e.target.closest('.tm-rating')) { onMatchRatingClick(e); return; }
       // Tournament launch
       if (e.target.closest('#launch-tournament')) {
         startTournament();

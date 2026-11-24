@@ -1259,6 +1259,19 @@ const UI = (() => {
       </div>`;
   }
 
+  // Your rating under a head-to-head card, with a stepper, so a pairing that
+  // shows two ratings in the wrong order can be fixed on the spot. The block
+  // sits inside the card, so app.js intercepts taps on it before the pick.
+  function renderMatchRating(m) {
+    const t = escapeHtml(m.title);
+    return `
+        <div class="tm-rating" data-rate-id="${m.id}">
+          <button type="button" class="tm-rate-btn" data-rate-step="-1" aria-label="Lower your rating of ${t}">&minus;</button>
+          <span class="tm-rate-val" aria-live="polite">${renderRatingBadge(m.rating)}</span>
+          <button type="button" class="tm-rate-btn" data-rate-step="1" aria-label="Raise your rating of ${t}">+</button>
+        </div>`;
+  }
+
   function renderDuelMatch(left, right, done, est, placed, total) {
     const card = (m) => `
       <div class="tournament-card" data-id="${m.id}">
@@ -1267,6 +1280,7 @@ const UI = (() => {
           : '<div class="tournament-no-poster"></div>'}</div>
         <div class="tournament-card-title">${escapeHtml(m.title)}</div>
         <div class="tournament-card-year">${m.year || ''}</div>
+        ${renderMatchRating(m)}
       </div>`;
     const pct = est > 0 ? Math.min(100, (done / est) * 100) : 0;
     return `
@@ -1524,12 +1538,14 @@ const UI = (() => {
             <div class="tournament-poster-wrap">${posterA}</div>
             <div class="tournament-card-title">${escapeHtml(movieA.title)}</div>
             <div class="tournament-card-year">${movieA.year || ''}</div>
+            ${renderMatchRating(movieA)}
           </div>
           <div class="tournament-vs-badge">VS</div>
           <div class="tournament-card" data-id="${movieB.id}">
             <div class="tournament-poster-wrap">${posterB}</div>
             <div class="tournament-card-title">${escapeHtml(movieB.title)}</div>
             <div class="tournament-card-year">${movieB.year || ''}</div>
+            ${renderMatchRating(movieB)}
           </div>
         </div>
         <div class="tournament-progress">
@@ -1548,6 +1564,7 @@ const UI = (() => {
         <span class="tr-rank">${medal}</span>
         <div class="tr-thumb">${poster}</div>
         <span class="tr-title">${escapeHtml(m.title)} <span class="tr-year">(${m.year || ''})</span></span>
+        ${m.rating ? renderRatingBadge(m.rating) : ''}
       </div>`;
     }).join('');
     return `
@@ -1580,6 +1597,7 @@ const UI = (() => {
             <div class="tournament-poster-wrap">${posterKing}</div>
             <div class="tournament-card-title">${escapeHtml(king.title)}</div>
             <div class="tournament-card-year">${king.year || ''}</div>
+            ${renderMatchRating(king)}
           </div>
           <div class="tournament-vs-badge">VS</div>
           <div class="tournament-card koth-challenger" data-id="${challenger.id}">
@@ -1587,6 +1605,7 @@ const UI = (() => {
             <div class="tournament-poster-wrap">${posterC}</div>
             <div class="tournament-card-title">${escapeHtml(challenger.title)}</div>
             <div class="tournament-card-year">${challenger.year || ''}</div>
+            ${renderMatchRating(challenger)}
           </div>
         </div>
         <div class="tournament-progress">

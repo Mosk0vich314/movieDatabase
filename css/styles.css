@@ -3278,6 +3278,37 @@ input[type="date"].form-input { color-scheme: dark; }
   font-size: 0.72rem;
   color: var(--text-muted);
 }
+/* Your rating under a head-to-head card, with a stepper to fix it on the spot.
+   Taps here never pick the card (app.js swallows them). */
+.tm-rating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  margin-top: var(--s-2);
+  cursor: default;
+}
+.tm-rate-val { display: inline-flex; min-width: 2.6em; justify-content: center; }
+.tm-rate-btn {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: 700 1rem/1 var(--font-text);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.tm-rate-btn:hover { border-color: var(--accent); }
+.tm-rate-btn:active { background: rgba(var(--accent-rgb), 0.18); }
+.tm-rate-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.scale-five .tm-rate-val .rating-badge { font-size: 0.68rem; letter-spacing: -0.01em; }
 .tournament-vs-badge {
   font-family: var(--font-display);
   font-size: 1.3rem;
